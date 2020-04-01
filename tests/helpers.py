@@ -9,7 +9,6 @@ from typing import Any, List, Set, Tuple, cast
 
 from halfedge import classes
 
-
 def _canon_face_rep(face: classes.Face) -> List[Any]:
     """Canonical face representation: value tuples starting at min."""
     coordinates = [x.coordinate for x in face.verts]

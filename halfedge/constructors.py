@@ -75,7 +75,7 @@ def _create_face_edges(face_verts: List[Vert], face: Face) -> List[Edge]:
     return new_edges
 
 
-def _match_pairs(edges: Set[Edge]) -> None:
+def find_pairs(edges: Set[Edge]) -> None:
     """Match edge pairs, where possible."""
     endpoints2edge = {(edge.orig, edge.dest): edge for edge in edges}
     for edge in edges:
@@ -129,7 +129,7 @@ def edges_from_vlvi(
         else:
             edges.update(_create_face_edges(face_verts, Face()))
 
-    _match_pairs(edges)
+    find_pairs(edges)
     return infer_holes(edges)
 
 
@@ -160,7 +160,7 @@ def edges_from_vr(
     for face in vr:
         edges.update(_create_face_edges(face, Face()))
 
-    _match_pairs(edges)
+    find_pairs(edges)
     return infer_holes(edges)
 
 

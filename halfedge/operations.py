@@ -17,6 +17,8 @@ def full_edges_only(edges: Set[Edge]) -> Generator[Edge, Set[Edge], None]:
     E.g.,
     `iter_full(mesh.interior_edges)` would yield either (half)edge OR pair where
     both edge and pair are face edges.
+
+    TODO: this looks suspicious for side effects
     """
     while edges:
         half = edges.pop()

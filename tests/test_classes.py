@@ -4,61 +4,55 @@
 
 created: 170204 14:22:23
 """
+import itertools
+import random
+from keyword import iskeyword
 from typing import Any, Callable, Dict
 
 import pytest
 
 # noinspection PyProtectedMember,PyProtectedMember
-from halfedge.classes import (
-    ManifoldMeshError,
-    _MeshElementBase,
-    _function_lap,
-    HalfEdges,
-    Vert,
+from ..halfedge.classes import (
     Edge,
     Face,
+    HalfEdges,
     Hole,
+    ManifoldMeshError,
+    Vert,
+    _MeshElementBase,
+    _function_lap,
 )
 
-from keyword import iskeyword
-from hypothesis import given, example, settings
-import hypothesis.strategies as strategies
+alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+identifiers = (
+    "".join(random.choice(alphabet) for _ in range(10)) for _ in itertools.count()
+)
 
 
-def valid_identifier(**kwargs):
+def valid_identifier():
     """Return a strategy which generates a valid Python Identifier"""
-    if "min_size" not in kwargs:
-        kwargs["min_size"] = 4
-    return strategies.text(
-        alphabet="abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
-        **kwargs
-    ).filter(lambda x: x[0].isalpha() and x.isidentifier() and not (iskeyword(x)))
+    return next(
+        filter(
+            lambda x: x[0].isalpha() and x.isidentifier() and not (iskeyword(x)),
+            identifiers,
+        )
+    )
 
 
 class TestMeshElementBase:
-    """Keep the linter happy."""
-
-    @staticmethod
-    @given(strategies.integers(min_value=1, max_value=5))
-    @example(0)
-    @settings(max_examples=5)
-    def test_sequential_serial_numbers(int_) -> None:
+    @pytest.mark.parametrize("count", [random.randint(2, 5) for x in range(5)])
+    def test_sequential_serial_numbers(self, count) -> None:
         """Assigns sequential serial numbers."""
-        sns = [_MeshElementBase().sn for _ in range(int_)]
+        sns = [_MeshElementBase().sn for _ in range(count)]
         assert sns == sorted(sns)
 
-    @staticmethod
-    @given(strategies.integers(min_value=1, max_value=5))
-    @example(0)
-    @settings(max_examples=5)
-    def test_last_issued_sn(int_) -> None:
+    @pytest.mark.parametrize("count", [random.randint(2, 5) for x in range(5)])
+    def test_last_issued_sn(self, count) -> None:
         """The last_issued_sn == last sn issued to ANY instance."""
-        instances = [_MeshElementBase() for _ in range(int_)]
+        instances = [_MeshElementBase() for _ in range(count)]
         assert all((x.last_issued_sn == instances[-1].sn for x in instances))
 
-    # noinspection Pylint
-    @staticmethod
-    def test_children_share_serial_numbers() -> None:
+    def test_children_share_serial_numbers(self) -> None:
         """ child classes share set of serial numbers
 
         A serial number will never duplicate and will always be sequential
@@ -79,39 +73,33 @@ class TestMeshElementBase:
         assert all(x.last_issued_sn == instances[-1].sn for x in instances)
         assert all(instances[x] < instances[x + 1] for x in range(3))
 
-    @staticmethod
-    def test_lt_gt() -> None:
+    def test_lt_gt(self) -> None:
         """Sorts by serial number."""
         elem1 = _MeshElementBase()
         elem2 = _MeshElementBase()
         assert elem1 < elem2
         assert elem2 > elem1
 
-    @staticmethod
-    @given(valid_identifier(), strategies.integers())
-    @settings(max_examples=5)
-    def test_kwargs(identifier, value) -> None:
+    @pytest.mark.parametrize("name,value", [(valid_identifier(), random.randint(1, 5))])
+    def test_kwargs(self, name, value) -> None:
         """Sets kwargs."""
-        a = _MeshElementBase(**{identifier: value})
-        assert getattr(a, identifier) == value
+        a = _MeshElementBase(**{name: value})
+        assert getattr(a, name) == value
 
-    @staticmethod
-    def test_fill_from_preserves_attrs() -> None:
+    def test_fill_from_preserves_attrs(self) -> None:
         """Does not overwrite attrs."""
         a_is_1 = _MeshElementBase(a=1)
         a_is_2 = _MeshElementBase(a=2, fill_from=a_is_1)
         assert getattr(a_is_2, "a") == 2
 
-    @staticmethod
-    def test_fill_attrs_from_fills_missing() -> None:
+    def test_fill_attrs_from_fills_missing(self) -> None:
         """Fills attrs if not present."""
         b_is_3 = _MeshElementBase(a=1, b=3)
         a_is_2 = _MeshElementBase(a=2, fill_from=b_is_3)
         assert getattr(a_is_2, "a") == 2
         assert getattr(a_is_2, "b") == 3
 
-    @staticmethod
-    def test_assign_new_sn() -> None:
+    def test_assign_new_sn(self) -> None:
         """New serial number will be higher than previous."""
         instances = [_MeshElementBase() for _ in range(100)]
         instances[0].assign_new_sn()
@@ -191,50 +179,42 @@ class TestElementSubclasses:
         """Will not set missing attrs. sets others."""
         self.check_init(Face, {"edge": Edge(), "some_kwarg": 20})
 
-    @staticmethod
-    def test_edge_face_edges(he_triangle: Dict[str, Any]) -> None:
+    def test_edge_face_edges(self, he_triangle: Dict[str, Any]) -> None:
         """Edge next around face."""
         for edge in he_triangle["edges"]:
             assert tuple(edge.face_edges) == (edge, edge.next, edge.next.next)
 
-    @staticmethod
-    def test_face_edges(he_triangle: Dict[str, Any]) -> None:
+    def test_face_edges(self, he_triangle: Dict[str, Any]) -> None:
         """Finds all edges, starting at face.edge."""
         for face in he_triangle["faces"]:
             assert tuple(face.edges) == tuple(face.edge.face_edges)
 
-    @staticmethod
-    def test_edge_face_verts(he_triangle: Dict[str, Any]) -> None:
+    def test_edge_face_verts(self, he_triangle: Dict[str, Any]) -> None:
         """Is equivalent to edge.pair.next around orig."""
         for edge in he_triangle["edges"]:
             assert tuple(edge.vert_edges) == (edge, edge.pair.next)
 
-    @staticmethod
-    def test_vert_edges(he_triangle: Dict[str, Any]) -> None:
+    def test_vert_edges(self, he_triangle: Dict[str, Any]) -> None:
         """Is equivalent to vert_edges for vert.edge."""
         for vert in he_triangle["verts"]:
             assert tuple(vert.edges) == tuple(vert.edge.vert_edges)
 
-    @staticmethod
-    def test_vert_verts(he_triangle: Dict[str, Any]) -> None:
+    def test_vert_verts(self, he_triangle: Dict[str, Any]) -> None:
         """Is equivalent to vert_edge.dest for vert.edge."""
         for vert in he_triangle["verts"]:
             assert vert.verts == [x.dest for x in vert.edge.vert_edges]
 
-    @staticmethod
-    def test_vert_valence(he_triangle: Dict[str, Any]) -> None:
+    def test_vert_valence(self, he_triangle: Dict[str, Any]) -> None:
         """Valence is two for every corner in a triangle."""
         for vert in he_triangle["verts"]:
             assert vert.valence == 2
 
-    @staticmethod
-    def test_prev_by_face_edges(he_triangle: Dict[str, Any]) -> None:
+    def test_prev_by_face_edges(self, he_triangle: Dict[str, Any]) -> None:
         """Previous edge will 'next' to self."""
         for edge in he_triangle["edges"]:
             assert edge.prev.next == edge
 
-    @staticmethod
-    def test_prev_by_vert_edges(he_triangle: Dict[str, Any]) -> None:
+    def test_prev_by_vert_edges(self, he_triangle: Dict[str, Any]) -> None:
         """Previous edge will 'next' to self."""
         edge = sorted(he_triangle["edges"])[0]
         edge.next = edge  # create an infinite loop
@@ -280,26 +260,22 @@ def test_half_edges_init(he_triangle: Dict[str, Any]) -> None:
 class TestHalfEdges:
     """Keep the linter happy."""
 
-    @staticmethod
-    def test_last_issued_sn(he_meshes: Dict[str, Any]) -> None:
+    def test_last_issued_sn(self, he_meshes: Dict[str, Any]) -> None:
         """Matches highest serial number of any _MeshElementBase instance."""
         for mesh in he_meshes.values():
             assert mesh.last_issued_sn == _MeshElementBase.last_issued_sn
 
-    @staticmethod
-    def test_vl(meshes_vlvi: Dict[str, Any], he_meshes: Dict[str, Any]) -> None:
+    def test_vl(self, meshes_vlvi: Dict[str, Any], he_meshes: Dict[str, Any]) -> None:
         """Converts unaltered mesh verts back to input vl."""
         assert he_meshes["cube"].vl == meshes_vlvi["cube_vl"]
         assert he_meshes["grid"].vl == meshes_vlvi["grid_vl"]
 
-    @staticmethod
-    def test_vi(meshes_vlvi: Dict[str, Any], he_meshes: Dict[str, Any]) -> None:
+    def test_vi(self, meshes_vlvi: Dict[str, Any], he_meshes: Dict[str, Any]) -> None:
         """Convert unaltered mesh faces back to input vi."""
         assert he_meshes["cube"].vi == meshes_vlvi["cube_vi"]
         assert he_meshes["grid"].vi == meshes_vlvi["grid_vi"]
 
-    @staticmethod
-    def test_hi(meshes_vlvi: Dict[str, Any], he_meshes: Dict[str, Any]) -> None:
+    def test_hi(self, meshes_vlvi: Dict[str, Any], he_meshes: Dict[str, Any]) -> None:
         """Convert unaltered mesh holes back to input holes."""
         assert he_meshes["grid"].hi == meshes_vlvi["grid_hi"]
 
