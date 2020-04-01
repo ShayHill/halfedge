@@ -8,9 +8,9 @@ from typing import Any, Dict
 
 import pytest
 
-from halfedge.classes import ManifoldMeshError, HalfEdges, Vert
-from halfedge.constructors import mesh_from_vlvi
-from halfedge.validations import validate_mesh
+from ..halfedge.classes import ManifoldMeshError, HalfEdges, Vert
+from ..halfedge.constructors import mesh_from_vlvi
+from ..halfedge.validations import validate_mesh
 
 
 def test_validate_mesh_empty() -> None:

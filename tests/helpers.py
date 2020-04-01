@@ -7,7 +7,7 @@ created: 181121 13:14:06
 
 from typing import Any, List, Set, Tuple, cast
 
-from halfedge import classes
+from ..halfedge import classes
 
 def _canon_face_rep(face: classes.Face) -> List[Any]:
     """Canonical face representation: value tuples starting at min."""

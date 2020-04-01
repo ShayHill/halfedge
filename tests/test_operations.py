@@ -10,11 +10,11 @@ import random
 from typing import Any, Dict
 
 import pytest
-from halfedge import operations as ops
-from halfedge.classes import HalfEdges, ManifoldMeshError, Vert, Hole
-from halfedge.constructors import mesh_from_vlvi
-from halfedge.validations import validate_mesh
-from tests.helpers import are_equivalent_meshes
+from ..halfedge import operations as ops
+from ..halfedge.classes import HalfEdges, ManifoldMeshError, Vert, Hole
+from ..halfedge.constructors import mesh_from_vlvi
+from ..halfedge.validations import validate_mesh
+from .helpers import are_equivalent_meshes
 
 
 def test_full_edges_only(he_meshes: Dict[str, Any]) -> None:

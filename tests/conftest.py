@@ -8,8 +8,8 @@ from itertools import product
 from typing import Any, Dict, List
 
 import pytest
-from halfedge import classes
-from halfedge.constructors import edges_from_vlvi
+from ..halfedge import classes
+from ..halfedge.constructors import edges_from_vlvi
 
 
 @pytest.fixture
