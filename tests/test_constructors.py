@@ -159,7 +159,7 @@ class TestElementSubclasses:
     def test_init_vert(self) -> None:
         """Will not set missing attrs. sets others."""
         self.check_init(
-            Vert, {"coordinate": (0, 0, 0), "edge": Edge(), "some_kwarg": 20}
+            Vert, {"coordinate": (0, 0, 0), "some_kwarg": 20}
         )
 
     def test_init_edge(self) -> None:
@@ -177,7 +177,7 @@ class TestElementSubclasses:
 
     def test_init_face(self) -> None:
         """Will not set missing attrs. sets others."""
-        self.check_init(Face, {"edge": Edge(), "some_kwarg": 20})
+        self.check_init(Face, {"some_kwarg": 20})
 
     def test_edge_face_edges(self, he_triangle: Dict[str, Any]) -> None:
         """Edge next around face."""

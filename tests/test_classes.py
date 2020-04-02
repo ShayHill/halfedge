@@ -28,6 +28,7 @@ identifiers = (
     "".join(random.choice(alphabet) for _ in range(10)) for _ in itertools.count()
 )
 
+# mesh = HalfEdges()
 
 def valid_identifier():
     """Return a strategy which generates a valid Python Identifier"""
@@ -40,6 +41,25 @@ def valid_identifier():
 
 
 class TestMeshElementBase:
+    def test_mesh_missing(self) -> None:
+        """init completes without complaint, no self.mesh
+        """
+        inst = _MeshElementBase()
+        assert not hasattr(inst, 'mesh')
+
+    def test_mesh_passed(self) -> None:
+        """Mesh passed as first (only) positional parameter"""
+        mesh = HalfEdges()
+        inst = _MeshElementBase(mesh)
+        assert inst.mesh is mesh
+
+    def test_mesh_inherited(self) -> None:
+        """Required mesh attribute can be 'inherited' from 'fill_from'"""
+        mesh = HalfEdges()
+        inst_a = _MeshElementBase(mesh)
+        inst_b = _MeshElementBase(fill_from=inst_a)
+        assert inst_b.mesh is mesh
+
     @pytest.mark.parametrize("count", [random.randint(2, 5) for x in range(5)])
     def test_sequential_serial_numbers(self, count) -> None:
         """Assigns sequential serial numbers."""
@@ -69,7 +89,9 @@ class TestMeshElementBase:
         class MeshElemC(_MeshElementBase):
             """Subclass _MeshElementBase to test for sn sharing."""
 
-        instances = [x() for x in (_MeshElementBase, MeshElemA, MeshElemB, MeshElemC)]
+        instances = [
+            x() for x in (_MeshElementBase, MeshElemA, MeshElemB, MeshElemC)
+        ]
         assert all(x.last_issued_sn == instances[-1].sn for x in instances)
         assert all(instances[x] < instances[x + 1] for x in range(3))
 
@@ -94,7 +116,7 @@ class TestMeshElementBase:
 
     def test_fill_attrs_from_fills_missing(self) -> None:
         """Fills attrs if not present."""
-        b_is_3 = _MeshElementBase(a=1, b=3)
+        b_is_3 = _MeshElementBase(HalfEda=1, b=3)
         a_is_2 = _MeshElementBase(a=2, fill_from=b_is_3)
         assert getattr(a_is_2, "a") == 2
         assert getattr(a_is_2, "b") == 3
@@ -159,7 +181,7 @@ class TestElementSubclasses:
     def test_init_vert(self) -> None:
         """Will not set missing attrs. sets others."""
         self.check_init(
-            Vert, {"coordinate": (0, 0, 0), "edge": Edge(), "some_kwarg": 20}
+            Vert, {"coordinate": (0, 0, 0), "some_kwarg": 20}
         )
 
     def test_init_edge(self) -> None:
@@ -177,7 +199,7 @@ class TestElementSubclasses:
 
     def test_init_face(self) -> None:
         """Will not set missing attrs. sets others."""
-        self.check_init(Face, {"edge": Edge(), "some_kwarg": 20})
+        self.check_init(Face, {"some_kwarg": 20})
 
     def test_edge_face_edges(self, he_triangle: Dict[str, Any]) -> None:
         """Edge next around face."""
@@ -193,6 +215,21 @@ class TestElementSubclasses:
         """Is equivalent to edge.pair.next around orig."""
         for edge in he_triangle["edges"]:
             assert tuple(edge.vert_edges) == (edge, edge.pair.next)
+
+    def test_vert_edge_fail(self) -> None:
+        """Extended AttributeError message if self.mesh is not present"""
+        vert = Vert()
+        with pytest.raises(AttributeError) as excinfo:
+            _ = vert.edge
+        assert 'does not store' in str(excinfo.value)
+
+    def test_vert_edge(self) -> None:
+        """Find vert edge in mesh"""
+        vert = Vert()
+        edge = Edge(orig=vert)
+        mesh = HalfEdges({edge})
+        vert.mesh = mesh
+        assert vert.edge == edge
 
     def test_vert_edges(self, he_triangle: Dict[str, Any]) -> None:
         """Is equivalent to vert_edges for vert.edge."""
@@ -271,7 +308,9 @@ class TestHalfEdges:
         assert he_meshes["grid"].vl == meshes_vlvi["grid_vl"]
 
     def test_vi(self, meshes_vlvi: Dict[str, Any], he_meshes: Dict[str, Any]) -> None:
-        """Convert unaltered mesh faces back to input vi."""
+        """Convert unaltered mesh faces back to input vi.
+
+        Demonstrates preservation of face edge beginning point."""
         assert he_meshes["cube"].vi == meshes_vlvi["cube_vi"]
         assert he_meshes["grid"].vi == meshes_vlvi["grid_vi"]
 

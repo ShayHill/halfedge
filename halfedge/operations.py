@@ -8,6 +8,8 @@ from typing import Generator, Set
 
 from .classes import Edge, Face, HalfEdges, ManifoldMeshError, Vert
 
+from contextlib import suppress
+
 
 def full_edges_only(edges: Set[Edge]) -> Generator[Edge, Set[Edge], None]:
     """Edges where edge.pair is in input set.
@@ -17,9 +19,8 @@ def full_edges_only(edges: Set[Edge]) -> Generator[Edge, Set[Edge], None]:
     E.g.,
     `iter_full(mesh.interior_edges)` would yield either (half)edge OR pair where
     both edge and pair are face edges.
-
-    TODO: this looks suspicious for side effects
     """
+    edges = set(edges)
     while edges:
         half = edges.pop()
         if half.pair in edges:
@@ -53,8 +54,6 @@ def remove_edge(mesh: HalfEdges, edge: Edge) -> None:
     for half in edge, edge.pair:
         half.face.assign_new_sn()
         half.orig.assign_new_sn()
-        half.orig.edge = half.pair.next
-        half.face.edge = half.next.next
         mesh.edges.remove(half)
 
     if edge.face != edge.pair.face:
@@ -68,7 +67,7 @@ def remove_edge(mesh: HalfEdges, edge: Edge) -> None:
 
 def remove_vert(mesh: HalfEdges, vert: Vert) -> None:
     """Remove all edges around a vert."""
-    edges = tuple(vert.edges)
+    edges = set(vert.edges)
     face_splitting_edges = [x for x in edges if x.dest.valence > 1]
     if len({x.face for x in edges}) < len(face_splitting_edges):
         raise ManifoldMeshError(
@@ -76,11 +75,24 @@ def remove_vert(mesh: HalfEdges, vert: Vert) -> None:
             " One of this vert's edges is a bridge edge."
         )
 
-    for edge in edges:
-        if edge.face in mesh.holes:
-            remove_edge(mesh, edge.pair)
-        else:
-            remove_edge(mesh, edge)
+    # can caused manifold mesh error if removed in wrong order. Try different sequences.
+    len_edges = len(edges)
+    while edges:
+        for edge in tuple(edges):
+            with suppress(ManifoldMeshError):
+                if edge.face in mesh.holes:
+                    remove_edge(mesh, edge.pair)
+                else:
+                    remove_edge(mesh, edge)
+                edges.remove(edge)
+        if len(edges) == len_edges:
+            raise ManifoldMeshError(
+                "cannot find a safe edge to remove. "
+                "The 'face_splitting_edges' check earlier in the function "
+                "should have prevented this from happening. This is a bug."
+            )
+        len_edges = len(edges)
+
 
 
 def remove_face(mesh: HalfEdges, face: Face) -> None:
@@ -111,27 +123,29 @@ def insert_edge(mesh: HalfEdges, face: Face, orig: Vert, dest: Vert) -> None:
     pair_next = next(x for x in orig.edges if x.face is face)
     pair = Edge(orig=dest, next=pair_next, fill_from=pair_next)
 
-    try:
-        edge_next = next(x for x in dest.edges if x.face is face)
-        if edge_next.next == pair_next or pair_next.next == edge_next:
-            raise ManifoldMeshError("overwriting existing edge")
-    except AttributeError:
+    if dest not in mesh.verts:
         edge_next = pair
+    else:
+        try:
+            edge_next = next(x for x in dest.edges if x.face is face)
+            if edge_next.next == pair_next or pair_next.next == edge_next:
+                raise ManifoldMeshError("overwriting existing edge")
+        except AttributeError:
+            edge_next = pair
+
     edge = Edge(orig=orig, next=edge_next, fill_from=edge_next)
 
     orig.assign_new_sn()
     dest.assign_new_sn()
 
-    dest.edge = pair
     face.assign_new_sn()
-    face.edge = pair
 
     edge.pair, pair.pair = pair, edge
     edge_prev, pair_prev = pair_next.prev, edge_next.prev
     edge_prev.next, pair_prev.next = edge, pair
 
-    if dest.valence > 1:
-        edge_face = Face(edge=edge)
+    if dest not in mesh.edges or dest.valence > 1:
+        edge_face = Face(mesh=mesh)
         for face_edge in edge.face_edges:
             face_edge.face = edge_face
 
@@ -172,9 +186,7 @@ def _replace_edge(mesh: HalfEdges, edge: Edge) -> Edge:
     This beats silently double-splitting edges.
     """
     new_edge = Edge(fill_from=edge)
-    edge.orig.edge = new_edge
     edge.pair.pair = new_edge
-    edge.face.edge = new_edge
     edge.prev.next = new_edge
     mesh.edges.add(new_edge)
     mesh.edges.remove(edge)
@@ -197,7 +209,6 @@ def split_edge(mesh: HalfEdges, edge: Edge, vert: Vert) -> None:
 
     edge.pair.next = pair_next
     edge.next = edge_next
-    vert.edge = edge_next
 
     # self._update_pairs_after_split(edge)
     pair = edge.pair

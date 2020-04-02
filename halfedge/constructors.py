@@ -68,9 +68,7 @@ def infer_holes(edges: Set[Edge]) -> Set[Edge]:
 def _create_face_edges(face_verts: List[Vert], face: Face) -> List[Edge]:
     """Create edges around a face defined by vert indices."""
     new_edges = [Edge(orig=vert, face=face) for vert in face_verts]
-    face.edge = new_edges[0]
     for idx, edge in enumerate(new_edges):
-        edge.orig.edge = edge
         new_edges[idx - 1].next = edge
     return new_edges
 
@@ -120,7 +118,7 @@ def edges_from_vlvi(
 
     # everything except pairs
     verts = [Vert(coordinate=v) for v in vl]
-    edges = cast(Set[Edge], set())
+    edges: Set[Edge] = set()
 
     for vert_indices in vi + hi:
         face_verts = [verts[idx] for idx in vert_indices]
@@ -130,6 +128,7 @@ def edges_from_vlvi(
             edges.update(_create_face_edges(face_verts, Face()))
 
     find_pairs(edges)
+
     return infer_holes(edges)
 
 
@@ -168,7 +167,10 @@ def mesh_from_vlvi(
     vl: List[Coordinate], vi: List[List[int]], hi: Optional[List[List[int]]] = None
 ) -> HalfEdges:
     """A HalfEdges instance from vl, vi, and optionally hi."""
-    return HalfEdges(edges_from_vlvi(vl, vi, hi))
+    mesh = HalfEdges(edges_from_vlvi(vl, vi, hi))
+    for elem in mesh.verts | mesh.faces | mesh.holes:
+        elem.mesh = mesh
+    return mesh
 
 
 def mesh_from_vr(

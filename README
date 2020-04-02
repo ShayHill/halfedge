@@ -1,0 +1,25 @@
+A proper half-edge data structure stores:
+    a container of verts
+    a container of edges
+    a container of faces
+    for each vert, a pointer to an edge
+    for each face, a pointer to an edge
+
+This implementation only stores edges. Sets of verts and faces are generated from iterating through references in edge
+instances. Vert.edge references and face.edge references are found the same way[1]. This makes for slower code, but does
+not violate DRY and makes for dramatically cleaner code.
+
+This means that verts and faces cannot do much if their associated edges have not been added to mesh.edges.
+
+Also means that this won't be useful for more than hundreds (maybe thousands) of edges. Good enough for my purposes.
+
+The only thing guaranteed besides connectivity is element sn. This allows code such as
+
+    last_issued_sn = mesh.last_issued_sn
+    # do some things
+    new_edges = {x for x in mesh.edges if x.sn > last_issued_sn}
+
+[1] When searching for an associated (with a vert or face) edge, the lowest sn associated edge will be returned. This
+preserves, under some circumstances, input face edge order. This order may be important if you need to know precisely
+where the path around a face begins. Again, this slows execution.
+

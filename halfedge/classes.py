@@ -12,6 +12,7 @@ No transformations, with the exception of _MeshElementBase.assign_new_sn.
 # 2012 September 30
 """
 from __future__ import annotations
+from contextlib import suppress
 
 from typing import Any, Callable, List, Optional, Sequence, Set, Tuple, TypeVar, Dict
 
@@ -49,10 +50,19 @@ class _MeshElementBase:
     sn: int
     last_issued_sn = -1
 
-    def __init__(self: T, *, fill_from: Optional[T] = None, **kwargs: Any) -> None:
+    def __init__(
+        self: T,
+        mesh: Optional["HalfEdges"] = None,
+        *,
+        fill_from: Optional[T] = None,
+        **kwargs: Any,
+    ) -> None:
         self.assign_new_sn()
+        if mesh is not None:
+            self.mesh = mesh
         for key, val in kwargs.items():
-            setattr(self, key, val)
+            with suppress(AttributeError):
+                setattr(self, key, val)
         if fill_from is not None:
             self.fill_from(fill_from)
 
@@ -99,8 +109,25 @@ class Vert(_MeshElementBase):
 
     coordinate: Sequence[float]
     uv_vector: Sequence[float]
-    edge: Edge
     fill_from: Vert
+
+    @property
+    def edge(self) -> Edge:
+        """
+        Find the first edge that references vert.
+
+        :return: Edge instance such that edge.orig == self
+
+        Looks through every in the unordered set to find the first.
+        """
+        try:
+            return min(e for e in self.mesh.edges if e.orig is self)
+        except AttributeError as exc:
+            raise AttributeError(
+                str(exc)
+                + ". This implementation does not store an edge value for each Vert."
+                " These can only be found by searching the Vert's 'mesh'."
+            )
 
     @property
     def edges(self) -> List[Edge]:
@@ -186,6 +213,17 @@ class Face(_MeshElementBase):
     fill_from: Face
 
     @property
+    def edge(self) -> Edge:
+        try:
+            return min(e for e in self.mesh.edges if e.face is self)
+        except AttributeError as exc:
+            raise AttributeError(
+                str(exc)
+                + ". This implementation does not store an edge value for each Face."
+                  " These can only be found by searching the Face's 'mesh'."
+            )
+
+    @property
     def edges(self) -> List[Edge]:
         """Look up all edges around face."""
         return self.edge.face_edges
@@ -208,8 +246,11 @@ class HalfEdges:
     half edges, but will be ignored in any "for face in" constructs.
     """
 
-    def __init__(self, edges: Set[Edge]) -> None:
-        self.edges = edges
+    def __init__(self, edges: Optional[Set[Edge]] = None) -> None:
+        if edges is None:
+            self.edges = set()
+        else:
+            self.edges = edges
 
     @property
     def verts(self) -> Set[Vert]:
@@ -307,5 +348,3 @@ class HalfEdges:
         vert2list_index = self._vert2list_index
         faces = [face.verts for face in sorted(self.holes)]
         return [[vert2list_index[vert] for vert in face] for face in faces]
-
-

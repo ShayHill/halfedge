@@ -19,10 +19,14 @@ from .helpers import are_equivalent_meshes
 
 def test_full_edges_only(he_meshes: Dict[str, Any]) -> None:
     """12 in grid. All on face. No pairs."""
-    edges = tuple(ops.full_edges_only(he_meshes["grid"].interior_edges))
+    int_edges = he_meshes['grid'].interior_edges
+    len_int_edges = len(int_edges)
+    edges = tuple(ops.full_edges_only(int_edges))
     assert len(edges) == 12
     assert all(x.pair not in edges for x in edges)
     assert not any(isinstance(x.face, Hole) for x in edges)
+    # no side effects
+    assert len(int_edges) == len_int_edges
 
 
 def test_remove_edge_increases_sns(he_meshes: Dict[str, Any]) -> None:
@@ -237,7 +241,7 @@ def test_insert_edge_new_vert() -> None:
 
     face = next(iter(mesh.faces))
     orig = sorted(mesh.verts)[0]
-    new_vert = Vert(coordinate=(0.5, 0.5))
+    new_vert = Vert(mesh=mesh, coordinate=(0.5, 0.5))
     ops.insert_edge(mesh, face, orig, new_vert)
     validate_mesh(mesh)
 

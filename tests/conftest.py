@@ -10,24 +10,28 @@ from typing import Any, Dict, List
 import pytest
 from ..halfedge import classes
 from ..halfedge.constructors import edges_from_vlvi
+from ..halfedge.classes import HalfEdges
 
 
 @pytest.fixture
 def he_triangle() -> Dict[str, List[Any]]:
     """A simple triangle (inside and outside faces) for Mesh Element tests"""
-    verts = [classes.Vert(coordinate=x) for x in ((-1, 0), (1, 0), (0, 1))]
-    faces = [classes.Face(), classes.Hole()]
+    mesh = HalfEdges()
+    verts = [classes.Vert(mesh, coordinate=x) for x in ((-1, 0), (1, 0), (0, 1))]
+    faces = [classes.Face(mesh), classes.Hole()]
     inner_edges = [classes.Edge(orig=verts[x], face=faces[0]) for x in range(3)]
     outer_edges = [classes.Edge(orig=verts[1 - x], face=faces[1]) for x in range(3)]
+    mesh.edges.update(inner_edges, outer_edges)
 
     for i in range(3):
         inner_edges[i].pair = outer_edges[-i]
         outer_edges[-i].pair = inner_edges[i]
         inner_edges[i - 1].next = inner_edges[i]
         outer_edges[i - 1].next = outer_edges[i]
-        verts[i].edge = inner_edges[i]
-    faces[0].edge = inner_edges[0]
-    faces[1].edge = outer_edges[0]
+        # verts[i].edge = inner_edges[i]
+    # faces[0].edge = inner_edges[0]
+    # faces[1].edge = outer_edges[0]
+    # TODO: remove commented lines above once all tests pass
 
     return {
         "verts": verts,
@@ -70,11 +74,15 @@ def he_meshes(meshes_vlvi: Dict[str, Any]) -> Dict[str, Any]:
     cube = classes.HalfEdges(
         edges_from_vlvi(meshes_vlvi["cube_vl"], meshes_vlvi["cube_vi"])
     )
+    for elem in cube.verts | cube.faces | cube.holes:
+        elem.mesh = cube
 
     grid = classes.HalfEdges(
         edges_from_vlvi(
             meshes_vlvi["grid_vl"], meshes_vlvi["grid_vi"], meshes_vlvi["grid_hi"]
         )
     )
+    for elem in grid.verts | grid.faces | grid.holes:
+        elem.mesh = grid
 
     return {"cube": cube, "grid": grid}
