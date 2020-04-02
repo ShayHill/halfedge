@@ -1,9 +1,9 @@
 A proper half-edge data structure stores:
-    a container of verts
+    a container of verts (redundant)
     a container of edges
-    a container of faces
-    for each vert, a pointer to an edge
-    for each face, a pointer to an edge
+    a container of faces (redundant)
+    for each vert, a pointer to an edge (redundant)
+    for each face, a pointer to an edge (redundant)
 
 This implementation only stores edges. Sets of verts and faces are generated from iterating through references in edge
 instances. Vert.edge references and face.edge references are found the same way[1]. This makes for slower code, but does

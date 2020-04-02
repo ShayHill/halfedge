@@ -110,6 +110,7 @@ class Vert(_MeshElementBase):
     coordinate: Sequence[float]
     uv_vector: Sequence[float]
     fill_from: Vert
+    _edge: Edge = None
 
     @property
     def edge(self) -> Edge:
@@ -120,8 +121,11 @@ class Vert(_MeshElementBase):
 
         Looks through every in the unordered set to find the first.
         """
+        if self._edge and self._edge in self.mesh.edges and self._edge.orig is self:
+            return self._edge
         try:
-            return min(e for e in self.mesh.edges if e.orig is self)
+            self._edge = min(e for e in self.mesh.edges if e.orig is self)
+            return self._edge
         except AttributeError as exc:
             raise AttributeError(
                 str(exc)
@@ -209,13 +213,16 @@ class Face(_MeshElementBase):
     :edge: pointer to one edge on the face
     """
 
-    edge: Edge
     fill_from: Face
+    _edge: Optional[Edge] = None
 
     @property
     def edge(self) -> Edge:
+        if self._edge and self._edge in self.mesh.edges and self._edge.face is self:
+            return self._edge
         try:
-            return min(e for e in self.mesh.edges if e.face is self)
+            self._edge = min(e for e in self.mesh.edges if e.face is self)
+            return self._edge
         except AttributeError as exc:
             raise AttributeError(
                 str(exc)
