@@ -114,13 +114,13 @@ def edges_from_vlvi(
 
     """
     if hi is None:
-        hi = []
+        hi = set()
 
     # everything except pairs
     verts = [Vert(coordinate=v) for v in vl]
     edges: Set[Edge] = set()
 
-    for vert_indices in vi + hi:
+    for vert_indices in vi | hi:
         face_verts = [verts[idx] for idx in vert_indices]
         if vert_indices in hi:
             edges.update(_create_face_edges(face_verts, Hole()))
@@ -167,10 +167,7 @@ def mesh_from_vlvi(
     vl: List[Coordinate], vi: List[List[int]], hi: Optional[List[List[int]]] = None
 ) -> HalfEdges:
     """A HalfEdges instance from vl, vi, and optionally hi."""
-    mesh = HalfEdges(edges_from_vlvi(vl, vi, hi))
-    for elem in mesh.verts | mesh.faces | mesh.holes:
-        elem.mesh = mesh
-    return mesh
+    return HalfEdges(edges_from_vlvi(vl, vi, hi))
 
 
 def mesh_from_vr(

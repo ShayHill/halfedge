@@ -1,13 +1,15 @@
 A proper half-edge data structure stores:
-    a container of verts (redundant)
-    a container of edges
-    a container of faces (redundant)
+    a set of verts (redundant)
+    a set of edges
+    for each edge, pointers to vert, pair, face, next
+    a set of faces (redundant)
     for each vert, a pointer to an edge (redundant)
     for each face, a pointer to an edge (redundant)
 
-This implementation only stores edges. Sets of verts and faces are generated from iterating through references in edge
-instances. Vert.edge references and face.edge references are found the same way[1]. This makes for slower code, but does
-not violate DRY and makes for dramatically cleaner code.
+This implementation only stores a set of edges. Face and Vert edge pointers (which had to be updated) have been replaced
+with pointers to the entire mesh (which do not have to be updated). Sets of verts and faces are generated from
+iterating through references in edge instances. Vert.edge references and face.edge references are found the same way[1].
+This makes for slower code, but does not violate DRY and makes for dramatically cleaner code.
 
 This means that verts and faces cannot do much if their associated edges have not been added to mesh.edges.
 

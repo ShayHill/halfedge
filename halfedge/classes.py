@@ -13,8 +13,20 @@ No transformations, with the exception of _MeshElementBase.assign_new_sn.
 """
 from __future__ import annotations
 from contextlib import suppress
+from operator import attrgetter
 
-from typing import Any, Callable, List, Optional, Sequence, Set, Tuple, TypeVar, Dict
+from typing import (
+    Any,
+    Callable,
+    List,
+    Optional,
+    Sequence,
+    Set,
+    Tuple,
+    TypeVar,
+    Dict,
+    Optional,
+)
 
 T = TypeVar("T")
 
@@ -27,7 +39,8 @@ class ManifoldMeshError(ValueError):
 
     ... or something broken along the way. List of edges do not represent a valid
     (manifold) half edge data structure. Some properties will still be available,
-    but many require valid, manifold mesh data to infer.
+    so you might catch this one and continue, but many operations will require valid,
+    manifold mesh data to infer.
     """
 
 
@@ -48,16 +61,26 @@ class _MeshElementBase:
     """
 
     sn: int
-    last_issued_sn = -1
+    last_issued_sn: int = -1
 
     def __init__(
         self: T,
-        mesh: Optional["HalfEdges"] = None,
+        mesh: Optional[HalfEdges] = None,
         *,
         fill_from: Optional[T] = None,
         **kwargs: Any,
     ) -> None:
-        self.assign_new_sn()
+        """
+        Create a mesh instance with no
+
+        :param mesh:
+        :param fill_from:
+        :param kwargs:
+        """
+
+        _MeshElementBase.last_issued_sn += 1
+        self.sn = self.last_issued_sn
+        # TODO: factor out mesh
         if mesh is not None:
             self.mesh = mesh
         for key, val in kwargs.items():
@@ -66,16 +89,11 @@ class _MeshElementBase:
         if fill_from is not None:
             self.fill_from(fill_from)
 
-    def __lt__(self: _MeshElementBase, other: _MeshElementBase) -> bool:
-        return self.sn < other.sn
-
-    def __gt__(self: _MeshElementBase, other: _MeshElementBase) -> bool:
-        return self.sn > other.sn
-
-    def assign_new_sn(self) -> None:
-        """Raise the serial number so this will look like a new element."""
-        _MeshElementBase.last_issued_sn += 1
-        setattr(self, "sn", self.last_issued_sn)
+    # def assign_new_sn(self) -> None:
+    #     """Raise the serial number so this will look like a new element."""
+    #     # TODO: factor out
+    #     if hasattr(self, 'sn'):
+    #         return
 
     def fill_from(self: T, other: T) -> None:
         """Copy attributes from :other:. Do not overwrite existing self attributes."""
@@ -100,38 +118,16 @@ def _function_lap(func: Callable[[T], T], first_arg: T) -> List[T]:
 class Vert(_MeshElementBase):
     """Half-edge mesh vertices.
 
-    some coordinate value is necessary for testing
-    :coordinate: coordinate of vert (e.g., np.array([1, -4, 2]))
-
-    required attribute
     :edge: pointer to one edge originating at vert
     """
 
-    coordinate: Sequence[float]
-    uv_vector: Sequence[float]
-    fill_from: Vert
-    _edge: Edge = None
-
     @property
     def edge(self) -> Edge:
-        """
-        Find the first edge that references vert.
+        return self._edge
 
-        :return: Edge instance such that edge.orig == self
-
-        Looks through every in the unordered set to find the first.
-        """
-        if self._edge and self._edge in self.mesh.edges and self._edge.orig is self:
-            return self._edge
-        try:
-            self._edge = min(e for e in self.mesh.edges if e.orig is self)
-            return self._edge
-        except AttributeError as exc:
-            raise AttributeError(
-                str(exc)
-                + ". This implementation does not store an edge value for each Vert."
-                " These can only be found by searching the Vert's 'mesh'."
-            )
+    @edge.setter
+    def edge(self, edge: Edge) -> None:
+        self._edge = edge
 
     @property
     def edges(self) -> List[Edge]:
@@ -166,12 +162,51 @@ class Edge(_MeshElementBase):
     fill_from: Edge
 
     @property
+    def orig(self) -> Vert:
+        return self._orig
+
+    @orig.setter
+    def orig(self, orig: Vert) -> None:
+        self._orig = orig
+        orig.edge = self
+
+    @property
+    def pair(self) -> Edge:
+        return self._pair
+
+    @pair.setter
+    def pair(self, pair: Edge) -> None:
+        self._pair = pair
+        pair._pair = self
+
+    @property
+    def face(self) -> Face:
+        return self._face
+
+    @face.setter
+    def face(self, face: Face) -> None:
+        self._face = face
+        face.edge = self
+
+    @property
+    def next(self) -> Edge:
+        return self._next
+
+    @next.setter
+    def next(self, next_: Edge) -> None:
+        self._next = next_
+
+    @property
     def prev(self) -> Edge:
         """Look up the edge before self."""
         try:
             return self.face_edges[-1]
         except (AttributeError, ManifoldMeshError):
             return self.vert_edges[-1].pair
+
+    @prev.setter
+    def prev(self, prev) -> None:
+        super(Edge, prev).__setattr__("next", self)
 
     @property
     def dest(self) -> Vert:
@@ -214,21 +249,15 @@ class Face(_MeshElementBase):
     """
 
     fill_from: Face
-    _edge: Optional[Edge] = None
+    edge: Edge
 
     @property
     def edge(self) -> Edge:
-        if self._edge and self._edge in self.mesh.edges and self._edge.face is self:
-            return self._edge
-        try:
-            self._edge = min(e for e in self.mesh.edges if e.face is self)
-            return self._edge
-        except AttributeError as exc:
-            raise AttributeError(
-                str(exc)
-                + ". This implementation does not store an edge value for each Face."
-                  " These can only be found by searching the Face's 'mesh'."
-            )
+        return self._edge
+
+    @edge.setter
+    def edge(self, edge: Edge) -> None:
+        self._edge = edge
 
     @property
     def edges(self) -> List[Edge]:
@@ -275,6 +304,11 @@ class HalfEdges:
         return {x.face for x in self.edges if type(x.face) is Hole}
 
     @property
+    def elements(self) -> Set[_MeshElementBase]:
+        """All elements in mesh"""
+        return self.verts | self.edges | self.faces | self.holes
+
+    @property
     def last_issued_sn(self) -> int:
         """Look up the last serial number issued to any mesh element."""
         return next(iter(self.edges)).last_issued_sn
@@ -300,58 +334,50 @@ class HalfEdges:
         return self.verts - self.boundary_verts
 
     @property
-    def bounding_box(self) -> Tuple[Tuple[float], Tuple[float]]:
-        """Look up min and max extent in all dimensions."""
-        axes = tuple(zip(*(x.coordinate for x in self.verts)))
-        return tuple(float(min(x)) for x in axes), tuple(float(max(x)) for x in axes)
+    def vl(self) -> List[Vert]:
+        """ Sorted list of verts """
+        return sorted(self.verts, key=attrgetter("sn"))
 
     @property
-    def vl(self) -> List[Tuple[float]]:
-        """Export verts as a list of coordinate tuples.
+    def el(self) -> List[Edge]:
+        """ Sorted list of edges """
+        return sorted(self.edges, key=attrgetter("sn"))
 
-        returns [(3, 4.4, -2.22), (13, 42, 344) ...]
+    @property
+    def fl(self) -> List[Edge]:
+        """ Sorted list of faces """
+        return sorted(self.faces, key=attrgetter("sn"))
 
-        Returned in .sn order.
-        """
-        return [tuple(vert.coordinate) for vert in sorted(self.verts)]
+    @property
+    def hl(self) -> List[Edge]:
+        """ Sorted list of holes """
+        return sorted(self.holes, key=attrgetter("sn"))
 
     @property
     def _vert2list_index(self) -> Dict[Vert, int]:
-        """Map Vert instances to indices in a sorted list of verts."""
-        return {vert: cnt for cnt, vert in enumerate(sorted(self.verts))}
+        """self.vl mapped to list indices."""
+        return {vert: cnt for cnt, vert in enumerate(self.vl)}
 
     @property
-    def ei(self) -> List[List[int]]:
-        """Export edges as a list of paired vert indices.
-
-        returns [[0, 1], [1, 4] ...]
-
-        Returned in .sn order.
-        """
-        vert2list_index = self._vert2list_index
-        edges = [(edge.orig, edge.dest) for edge in sorted(self.edges)]
-        return [[vert2list_index[vert] for vert in edge] for edge in edges]
+    def ei(self) -> Set[Tuple[int, int]]:
+        """Edges as a set of paired vert indices."""
+        v2i = self._vert2list_index
+        return {(v2i[edge.orig], v2i[edge.dest]) for edge in self.edges}
 
     @property
-    def vi(self) -> List[List[int]]:
-        """Export faces as a list lists of vl indices.
+    def fi(self) -> Set[Tuple[int, ...]]:
+        """Faces as a set of tuples of vl indices.
 
         returns [[0, 1, 2, 3], [1, 0, 4, 5] ...]
-
-        Returned in .sn order.
         """
-        vert2list_index = self._vert2list_index
-        faces = [face.verts for face in sorted(self.faces)]
-        return [[vert2list_index[vert] for vert in face] for face in faces]
+        v2i = self._vert2list_index
+        return {tuple(v2i[x] for x in face.verts) for face in self.faces}
 
     @property
-    def hi(self) -> List[List[int]]:
-        """Export holes as a list of lists of vl indices.
+    def hi(self) -> Set[Tuple[int, ...]]:
+        """Holes as a set of tuples of vl indices.
 
         returns [[0, 1, 2, 3], [1, 0, 4, 5] ...]
-
-        Returned in .sn order.
         """
-        vert2list_index = self._vert2list_index
-        faces = [face.verts for face in sorted(self.holes)]
-        return [[vert2list_index[vert] for vert in face] for face in faces]
+        v2i = self._vert2list_index
+        return {tuple(v2i[x] for x in hole.verts) for hole in self.holes}

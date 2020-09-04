@@ -3,9 +3,9 @@
 
 created: 181121 13:14:06
 """
-
+from copy import deepcopy
 from itertools import product
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Sequence
 
 import pytest
 from ..halfedge import classes
@@ -48,17 +48,17 @@ def meshes_vlvi() -> Dict[str, Any]:
     cube_vl = [(-1, -1, -1), (1, -1, -1), (1, 1, -1), (-1, 1, -1),
                (-1, -1, 1), (1, -1, 1), (1, 1, 1), (-1, 1, 1)]
 
-    cube_vi = [[0, 1, 2, 3], [0, 3, 7, 4], [0, 4, 5, 1],
-               [1, 5, 6, 2], [2, 6, 7, 3], [4, 7, 6, 5]]
+    cube_vi = {(0, 1, 2, 3), (0, 3, 7, 4), (0, 4, 5, 1),
+               (1, 5, 6, 2), (2, 6, 7, 3), (4, 7, 6, 5)}
 
     grid_vl = [(x, y) for x, y in product(range(4), range(4))]
 
-    grid_vi = [
-        [x + y, x + y + 1, x + y + 5, x + y + 4]
+    grid_vi = {
+        (x + y, x + y + 1, x + y + 5, x + y + 4)
         for y, x in product((0, 4, 8), (0, 1, 2))
-    ]
+    }
 
-    grid_hi = [[0, 4, 8, 12, 13, 14, 15, 11, 7, 3, 2, 1]]
+    grid_hi = {(0, 4, 8, 12, 13, 14, 15, 11, 7, 3, 2, 1)}
 
     return {
         "cube_vl": cube_vl, "cube_vi": cube_vi,
@@ -86,3 +86,34 @@ def he_meshes(meshes_vlvi: Dict[str, Any]) -> Dict[str, Any]:
         elem.mesh = grid
 
     return {"cube": cube, "grid": grid}
+
+
+def compare_circular(seq_a: Sequence[Any], seq_b: Sequence[Any]) -> bool:
+    """ Start sequence at lowest value
+
+    To help compare circular sequences
+    """
+    if not seq_a:
+        return ~bool(seq_b)
+    beg = seq_a[0]
+    if beg not in seq_b:
+        return False
+    idx = seq_b.index(beg)
+    return seq_a == seq_b[idx:] + seq_b[:idx]
+
+
+def compare_circular_2(seq_a: List[List[Any]], seq_b: List[List[Any]]) -> bool:
+    """"
+    Compare_circular with a nested list
+    """
+    seq_a = deepcopy(seq_a)
+    seq_b = deepcopy(seq_b)
+    while seq_a and seq_b:
+        sub_a = seq_a.pop()
+        try:
+            seq_b.remove(next(x for x in seq_b if compare_circular(sub_a, x)))
+        except StopIteration:
+            return False
+    if seq_b:
+        return False
+    return True
