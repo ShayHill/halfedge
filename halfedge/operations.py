@@ -185,6 +185,7 @@ def insert_edge(
     face: Optional[Face] = None,
     **edge_kwargs: Any,
 ) -> Edge:
+    return mesh.insert_edge(orig, dest, face, **edge_kwargs)
     """
     Insert a new edge between two verts.
 
@@ -248,7 +249,7 @@ def insert_vert(mesh: StaticHalfEdges, face: Face, orig: Vert) -> None:
     Insert a vert into a face then triangulate face.
     """
     for vert in face.verts:
-        insert_edge(mesh, orig, vert, face)
+        mesh.insert_edge(orig, vert, face)
 
 
 def inherit_kwargs(*ancestors: _MeshElementBase, **kwargs: Any) -> Dict[str, Any]:

@@ -17,10 +17,193 @@ from ..halfedge.constructors import mesh_from_vlvi
 from ..halfedge.validations import validate_mesh
 from .helpers import are_equivalent_meshes
 from operator import attrgetter
+from ..halfedge.half_edge_object import HalfEdges
+import random
 
 
 def sorted_by_sn(elements):
     return sorted(elements, key=attrgetter("sn"))
+
+VERT_IN_ANOTHER_FACE = "orig or dest in mesh but not on given face"
+
+
+class TestInsertEdge:
+    def test_insert_into_empty_mesh(self) -> None:
+        """ First edge into empty mesh creates Hole """
+        mesh = HalfEdges()
+        mesh.insert_edge(Vert(), Vert())
+        assert len(tuple(mesh.verts)) == 2
+        assert len(tuple(mesh.edges)) == 2
+        assert len(tuple(mesh.holes)) == 1
+        validate_mesh(mesh)
+
+    def test_infer_face_both_verts(self, he_meshes: Dict[str, Any]) -> None:
+        """ Infer face when two verts on face given """
+        grid = he_meshes["grid"]
+        face = random.choice(tuple(grid.faces))
+        new_edge = grid.insert_edge(face.verts[0], face.verts[2])
+        assert new_edge.pair.face == face
+        validate_mesh(grid)
+
+    def test_given_face_both_verts(self, he_meshes: Dict[str, Any]) -> None:
+        """ Infer face when two verts on face given """
+        grid = he_meshes["grid"]
+        face = random.choice(tuple(grid.faces))
+        new_edge = grid.insert_edge(face.verts[0], face.verts[2], face)
+        assert new_edge.pair.face == face
+        validate_mesh(grid)
+
+    def test_orig_on_face(self, he_meshes: Dict[str, Any]) -> None:
+        """ Connect to new vert from orig on face """
+        grid = he_meshes["grid"]
+        face = random.choice(tuple(grid.faces))
+        orig = random.choice(tuple(face.verts))
+        new_edge = grid.insert_edge(orig, Vert(), face)
+        assert new_edge.face == face
+        assert new_edge.pair.face == face
+        validate_mesh(grid)
+
+    def test_dest_on_face(self, he_meshes: Dict[str, Any]) -> None:
+        """ Connect to dest on face from new vert """
+        grid = he_meshes["grid"]
+        face = random.choice(tuple(grid.faces))
+        dest = random.choice(tuple(face.verts))
+        new_edge = grid.insert_edge(Vert(), dest, face)
+        assert new_edge.face == face
+        assert new_edge.pair.face == face
+        validate_mesh(grid)
+
+    def test_insert_will_not_overwrite(self, he_meshes: Dict[str, Any]) -> None:
+        """ Raise ManifoldMeshError if attempting to overwrite existing edge. """
+        grid = he_meshes["grid"]
+        face = random.choice(tuple(grid.faces))
+        with pytest.raises(ManifoldMeshError) as err:
+            grid.insert_edge(face.verts[0], face.verts[1], face)
+        assert "overwriting existing edge" in err.value.args[0]
+
+    def test_orig_off_face(self, he_meshes: Dict[str, Any]) -> None:
+        """ Raise ManifoldMeshError if any vert in mesh but not on given face """
+        grid = he_meshes["grid"]
+        face = random.choice(tuple(grid.faces))
+        dest = random.choice(face.verts)
+        orig = next(
+            x for x in grid.verts if x not in face.verts and x not in dest.neighbors
+        )
+        with pytest.raises(ManifoldMeshError) as err:
+            grid.insert_edge(orig, dest, face)
+        assert VERT_IN_ANOTHER_FACE in err.value.args[0]
+
+    def test_dest_off_face(self, he_meshes: Dict[str, Any]) -> None:
+        """ Raise ManifoldMeshError if any vert in mesh but not on given face """
+        grid = he_meshes["grid"]
+        face = random.choice(tuple(grid.faces))
+        orig = random.choice(face.verts)
+        dest = next(
+            x for x in grid.verts if x not in face.verts and x not in orig.neighbors
+        )
+        with pytest.raises(ManifoldMeshError) as err:
+            grid.insert_edge(orig, dest, face)
+        assert VERT_IN_ANOTHER_FACE in err.value.args[0]
+
+    def test_orig_and_dest_off_face(self, he_meshes: Dict[str, Any]) -> None:
+        """ Raise ManifoldMeshError if any vert in mesh but not on given face """
+        grid = he_meshes["grid"]
+        face = random.choice(tuple(grid.faces))
+        orig = next(x for x in grid.verts if x not in face.verts)
+        dest = next(
+            x
+            for x in grid.verts
+            if x not in face.verts and x != orig and x not in orig.neighbors
+        )
+        with pytest.raises(ManifoldMeshError) as err:
+            grid.insert_edge(orig, dest, face)
+        assert VERT_IN_ANOTHER_FACE in err.value.args[0]
+
+    def test_orig_eq_dest(self, he_meshes: Dict[str, Any]) -> None:
+        """ Raise ManifoldMeshError if orig == dest """
+        grid = he_meshes["grid"]
+        face = random.choice(tuple(grid.faces))
+        orig = random.choice(face.verts)
+        with pytest.raises(ManifoldMeshError) as err:
+            grid.insert_edge(orig, orig, face)
+        assert "orig and dest are the same" in err.value.args[0]
+
+    def test_floating_edge(self, he_meshes: Dict[str, Any]) -> None:
+        """ Raise ManifoldMeshError neither vert in mesh (and mesh not empty) """
+        grid = he_meshes["grid"]
+        face = random.choice(tuple(grid.faces))
+        with pytest.raises(ManifoldMeshError) as err:
+            grid.insert_edge(Vert(), Vert(), face)
+        assert "adding floating edge to existing face" in err.value.args[0]
+
+    def test_fail_to_infer(self, he_meshes: Dict[str, Any]) -> None:
+        """ Raise ValueError if face not given and not unambiguous """
+        grid = he_meshes["grid"]
+        face = random.choice(tuple(grid.faces))
+        with pytest.raises(ValueError) as err:
+            grid.insert_edge(Vert(), Vert())
+        assert "face cannot be determined from orig and dest" in err.value.args[0]
+
+    def test_face_attrs_pass(self, he_meshes: Dict[str, Any]) -> None:
+        """ Pass attributes from face when face is split """
+        grid = he_meshes["grid"]
+        face = random.choice(tuple(grid.faces))
+        face.some_attr = 'orange'
+        edge = grid.insert_edge(face.verts[0], face.verts[2])
+        assert edge.face.some_attr == 'orange'
+        assert edge.pair.face.some_attr == 'orange'
+
+    def test_edge_kwargs(self, he_meshes: Dict[str, Any]) -> None:
+        """ Assign edge_kwargs as attributes """
+        grid = he_meshes["grid"]
+        face = random.choice(tuple(grid.faces))
+        edge = grid.insert_edge(face.verts[0], face.verts[2], some_attr='blue')
+        assert edge.some_attr == 'blue'
+        assert edge.pair.some_attr == 'blue'
+
+    def test_edge_attrs_pass(self, he_meshes: Dict[str, Any]) -> None:
+        """ Shared face edge attributes pass to new edge """
+        grid = he_meshes["grid"]
+        face = random.choice(tuple(grid.faces))
+        for edge in face.edges:
+            edge.some_attr='red'
+        edge = grid.insert_edge(face.verts[0], face.verts[2])
+        assert edge.some_attr == 'red'
+        assert edge.pair.some_attr == 'red'
+
+
+def test_insert_edge_marks_changes(he_meshes: Dict[str, Any]) -> None:
+    """Insert_edge affected faces and new edge have new sns."""
+    grid = he_meshes["grid"]
+    max_sn = grid.last_issued_sn
+    face = random.choice(tuple(grid.faces))
+    orig, dest = face.verts[0], face.verts[2]
+    ops.insert_edge(grid, orig, dest, face)
+
+    assert len([x for x in grid.edges if x.sn > max_sn]) == 2
+    assert len([x for x in grid.faces if x.sn > max_sn]) == 1
+    assert len([x for x in grid.elements if x.sn > max_sn]) == 3
+
+
+def test_insert_edge_0to1() -> None:
+    """Creates a valid mesh from either direction."""
+    mesh = mesh_from_vlvi(
+        [(0, 0), (1, 0), (2, 0), (2, 1), (1, 1), (0, 1)], {(0, 1, 2, 3, 4, 5)}
+    )
+    face = next(iter(mesh.faces))
+    verts = sorted_by_sn(mesh.verts)[1::3]
+    ops.insert_edge(mesh, verts[0], verts[1], face)
+    validate_mesh(mesh)
+
+
+def test_insert_edge_1to0() -> None:
+    mesh = mesh_from_vlvi(
+        [(0, 0), (1, 0), (2, 0), (2, 1), (1, 1), (0, 1)], {(0, 1, 2, 3, 4, 5)}
+    )
+    face = next(iter(mesh.faces))
+    verts = sorted_by_sn(mesh.verts)[1::3]
+    ops.insert_edge(mesh, verts[1], verts[0], face)
+    validate_mesh(mesh)
 
 
 def test_full_edges_only(he_meshes: Dict[str, Any]) -> None:
@@ -59,7 +242,8 @@ def test_remove_edge_bridge(meshes_vlvi: Dict[str, Any]) -> None:
     row_vi = {x for x in meshes_vlvi["grid_vi"] if not any(y > 7 for y in x)}
     mesh = mesh_from_vlvi(row_vl, row_vi)
     outer_center_edges = [
-        x for x in mesh.edges
+        x
+        for x in mesh.edges
         if x.orig.valence == 3 and x.dest.valence == 3 and x.pair.face in mesh.holes
     ]
     ops.remove_edge(mesh, outer_center_edges[0])
@@ -120,7 +304,7 @@ def test_remove_vert_bridge(he_meshes: Dict[str, Any]) -> None:
     for i in (0, 5, 10):
         ops.remove_vert(mesh, verts[i])
         validate_mesh(mesh)
-    snapshot = StaticHalfEdges(mesh.edges)
+    snapshot = HalfEdges(mesh.edges)
     with pytest.raises(ManifoldMeshError) as err:
         ops.remove_vert(mesh, verts[15])
     assert "would create non-manifold" in err.value.args[0]
@@ -169,51 +353,6 @@ def test_remove_vert_peninsulas(he_meshes: Dict[str, Any]) -> None:
 #     with pytest.raises(ManifoldMeshError) as err:
 #         ops.remove_face(mesh, center_face)
 #     assert "would create non-manifold" in err.value.args[0]
-
-
-def test_insert_will_not_overwrite(he_meshes: Dict[str, Any]) -> None:
-    """Raise exception if attempting to overwrite existing edge."""
-    grid = he_meshes["grid"]
-    face = sorted_by_sn(grid.faces)[0]
-    edge = sorted_by_sn(grid.edges)[0]
-    orig, dest = edge.orig, edge.dest
-    with pytest.raises(ManifoldMeshError) as err:
-        ops.insert_edge(grid, orig, dest, face)
-    assert "overwriting existing edge" in err.value.args[0]
-
-
-def test_insert_edge_marks_changes(he_meshes: Dict[str, Any]) -> None:
-    """Insert_edge affected faces and new edge have new sns."""
-    grid = he_meshes["grid"]
-    max_sn = grid.last_issued_sn
-    face = random.choice(tuple(grid.faces))
-    orig, dest = face.verts[0], face.verts[2]
-    ops.insert_edge(grid, orig, dest, face)
-
-    assert len([x for x in grid.edges if x.sn > max_sn]) == 2
-    assert len([x for x in grid.faces if x.sn > max_sn]) == 1
-    assert len([x for x in grid.elements if x.sn > max_sn]) == 3
-
-
-def test_insert_edge_0to1() -> None:
-    """Creates a valid mesh from either direction."""
-    mesh = mesh_from_vlvi(
-        [(0, 0), (1, 0), (2, 0), (2, 1), (1, 1), (0, 1)], {(0, 1, 2, 3, 4, 5)}
-    )
-    face = next(iter(mesh.faces))
-    verts = sorted_by_sn(mesh.verts)[1::3]
-    ops.insert_edge(mesh, verts[0], verts[1], face)
-    validate_mesh(mesh)
-
-
-def test_insert_edge_1to0() -> None:
-    mesh = mesh_from_vlvi(
-        [(0, 0), (1, 0), (2, 0), (2, 1), (1, 1), (0, 1)], {(0, 1, 2, 3, 4, 5)}
-    )
-    face = next(iter(mesh.faces))
-    verts = sorted_by_sn(mesh.verts)[1::3]
-    ops.insert_edge(mesh, verts[1], verts[0], face)
-    validate_mesh(mesh)
 
 
 def test_remove_then_insert(meshes_vlvi: Dict[str, Any]) -> None:

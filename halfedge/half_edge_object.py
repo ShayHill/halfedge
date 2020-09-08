@@ -16,16 +16,15 @@ class HalfEdges(StaticHalfEdges):
         """
         Infer which face two verts lie on.
 
-        :return: face (in unambiguous) on which verts lie
+        :return: face (if unambiguous) on which verts lie
 
         Able to infer from:
-            * empty mesh: a new Hole
-            * one vert on a face: that face
             * both verts on same face: that face
+            * empty mesh: a new Hole
         """
         if not self.edges:
             return Hole()
-        shared_faces = set(orig.faces) | set(dest.faces)
+        shared_faces = set(orig.faces) & set(dest.faces)
         if len(shared_faces) == 1:
             return shared_faces.pop()
         raise ValueError("face cannot be determined from orig and dest")
@@ -36,10 +35,18 @@ class HalfEdges(StaticHalfEdges):
         """
         Insert a new edge between two verts.
 
-        :orig: origin of new edge
-        :dest: destination of new edge
-        :face: edge will lie on or split face
+        :param orig: origin of new edge
+        :param dest: destination of new edge
+        :param face: edge will lie on or split face (will infer in unambiguous)
+        :param edge_kwargs: set attributes for new edge
         :returns: newly inserted edge
+
+        :raises: ValueError if no face is given and face is ambiguous
+        :raises: ManifoldMeshError if
+            * overwriting existing edge
+            * any vert in mesh but not on face
+            * orig and dest are the same
+            * edge is not connected to mesh (and mesh is not empty)
 
         Edge face is created.
         Pair face is retained.
@@ -51,22 +58,31 @@ class HalfEdges(StaticHalfEdges):
             * an existing Vert to a new vert inside the face
             * a new vert inside the face to an existing vert
             * two new verts to create a floating edge in an empty mesh.
+
+        Passes attributes:
+
+            * shared face.edges attributes passed to new edge
+            * edge_kwargs passed to new edge
+            * face attributes passed to new face if face is split
         """
         if face is None:
             face = self._infer_face(orig, dest)
 
         face_edges = face.edges
+        face_verts = face.verts
         orig2edge = {x.orig: x for x in face_edges}
         dest2edge = {x.dest: x for x in face_edges}
-
-        if set(face.verts) & {orig, dest} != self.verts & {orig, dest}:
-            raise ManifoldMeshError("orig or dest in mesh but not on given face")
 
         if getattr(orig, "edge", None) and dest in orig.neighbors:
             raise ManifoldMeshError("overwriting existing edge")
 
+        if set(face.verts) & {orig, dest} != self.verts & {orig, dest}:
+            raise ManifoldMeshError("orig or dest in mesh but not on given face")
+
+        if orig == dest:
+            raise ManifoldMeshError('orig and dest are the same')
+
         if not set(face.verts) & {orig, dest} and face in self.faces:
-            # TODO: test adding edge to an empty mesh
             raise ManifoldMeshError("adding floating edge to existing face")
 
         edge = Edge(*face_edges, orig=orig, **edge_kwargs)
@@ -77,7 +93,7 @@ class HalfEdges(StaticHalfEdges):
         pair.prev = dest2edge.get(dest, edge)
 
         _face_edges(face, pair)
-        if len(set(face.verts) & {orig, dest}) == 2:
+        if len(set(face_verts) & {orig, dest}) == 2:
             _face_edges(Face(face), edge)
 
         self.edges.update({edge, pair})

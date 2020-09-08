@@ -21,6 +21,7 @@ from typing import Any, List, Optional, Set, cast
 
 from .half_edge_elements import Edge, Face, Hole, ManifoldMeshError, Vert
 from .half_edge_querries import StaticHalfEdges
+from .half_edge_object import HalfEdges
 
 
 def infer_holes(edges: Set[Edge]) -> Set[Edge]:
@@ -162,13 +163,13 @@ def edges_from_vr(
 
 def mesh_from_vlvi(
     vl: List[Any], vi: List[List[int]], hi: Optional[List[List[int]]] = None
-) -> StaticHalfEdges:
+) -> HalfEdges:
     """A HalfEdges instance from vl, vi, and optionally hi."""
-    return StaticHalfEdges(edges_from_vlvi(vl, vi, hi))
+    return HalfEdges(edges_from_vlvi(vl, vi, hi))
 
 
 def mesh_from_vr(
     vr: List[List[Vert]], hr: Optional[List[List[Vert]]] = None
-) -> StaticHalfEdges:
+) -> HalfEdges:
     """A HalfEdges instance from vr and optionally hr."""
-    return StaticHalfEdges(edges_from_vr(vr, hr))
+    return HalfEdges(edges_from_vr(vr, hr))
