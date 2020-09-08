@@ -8,14 +8,15 @@ from typing import Any, Dict
 
 import pytest
 
-from ..halfedge.classes import ManifoldMeshError, HalfEdges, Vert
+from ..halfedge.half_edge_elements import ManifoldMeshError, Vert
+from ..halfedge.half_edge_querries import StaticHalfEdges
 from ..halfedge.constructors import mesh_from_vlvi
 from ..halfedge.validations import validate_mesh
 
 
 def test_validate_mesh_empty() -> None:
     """Passes on empty mesh."""
-    mesh = HalfEdges(edges=set())
+    mesh = StaticHalfEdges(edges=set())
     # assert NOT raises
     validate_mesh(mesh)
 

@@ -12,7 +12,8 @@ created: 181127
 from itertools import chain
 from typing import Iterator, Set, Any, Callable, TypeVar
 
-from .classes import HalfEdges, Face, ManifoldMeshError
+from .half_edge_elements import Face, ManifoldMeshError
+from .half_edge_querries import StaticHalfEdges
 
 T = TypeVar("T")
 
@@ -36,7 +37,7 @@ def _does_reach_all(set_: Set[Any], f_next: Callable[[T], Iterator[T]]) -> bool:
     return not bool(found ^ set_)
 
 
-def validate_mesh(mesh: HalfEdges) -> None:
+def validate_mesh(mesh: StaticHalfEdges) -> None:
     """Test for a "legal" mesh."""
     if not mesh.edges:
         return

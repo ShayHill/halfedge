@@ -14,16 +14,16 @@ import pytest
 
 # noinspection PyProtectedMember,PyProtectedMember
 from .conftest import compare_circular, compare_circular_2
-from ..halfedge.classes import (
+from ..halfedge.half_edge_elements import (
     Edge,
     Face,
-    HalfEdges,
     Hole,
     ManifoldMeshError,
     Vert,
     _MeshElementBase,
     _function_lap,
 )
+from ..halfedge.half_edge_querries import StaticHalfEdges
 
 alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 identifiers = (
@@ -92,13 +92,13 @@ class TestMeshElementBase:
     def test_fill_from_preserves_attrs(self) -> None:
         """Does not overwrite attrs."""
         a_is_1 = _MeshElementBase(a=1)
-        a_is_2 = _MeshElementBase(a=2, fill_from=a_is_1)
+        a_is_2 = _MeshElementBase(a_is_1, a=2)
         assert getattr(a_is_2, "a") == 2
 
     def test_fill_attrs_from_fills_missing(self) -> None:
         """Fills attrs if not present."""
         b_is_3 = _MeshElementBase(a=1, b=3)
-        a_is_2 = _MeshElementBase(a=2, fill_from=b_is_3)
+        a_is_2 = _MeshElementBase(b_is_3, a=2)
         assert getattr(a_is_2, "a") == 2
         assert getattr(a_is_2, "b") == 3
 
@@ -199,7 +199,7 @@ class TestElementSubclasses:
     def test_vert_verts(self, he_triangle: Dict[str, Any]) -> None:
         """Is equivalent to vert_edge.dest for vert.edge."""
         for vert in he_triangle["verts"]:
-            assert vert.verts == [x.dest for x in vert.edge.vert_edges]
+            assert vert.neighbors == [x.dest for x in vert.edge.vert_edges]
 
     def test_vert_valence(self, he_triangle: Dict[str, Any]) -> None:
         """Valence is two for every corner in a triangle."""
@@ -232,7 +232,7 @@ def test_half_edges_init(he_triangle: Dict[str, Any]) -> None:
     faces = set(he_triangle["faces"])
     holes = set(he_triangle["holes"])
 
-    mesh = HalfEdges(edges)
+    mesh = StaticHalfEdges(edges)
 
     assert mesh.verts == verts
     assert mesh.edges == edges

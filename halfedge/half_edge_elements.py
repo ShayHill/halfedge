@@ -6,15 +6,34 @@
 A simple container for a list of half edges. Provides lookups and a serial
 number for each mesh element (Vert, Edge, Face, or Hole).
 
-No transformations, with the exception of _MeshElementBase.assign_new_sn.
+This is a typical halfedges data structure. Exceptions:
+
+    * Faces and Holes are two different (but identical except in name) types. This is
+      to simplify working with 2D meshes. You can
+          - define a 2d mesh with triangles
+          - explicitly or algorithmically define holes to keep the mesh manifold
+          - ignore the holes after that. They won't be returned when, for instance,
+            iterating over mesh faces.
+      Boundary verts, and boundary edges are identified by these holes, but that all
+      happens internally, so the holes can again be ignored for most things.
+
+    * Orig, pair, face, and next assignments are mirrored, so a.pair = b will
+      set a.pair = b and b.pair = a. This makes edge insertion, etc. cleaner,
+      but the whole thing is still easy to break. Hopefully, I've provided enough
+      insertion / removal code to get you over the pitfalls. Halfedges is clever when
+      it's all built, but a lot has to be temporarily broken down to transform the
+      mesh. All I can say is, write a lot of tests if you want to extend the
+      insertion / removal methods here.
+
+This module is all the base elements (Vert, Edge, Face, Hole).
 
 # 2006 June 05
 # 2012 September 30
 """
 from __future__ import annotations
 
-from operator import attrgetter
-from typing import Any, Callable, Dict, List, Optional, Set, Tuple, TypeVar, Union
+from typing import Any, Callable, List, Optional, TypeVar, Union, Dict
+from contextlib import suppress
 
 
 class ManifoldMeshError(ValueError):
@@ -26,6 +45,30 @@ class ManifoldMeshError(ValueError):
     so you might catch this one and continue in some cases, but many operations will
     require valid, manifold mesh data to infer.
     """
+
+def array_equal(*args: Any):
+    with suppress(ValueError):
+        # should work for everything except numpy
+        return all(x == args[0] for x in args[1:])
+    with suppress(TypeError):
+        # for numpy, which would return [True, True, ...]
+        return all(all(x == args[0]) for x in args[1:])  # type: ignore
+    raise ValueError(f"module does not support equality test between {args}")
+
+KeyT = TypeVar("KeyT")
+
+def get_dict_intersection(*dicts: Dict[KeyT, Any]) -> Dict[KeyT, Any]:
+    """
+    Identical key: value items from multiple dictionaries.
+
+    """
+    if not dicts:
+        return {}
+    intersection = {}
+    for key in set.intersection(*(set(x.keys()) for x in dicts)):
+        if array_equal(*(x[key] for x in dicts)):
+            intersection[key] = dicts[0][key]
+    return intersection
 
 
 T = TypeVar("T")
@@ -51,7 +94,7 @@ class _MeshElementBase:
     sn: int
     last_issued_sn: int = -1
 
-    def __init__(self: T, *, fill_from: Optional[T] = None, **kwargs: Any) -> None:
+    def __init__(self: T, *fill_from: T, **kwargs: Any) -> None:
         """
         Create an instance withe a new serial number (and copy attrs from fill_from).
 
@@ -62,9 +105,14 @@ class _MeshElementBase:
         1. attributes passes as kwargs to init
         2. attributes inherited from fill_from argument
         """
-        attrs = getattr(fill_from, "__dict__", {})
+        # TODO: remove assertion after 100% test coverage
+        assert 'fill_from' not in kwargs
+
+        attrs = get_dict_intersection(*(x.__dict__ for x in fill_from))
         attrs.update(kwargs)
         for key, val in attrs.items():
+            if key in self.__annotations__:
+                key = key.lstrip('_')
             setattr(self, key, val)
 
         _MeshElementBase.last_issued_sn += 1
@@ -74,6 +122,7 @@ class _MeshElementBase:
         """Copy attributes from :other:. Do not overwrite existing self attributes."""
         for key, val in other.__dict__.items():
             setattr(self, key, getattr(self, key, val))
+
 
 
 FLapArgT = TypeVar("FLapArgT")
@@ -118,12 +167,19 @@ class Vert(_MeshElementBase):
     @property
     def edges(self) -> List[Edge]:
         """ Half edges radiating from vert. """
-        return self.edge.vert_edges
+        if hasattr(self, 'edge'):
+            return self.edge.vert_edges
+        return []
 
     @property
-    def verts(self) -> List[Vert]:
+    def faces(self) -> List[Face]:
+        """ Faces radiating from vert """
+        return [x.face for x in self.edges]
+
+    @property
+    def neighbors(self) -> List[Vert]:
         """ Evert vert connected to vert by one edge. """
-        return self.edge.vert_verts
+        return [x.dest for x in self.edges]
 
     @property
     def valence(self) -> int:
@@ -261,110 +317,3 @@ class Hole(Face):
     """ A copy of Face to differentiate b/t interior edges and boundaries. """
 
 
-class HalfEdges:
-    """Basic half edge lookups.
-
-    Some properties require a manifold mesh, but the Edge type does support
-    explicitly defined holes. Holes provide enough information to pair and link all
-    half edges, but will be ignored in any "for face in" constructs.
-    """
-
-    def __init__(self, edges: Optional[Set[Edge]] = None) -> None:
-        if edges is None:
-            self.edges = set()
-        else:
-            self.edges = edges
-
-    @property
-    def verts(self) -> Set[Vert]:
-        """Look up all verts in mesh."""
-        return {x.orig for x in self.edges}
-
-    @property
-    def faces(self) -> Set[Face]:
-        """Look up all faces in mesh."""
-        return {x.face for x in self.edges if type(x.face) is Face}
-
-    @property
-    def holes(self) -> Set[Hole]:
-        """Look up all holes in mesh."""
-        return {x.face for x in self.edges if type(x.face) is Hole}
-
-    @property
-    def elements(self) -> Set[_MeshElementBase]:
-        """All elements in mesh"""
-        return self.verts | self.edges | self.faces | self.holes
-
-    @property
-    def last_issued_sn(self) -> int:
-        """Look up the last serial number issued to any mesh element."""
-        return next(iter(self.edges)).last_issued_sn
-
-    @property
-    def boundary_edges(self) -> Set[Edge]:
-        """Look up edges on holes."""
-        return {x for x in self.edges if type(x.face) is Hole}
-
-    @property
-    def boundary_verts(self) -> Set[Vert]:
-        """Look up all verts on hole boundaries."""
-        return {x.orig for x in self.boundary_edges}
-
-    @property
-    def interior_edges(self):
-        """Look up edges on faces."""
-        return self.edges - self.boundary_edges
-
-    @property
-    def interior_verts(self) -> Set[Vert]:
-        """Look up all verts not on hole boundaries."""
-        return self.verts - self.boundary_verts
-
-    @property
-    def vl(self) -> List[Vert]:
-        """ Sorted list of verts """
-        return sorted(self.verts, key=attrgetter("sn"))
-
-    @property
-    def el(self) -> List[Edge]:
-        """ Sorted list of edges """
-        return sorted(self.edges, key=attrgetter("sn"))
-
-    @property
-    def fl(self) -> List[Face]:
-        """ Sorted list of faces """
-        return sorted(self.faces, key=attrgetter("sn"))
-
-    @property
-    def hl(self) -> List[Hole]:
-        """ Sorted list of holes """
-        return sorted(self.holes, key=attrgetter("sn"))
-
-    @property
-    def _vert2list_index(self) -> Dict[Vert, int]:
-        """self.vl mapped to list indices."""
-        return {vert: cnt for cnt, vert in enumerate(self.vl)}
-
-    @property
-    def ei(self) -> Set[Tuple[int, int]]:
-        """Edges as a set of paired vert indices."""
-        v2i = self._vert2list_index
-        return {(v2i[edge.orig], v2i[edge.dest]) for edge in self.edges}
-
-    @property
-    def fi(self) -> Set[Tuple[int, ...]]:
-        """Faces as a set of tuples of vl indices.
-
-        returns [[0, 1, 2, 3], [1, 0, 4, 5] ...]
-        """
-        v2i = self._vert2list_index
-        return {tuple(v2i[x] for x in face.verts) for face in self.faces}
-
-    @property
-    def hi(self) -> Set[Tuple[int, ...]]:
-        """Holes as a set of tuples of vl indices.
-
-        returns [[0, 1, 2, 3], [1, 0, 4, 5] ...]
-        """
-        v2i = self._vert2list_index
-        return {tuple(v2i[x] for x in hole.verts) for hole in self.holes}

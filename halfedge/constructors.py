@@ -16,52 +16,49 @@ then passing that raw data to mesh_from_vr would create a mesh with 6 faces and
 24 (not 8!) Vert instances.
 """
 
-# TODO: project types
 
-from typing import Set, List, Optional, Dict, cast
+from typing import Any, List, Optional, Set, cast
 
-from .classes import Edge, Face, ManifoldMeshError, Vert, HalfEdges, Hole, Coordinate
+from .half_edge_elements import Edge, Face, Hole, ManifoldMeshError, Vert
+from .half_edge_querries import StaticHalfEdges
 
 
 def infer_holes(edges: Set[Edge]) -> Set[Edge]:
-    """Create pairs for unpaired edges. Try to connect into hole faces."""
-    orig2pair = cast(Dict[Vert, Edge], {})
+    """
+    Fill in missing hole faces where unambiguous.
 
-    for edge in [x for x in edges if getattr(x, "pair", None) is None]:
+    :param edges: Edge instances
+    :returns: input edges plus hole edges
+    :raises: Manifold mesh error if holes touch at corners. If this happens, holes are
+    ambiguous.
 
-        if edge.dest in orig2pair:
-            raise ManifoldMeshError(
-                "Ambiguous 'next' in inferred pair edge."
-                " Inferred holes probably meet at corner."
-            )
-        else:
-            orig2pair[edge.dest] = Edge(orig=edge.dest, pair=edge)
+    Create pairs for unpaired edges. Try to connect into hole faces.
 
-    for edge in orig2pair.values():
+    This will be most applicable to a 2D mesh defined by positive space (faces,
+    not holes). The halfedge data structure requires a manifold mesh, which among
+    other things means that every edge must have a pair. This can be accomplished
+    by creating a hole face around the positive space (provided the boundary of the
+    space is contiguous).
 
-        try:
-            edge.next = orig2pair[edge.dest]
-            edge.pair.pair = edge
+    This function can also fill in holes inside the mesh.
+    """
+    hole_edges = {Edge(orig=x.dest, pair=x) for x in edges if not hasattr(x, "pair")}
+    orig2hole_edge = {x.orig: x for x in hole_edges}
 
-        except KeyError:
-            raise ManifoldMeshError(
-                "Bad input data. Paired edge on inferred hole boundary."
-                " Following inferred edges and hit a dead end."
-            )
+    if len(orig2hole_edge) < len(hole_edges):
+        raise ManifoldMeshError(
+            "Ambiguous 'next' in inferred pair edge."
+            " Inferred holes probably meet at corner."
+        )
 
-    free_edges = set(orig2pair.values())
-
-    while free_edges:
-
-        hole_edges = free_edges.pop().face_edges
-        hole = Hole(edge=hole_edges[0])
-        for edge in hole_edges:
-            edge.face = hole
-
-        free_edges -= set(hole_edges)
-
-        edges.update(hole_edges)
-
+    while orig2hole_edge:
+        orig, edge = next(iter(orig2hole_edge.items()))
+        edge.face = Hole()
+        while edge.dest in orig2hole_edge:
+            edge.next = orig2hole_edge.pop(edge.dest)
+            edge.next.face = edge.face
+            edge = edge.next
+    edges.update(hole_edges)
     return edges
 
 
@@ -84,7 +81,7 @@ def find_pairs(edges: Set[Edge]) -> None:
 
 
 def edges_from_vlvi(
-    vl: List[Coordinate], vi: List[List[int]], hi: Optional[List[List[int]]] = None
+    vl: List[Any], vi: List[List[int]], hi: Optional[List[List[int]]] = None
 ) -> Set[Edge]:
     """A set of half edges from a vertex list and vertex index.
 
@@ -164,14 +161,14 @@ def edges_from_vr(
 
 
 def mesh_from_vlvi(
-    vl: List[Coordinate], vi: List[List[int]], hi: Optional[List[List[int]]] = None
-) -> HalfEdges:
+    vl: List[Any], vi: List[List[int]], hi: Optional[List[List[int]]] = None
+) -> StaticHalfEdges:
     """A HalfEdges instance from vl, vi, and optionally hi."""
-    return HalfEdges(edges_from_vlvi(vl, vi, hi))
+    return StaticHalfEdges(edges_from_vlvi(vl, vi, hi))
 
 
 def mesh_from_vr(
     vr: List[List[Vert]], hr: Optional[List[List[Vert]]] = None
-) -> HalfEdges:
+) -> StaticHalfEdges:
     """A HalfEdges instance from vr and optionally hr."""
-    return HalfEdges(edges_from_vr(vr, hr))
+    return StaticHalfEdges(edges_from_vr(vr, hr))

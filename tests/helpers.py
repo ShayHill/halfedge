@@ -7,22 +7,23 @@ created: 181121 13:14:06
 
 from typing import Any, List, Set, Tuple, cast
 
-from ..halfedge import classes
+import halfedge.half_edge_querries
+from ..halfedge import half_edge_elements
 
-def _canon_face_rep(face: classes.Face) -> List[Any]:
+def _canon_face_rep(face: half_edge_elements.Face) -> List[Any]:
     """Canonical face representation: value tuples starting at min."""
     coordinates = [x.coordinate for x in face.verts]
     idx_min = coordinates.index(min(coordinates))
     return coordinates[idx_min:] + coordinates[:idx_min]
 
 
-def _canon_he_rep(edges: Set[classes.Edge]) -> Tuple[List[Any], List[Any]]:
+def _canon_he_rep(edges: Set[half_edge_elements.Edge]) -> Tuple[List[Any], List[Any]]:
     """Canonical mesh representation [faces, holes].
 
     faces or holes = [canon_face_rep(face), ...]
     """
-    faces = set(x.face for x in edges if not isinstance(x.face, classes.Hole))
-    holes = set(x.face for x in edges if isinstance(x.face, classes.Hole))
+    faces = set(x.face for x in edges if not isinstance(x.face, half_edge_elements.Hole))
+    holes = set(x.face for x in edges if isinstance(x.face, half_edge_elements.Hole))
     face_reps = cast(List[Any], [_canon_face_rep(x) for x in faces])
     hole_reps = cast(List[Any], [_canon_face_rep(x) for x in holes])
 
@@ -30,7 +31,7 @@ def _canon_he_rep(edges: Set[classes.Edge]) -> Tuple[List[Any], List[Any]]:
 
 
 def are_equivalent_edges(
-    edges_a: Set[classes.Edge], edges_b: Set[classes.Edge]
+    edges_a: Set[half_edge_elements.Edge], edges_b: Set[half_edge_elements.Edge]
 ) -> bool:
     """Do edges lay on the same vert values with same geometry?"""
     faces_a, holes_a = _canon_he_rep(edges_a)
@@ -44,6 +45,6 @@ def are_equivalent_edges(
     return are_same
 
 
-def are_equivalent_meshes(mesh_a: classes.HalfEdges, mesh_b: classes.HalfEdges) -> bool:
+def are_equivalent_meshes(mesh_a: halfedge.half_edge_querries.StaticHalfEdges, mesh_b: halfedge.half_edge_querries.StaticHalfEdges) -> bool:
     """Do meshes lay on the same vert values with same geometry?"""
     return are_equivalent_edges(mesh_a.edges, mesh_b.edges)

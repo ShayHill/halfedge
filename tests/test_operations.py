@@ -11,7 +11,8 @@ from typing import Any, Dict
 
 import pytest
 from ..halfedge import operations as ops
-from ..halfedge.classes import HalfEdges, ManifoldMeshError, Vert, Hole
+from ..halfedge.half_edge_elements import ManifoldMeshError, Vert, Hole
+from ..halfedge.half_edge_querries import StaticHalfEdges
 from ..halfedge.constructors import mesh_from_vlvi
 from ..halfedge.validations import validate_mesh
 from .helpers import are_equivalent_meshes
@@ -119,7 +120,7 @@ def test_remove_vert_bridge(he_meshes: Dict[str, Any]) -> None:
     for i in (0, 5, 10):
         ops.remove_vert(mesh, verts[i])
         validate_mesh(mesh)
-    snapshot = HalfEdges(mesh.edges)
+    snapshot = StaticHalfEdges(mesh.edges)
     with pytest.raises(ManifoldMeshError) as err:
         ops.remove_vert(mesh, verts[15])
     assert "would create non-manifold" in err.value.args[0]
@@ -177,7 +178,7 @@ def test_insert_will_not_overwrite(he_meshes: Dict[str, Any]) -> None:
     edge = sorted_by_sn(grid.edges)[0]
     orig, dest = edge.orig, edge.dest
     with pytest.raises(ManifoldMeshError) as err:
-        ops.insert_edge(grid, face, orig, dest)
+        ops.insert_edge(grid, orig, dest, face)
     assert "overwriting existing edge" in err.value.args[0]
 
 
@@ -187,7 +188,7 @@ def test_insert_edge_marks_changes(he_meshes: Dict[str, Any]) -> None:
     max_sn = grid.last_issued_sn
     face = random.choice(tuple(grid.faces))
     orig, dest = face.verts[0], face.verts[2]
-    ops.insert_edge(grid, face, orig, dest)
+    ops.insert_edge(grid, orig, dest, face)
 
     assert len([x for x in grid.edges if x.sn > max_sn]) == 2
     assert len([x for x in grid.faces if x.sn > max_sn]) == 1
@@ -201,7 +202,7 @@ def test_insert_edge_0to1() -> None:
     )
     face = next(iter(mesh.faces))
     verts = sorted_by_sn(mesh.verts)[1::3]
-    ops.insert_edge(mesh, face, verts[0], verts[1])
+    ops.insert_edge(mesh, verts[0], verts[1], face)
     validate_mesh(mesh)
 
 
@@ -211,7 +212,7 @@ def test_insert_edge_1to0() -> None:
     )
     face = next(iter(mesh.faces))
     verts = sorted_by_sn(mesh.verts)[1::3]
-    ops.insert_edge(mesh, face, verts[1], verts[0])
+    ops.insert_edge(mesh, verts[1], verts[0], face)
     validate_mesh(mesh)
 
 
@@ -226,7 +227,7 @@ def test_remove_then_insert(meshes_vlvi: Dict[str, Any]) -> None:
 
         for edge in tuple(e for e in test.edges if e.sn < e.pair.sn):
             ops.remove_edge(test, edge)
-            ops.insert_edge(test, edge.pair.face, edge.orig, edge.dest)
+            ops.insert_edge(test, edge.orig, edge.dest, edge.pair.face)
             # try:
             #     assert are_equivalent_meshes(test, ctrl)
             # except:
@@ -243,7 +244,7 @@ def test_insert_edge_new_vert() -> None:
     face = sorted_by_sn(mesh.faces)[0]
     orig = sorted_by_sn(mesh.verts)[0]
     new_vert = Vert(mesh=mesh, coordinate=(0.5, 0.5))
-    ops.insert_edge(mesh, face, orig, new_vert)
+    ops.insert_edge(mesh, orig, new_vert, face)
     validate_mesh(mesh)
 
     # TODO: restore vlvi checks
@@ -289,9 +290,8 @@ def test_split_edge_updates_sns(he_meshes: Dict[str, Any]) -> None:
 
         for edge in tuple(filter(lambda x: x.sn < x.pair.sn, mesh.edges)):
 
-            vert = Vert()
             max_sn = mesh.last_issued_sn
-            ops.split_edge(mesh, edge, vert)
+            ops.split_edge(mesh, edge)
             validate_mesh(mesh)
 
             # updated serial numbers
@@ -309,14 +309,13 @@ def test_split_edge_destroys_old_edges(he_meshes: Dict[str, Any]) -> None:
     edge = next(iter(mesh.edges))
     pair = edge.pair
 
-    vert = Vert()
-    ops.split_edge(mesh, edge, vert)
+    ops.split_edge(mesh, edge)
 
     with pytest.raises(ValueError):
-        ops.split_edge(mesh, edge, vert)
+        ops.split_edge(mesh, edge)
 
     with pytest.raises(ValueError):
-        ops.split_edge(mesh, pair, vert)
+        ops.split_edge(mesh, pair)
 
 
 def test_add_edge_vert_passes_all_attrs() -> None:
@@ -332,7 +331,7 @@ def test_add_edge_vert_passes_all_attrs() -> None:
     edge.pass_this = "edge attr"  # type: ignore
     edge.pair.pass_this = "pair attr"  # type: ignore
 
-    ops.split_edge(mesh, edge, Vert())
+    ops.split_edge(mesh, edge)
     new_edges = {x for x in mesh.edges if x.sn > max_sn}
     assert len(new_edges) == 4
     edge = next(x for x in new_edges if hasattr(x.orig, "mark"))
