@@ -12,46 +12,34 @@ No transformations, with the exception of _MeshElementBase.assign_new_sn.
 # 2012 September 30
 """
 from __future__ import annotations
-from contextlib import suppress
+
 from operator import attrgetter
-
-from typing import (
-    Any,
-    Callable,
-    List,
-    Optional,
-    Sequence,
-    Set,
-    Tuple,
-    TypeVar,
-    Dict,
-    Optional,
-)
-
-T = TypeVar("T")
-
-Coordinate = Any
-# TODO: remove coordinate
+from typing import Any, Callable, Dict, List, Optional, Set, Tuple, TypeVar, Union
 
 
 class ManifoldMeshError(ValueError):
-    """Incorrect arguments passed to HalfEdges init.
+    """
+    Incorrect arguments passed to HalfEdges init.
 
     ... or something broken along the way. List of edges do not represent a valid
     (manifold) half edge data structure. Some properties will still be available,
-    so you might catch this one and continue, but many operations will require valid,
-    manifold mesh data to infer.
+    so you might catch this one and continue in some cases, but many operations will
+    require valid, manifold mesh data to infer.
     """
 
 
+T = TypeVar("T")
+
+
 class _MeshElementBase:
-    """A namespace that == on id, not equivalency. counts instances.
+    """
+    A namespace that == on id, not equivalency. counts instances.
 
-    Vert, Edge, Face, and Hole elements
-
-        * are assigned a serial number at creation.
-        * are sortable by serial number
-        * current highest serial number is available as self.last_issued_sn
+    * Vert, Edge, Face, and Hole elements are assigned a serial number at creation.
+    * Vert, Edge, Face, and Hole share a sequence of serial numbers (i.e., there will
+        be no duplicate serial numbers between instances of child classes of
+        _MeshElementBase).
+    * current highest serial number is available as self.last_issued_sn
 
     This allows for
 
@@ -63,37 +51,24 @@ class _MeshElementBase:
     sn: int
     last_issued_sn: int = -1
 
-    def __init__(
-        self: T,
-        mesh: Optional[HalfEdges] = None,
-        *,
-        fill_from: Optional[T] = None,
-        **kwargs: Any,
-    ) -> None:
+    def __init__(self: T, *, fill_from: Optional[T] = None, **kwargs: Any) -> None:
         """
-        Create a mesh instance with no
+        Create an instance withe a new serial number (and copy attrs from fill_from).
 
-        :param mesh:
-        :param fill_from:
-        :param kwargs:
+        :param fill_from: an instance of the same class
+        :param kwargs: attributes for new instance
+
+        Priority for attributes
+        1. attributes passes as kwargs to init
+        2. attributes inherited from fill_from argument
         """
+        attrs = getattr(fill_from, "__dict__", {})
+        attrs.update(kwargs)
+        for key, val in attrs.items():
+            setattr(self, key, val)
 
         _MeshElementBase.last_issued_sn += 1
         self.sn = self.last_issued_sn
-        # TODO: factor out mesh
-        if mesh is not None:
-            self.mesh = mesh
-        for key, val in kwargs.items():
-            with suppress(AttributeError):
-                setattr(self, key, val)
-        if fill_from is not None:
-            self.fill_from(fill_from)
-
-    # def assign_new_sn(self) -> None:
-    #     """Raise the serial number so this will look like a new element."""
-    #     # TODO: factor out
-    #     if hasattr(self, 'sn'):
-    #         return
 
     def fill_from(self: T, other: T) -> None:
         """Copy attributes from :other:. Do not overwrite existing self attributes."""
@@ -101,10 +76,18 @@ class _MeshElementBase:
             setattr(self, key, getattr(self, key, val))
 
 
-def _function_lap(func: Callable[[T], T], first_arg: T) -> List[T]:
-    """Repeatedly apply func till first_arg is reached again.
+FLapArgT = TypeVar("FLapArgT")
 
-    [first_arg, func(first_arg), func(func(first_arg)) ... first_arg]
+
+def _function_lap(
+    func: Callable[[FLapArgT], FLapArgT], first_arg: FLapArgT
+) -> List[FLapArgT]:
+    """
+    Repeatedly apply func till first_arg is reached again.
+
+    :param func: function takes one argument and returns a value of the same type
+    :returns: [first_arg, func(first_arg), func(func(first_arg)) ... first_arg]
+    :raises: ManifoldMeshError if any result except the first repeats
     """
     lap = [first_arg]
     while True:
@@ -118,8 +101,11 @@ def _function_lap(func: Callable[[T], T], first_arg: T) -> List[T]:
 class Vert(_MeshElementBase):
     """Half-edge mesh vertices.
 
+    required attributes
     :edge: pointer to one edge originating at vert
     """
+
+    _edge: Edge
 
     @property
     def edge(self) -> Edge:
@@ -131,17 +117,17 @@ class Vert(_MeshElementBase):
 
     @property
     def edges(self) -> List[Edge]:
-        """Half edges radiating from vert."""
+        """ Half edges radiating from vert. """
         return self.edge.vert_edges
 
     @property
     def verts(self) -> List[Vert]:
-        """Evert vert connected to vert by one edge."""
+        """ Evert vert connected to vert by one edge. """
         return self.edge.vert_verts
 
     @property
     def valence(self) -> int:
-        """Count the number of edges incident to vertex."""
+        """ The number of edges incident to vertex. """
         return len(self.edges)
 
 
@@ -155,11 +141,10 @@ class Edge(_MeshElementBase):
     :next: pointer to next edge along face
     """
 
-    orig: Vert
-    pair: Edge
-    face: Face
-    next: Edge
-    fill_from: Edge
+    _orig: Vert
+    _pair: Edge
+    _face: Union[Face, Hole]
+    _next: Edge
 
     @property
     def orig(self) -> Vert:
@@ -198,7 +183,7 @@ class Edge(_MeshElementBase):
 
     @property
     def prev(self) -> Edge:
-        """Look up the edge before self."""
+        """ Look up the edge before self. """
         try:
             return self.face_edges[-1]
         except (AttributeError, ManifoldMeshError):
@@ -210,7 +195,7 @@ class Edge(_MeshElementBase):
 
     @property
     def dest(self) -> Vert:
-        """Vert at the end of the edge (opposite of orig)."""
+        """ Vert at the end of the edge (opposite of orig). """
         try:
             return self.next.orig
         except AttributeError:
@@ -218,17 +203,18 @@ class Edge(_MeshElementBase):
 
     @property
     def face_edges(self) -> List[Edge]:
-        """All edges around an edge.face."""
+        """ All edges around an edge.face. """
         return _function_lap(lambda x: x.next, self)
 
     @property
     def face_verts(self) -> List[Vert]:
-        """All verts around an edge.vert."""
+        """ All verts around an edge.vert. """
         return [edge.orig for edge in self.face_edges]
 
     @property
     def vert_edges(self) -> List[Edge]:
-        """All half edges radiating from edge.orig.
+        """
+        All half edges radiating from edge.orig.
 
         These will be returned in the opposite "handedness" of the faces. IOW,
         if the faces are defined ccw, the vert_edges will be returned cw.
@@ -237,7 +223,7 @@ class Edge(_MeshElementBase):
 
     @property
     def vert_verts(self) -> List[Vert]:
-        """All verts connected to vert by one edge."""
+        """ All verts connected to vert by one edge. """
         return [edge.dest for edge in self.vert_edges]
 
 
@@ -248,30 +234,31 @@ class Face(_MeshElementBase):
     :edge: pointer to one edge on the face
     """
 
-    fill_from: Face
-    edge: Edge
+    _edge: Edge
 
     @property
     def edge(self) -> Edge:
+        """ One edge on the face """
         return self._edge
 
     @edge.setter
     def edge(self, edge: Edge) -> None:
+        """ Point face.edge back to face. """
         self._edge = edge
 
     @property
     def edges(self) -> List[Edge]:
-        """Look up all edges around face."""
+        """ Look up all edges around face. """
         return self.edge.face_edges
 
     @property
     def verts(self) -> List[Vert]:
-        """Look up all verts around face."""
+        """ Look up all verts around face. """
         return self.edge.face_verts
 
 
 class Hole(Face):
-    """A copy of Hole to differentiate b/t interior edges and boundaries."""
+    """ A copy of Face to differentiate b/t interior edges and boundaries. """
 
 
 class HalfEdges:
@@ -299,7 +286,7 @@ class HalfEdges:
         return {x.face for x in self.edges if type(x.face) is Face}
 
     @property
-    def holes(self) -> Set[Face]:
+    def holes(self) -> Set[Hole]:
         """Look up all holes in mesh."""
         return {x.face for x in self.edges if type(x.face) is Hole}
 
@@ -344,12 +331,12 @@ class HalfEdges:
         return sorted(self.edges, key=attrgetter("sn"))
 
     @property
-    def fl(self) -> List[Edge]:
+    def fl(self) -> List[Face]:
         """ Sorted list of faces """
         return sorted(self.faces, key=attrgetter("sn"))
 
     @property
-    def hl(self) -> List[Edge]:
+    def hl(self) -> List[Hole]:
         """ Sorted list of holes """
         return sorted(self.holes, key=attrgetter("sn"))
 
