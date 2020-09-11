@@ -5,13 +5,14 @@ created: 181121 13:14:06
 """
 from copy import deepcopy
 from itertools import product
-from typing import Any, Dict, List, Sequence
+from typing import Any, Dict, List, Sequence, Tuple
 
 import pytest
+from pytest_lazyfixture import lazy_fixture
 
-import halfedge.half_edge_querries
 from ..halfedge import half_edge_elements
 from ..halfedge.constructors import edges_from_vlvi
+from ..halfedge.half_edge_elements import Edge, Face
 from ..halfedge.half_edge_object import HalfEdges
 
 
@@ -21,8 +22,12 @@ def he_triangle() -> Dict[str, List[Any]]:
     mesh = HalfEdges()
     verts = [half_edge_elements.Vert(coordinate=x) for x in ((-1, 0), (1, 0), (0, 1))]
     faces = [half_edge_elements.Face(), half_edge_elements.Hole()]
-    inner_edges = [half_edge_elements.Edge(orig=verts[x], face=faces[0]) for x in range(3)]
-    outer_edges = [half_edge_elements.Edge(orig=verts[1 - x], face=faces[1]) for x in range(3)]
+    inner_edges = [
+        half_edge_elements.Edge(orig=verts[x], face=faces[0]) for x in range(3)
+    ]
+    outer_edges = [
+        half_edge_elements.Edge(orig=verts[1 - x], face=faces[1]) for x in range(3)
+    ]
     mesh.edges.update(inner_edges, outer_edges)
 
     for i in range(3):
@@ -69,29 +74,60 @@ def meshes_vlvi() -> Dict[str, Any]:
     # fmt: on
 
 
-# noinspection Pylint
-@pytest.fixture
-def he_meshes(meshes_vlvi: Dict[str, Any]) -> Dict[str, Any]:
+@pytest.fixture(scope="function")
+def he_cube(meshes_vlvi: Dict[str, Any]) -> HalfEdges:
+    return HalfEdges(edges_from_vlvi(meshes_vlvi["cube_vl"], meshes_vlvi["cube_vi"]))
+
+
+@pytest.fixture(scope="function")
+def he_grid(meshes_vlvi: Dict[str, Any]) -> HalfEdges:
+    return HalfEdges(edges_from_vlvi(meshes_vlvi["grid_vl"], meshes_vlvi["grid_vi"]))
+
+
+@pytest.fixture(params=[lazy_fixture("he_grid"), lazy_fixture("he_cube")])
+def he_mesh(request, he_cube, he_grid) -> HalfEdges:
     """A cube and a 3 x 3 grid as HalfEdges instances"""
-    cube = HalfEdges(
-        edges_from_vlvi(meshes_vlvi["cube_vl"], meshes_vlvi["cube_vi"])
-    )
-    for elem in cube.verts | cube.faces | cube.holes:
-        elem.mesh = cube
+    return request.param
 
-    grid = HalfEdges(
-        edges_from_vlvi(
-            meshes_vlvi["grid_vl"], meshes_vlvi["grid_vi"] #, meshes_vlvi["grid_hi"]
-        )
-    )
-    for elem in grid.verts | grid.faces | grid.holes:
-        elem.mesh = grid
 
-    return {"cube": cube, "grid": grid}
+@pytest.fixture(scope="function", params=range(9))
+def grid_faces(request, he_grid) -> Tuple[HalfEdges, Face]:
+    """A cube and a 3 x 3 grid as HalfEdges instances"""
+    return he_grid, he_grid.fl[request.param]
+
+
+@pytest.fixture(scope="function", params=range(6))
+def cube_faces(request, he_cube) -> Tuple[HalfEdges, Face]:
+    """A cube and a 3 x 3 grid as HalfEdges instances"""
+    return he_cube, he_cube.fl[request.param]
+
+
+@pytest.fixture(params=[lazy_fixture("grid_faces"), lazy_fixture("cube_faces")])
+def mesh_faces(request) -> Tuple[HalfEdges, Face]:
+    """A cube and a 3 x 3 grid as HalfEdges instances"""
+    return request.param
+
+
+@pytest.fixture(scope="function", params=range(48))
+def grid_edges(request, he_grid) -> Tuple[HalfEdges, Edge]:
+    """A cube and a 3 x 3 grid as HalfEdges instances"""
+    return he_grid, he_grid.el[request.param]
+
+
+@pytest.fixture(scope="function", params=range(24))
+def cube_edges(request, he_cube) -> Tuple[HalfEdges, Edge]:
+    """A cube and a 3 x 3 grid as HalfEdges instances"""
+    return he_cube, he_cube.el[request.param]
+
+
+@pytest.fixture(params=[lazy_fixture("grid_edges"), lazy_fixture("cube_edges")])
+def mesh_edges(request) -> Tuple[HalfEdges, Edge]:
+    """A cube and a 3 x 3 grid as HalfEdges instances"""
+    return request.param
 
 
 def compare_circular(seq_a: Sequence[Any], seq_b: Sequence[Any]) -> bool:
-    """ Start sequence at lowest value
+    """Start sequence at lowest value
 
     To help compare circular sequences
     """
@@ -105,7 +141,7 @@ def compare_circular(seq_a: Sequence[Any], seq_b: Sequence[Any]) -> bool:
 
 
 def compare_circular_2(seq_a: List[List[Any]], seq_b: List[List[Any]]) -> bool:
-    """"
+    """ "
     Compare_circular with a nested list
     """
     seq_a = deepcopy(seq_a)
