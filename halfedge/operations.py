@@ -2,6 +2,8 @@
 """ functions which insert, remove, or split edges from a HalfEdges instance
 created: 181121 13:43:59
 
+As far as I know. These functions are deprecated, replaced by methods in HalfEdges
+TODO: see how much of that is true
 """
 
 from typing import (

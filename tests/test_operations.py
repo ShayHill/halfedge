@@ -15,7 +15,7 @@ from ..halfedge.half_edge_elements import ManifoldMeshError, Vert, Hole
 from ..halfedge.half_edge_querries import StaticHalfEdges
 from ..halfedge.constructors import mesh_from_vlvi
 from ..halfedge.validations import validate_mesh
-from .helpers import are_equivalent_meshes
+from . import are_equivalent_meshes
 from operator import attrgetter
 
 

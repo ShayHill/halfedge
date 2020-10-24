@@ -3,17 +3,20 @@
 
 created: 181121 13:14:06
 """
+
 from copy import deepcopy
 from itertools import product
-from typing import Any, Dict, List, Sequence
+from typing import Any, Dict, List, Sequence, Set, Tuple, cast
 
 import pytest
 
-import halfedge.half_edge_querries
 from ..halfedge import half_edge_elements
 from ..halfedge.constructors import edges_from_vlvi
-from halfedge.half_edge_querries import StaticHalfEdges
+from ..halfedge.half_edge_querries import StaticHalfEdges
+import os
+import sys
 
+sys.path.append(os.path.join(__file__, "../.."))
 
 @pytest.fixture
 def he_triangle() -> Dict[str, List[Any]]:
@@ -73,13 +76,13 @@ def meshes_vlvi() -> Dict[str, Any]:
 @pytest.fixture
 def he_meshes(meshes_vlvi: Dict[str, Any]) -> Dict[str, Any]:
     """A cube and a 3 x 3 grid as HalfEdges instances"""
-    cube = halfedge.half_edge_querries.StaticHalfEdges(
+    cube = StaticHalfEdges(
         edges_from_vlvi(meshes_vlvi["cube_vl"], meshes_vlvi["cube_vi"])
     )
     for elem in cube.verts | cube.faces | cube.holes:
         elem.mesh = cube
 
-    grid = halfedge.half_edge_querries.StaticHalfEdges(
+    grid = StaticHalfEdges(
         edges_from_vlvi(
             meshes_vlvi["grid_vl"], meshes_vlvi["grid_vi"] #, meshes_vlvi["grid_hi"]
         )
@@ -119,3 +122,43 @@ def compare_circular_2(seq_a: List[List[Any]], seq_b: List[List[Any]]) -> bool:
     if seq_b:
         return False
     return True
+
+
+def _canon_face_rep(face: half_edge_elements.Face) -> List[Any]:
+    """Canonical face representation: value tuples starting at min."""
+    coordinates = [x.coordinate for x in face.verts]
+    idx_min = coordinates.index(min(coordinates))
+    return coordinates[idx_min:] + coordinates[:idx_min]
+
+
+def _canon_he_rep(edges: Set[half_edge_elements.Edge]) -> Tuple[List[Any], List[Any]]:
+    """Canonical mesh representation [faces, holes].
+
+    faces or holes = [canon_face_rep(face), ...]
+    """
+    faces = set(x.face for x in edges if not isinstance(x.face, half_edge_elements.Hole))
+    holes = set(x.face for x in edges if isinstance(x.face, half_edge_elements.Hole))
+    face_reps = cast(List[Any], [_canon_face_rep(x) for x in faces])
+    hole_reps = cast(List[Any], [_canon_face_rep(x) for x in holes])
+
+    return sorted(face_reps), sorted(hole_reps)
+
+
+def are_equivalent_edges(
+    edges_a: Set[half_edge_elements.Edge], edges_b: Set[half_edge_elements.Edge]
+) -> bool:
+    """Do edges lay on the same vert values with same geometry?"""
+    faces_a, holes_a = _canon_he_rep(edges_a)
+    faces_b, holes_b = _canon_he_rep(edges_b)
+
+    are_same = len(faces_a) == len(faces_b) and len(holes_a) == len(holes_b)
+
+    for a, b in zip(faces_a + holes_a, faces_b + holes_b):
+        are_same = are_same and a == b
+
+    return are_same
+
+
+def are_equivalent_meshes(mesh_a, mesh_b) -> bool:
+    """Do meshes lay on the same vert values with same geometry?"""
+    return are_equivalent_edges(mesh_a.edges, mesh_b.edges)
