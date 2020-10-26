@@ -44,6 +44,10 @@ class StaticHalfEdges:
     explicitly defined holes. Holes provide enough information to pair and link all
     half edges, but will be ignored in any "for face in" constructs.
     """
+    vert_type = half_edge_elements.Vert
+    edge_type = half_edge_elements.Edge
+    face_type = half_edge_elements.Face
+    hole_type = half_edge_elements.Hole
 
     def __init__(self, edges: Optional[Set[half_edge_elements.Edge]] = None) -> None:
         if edges is None:
@@ -59,12 +63,18 @@ class StaticHalfEdges:
     @property
     def faces(self) -> Set[half_edge_elements.Face]:
         """Look up all faces in mesh."""
-        return {x.face for x in self.edges if type(x.face).__name__ == "Face"}
+        return {
+            x.face
+            for x in self.edges
+            if not isinstance(x.face, half_edge_elements.Hole)
+        }
 
     @property
     def holes(self) -> Set[half_edge_elements.Hole]:
         """Look up all holes in mesh."""
-        return {x.face for x in self.edges if type(x.face).__name__ == "Hole"}
+        return {
+            x.face for x in self.edges if isinstance(x.face, half_edge_elements.Hole)
+        }
 
     @property
     def elements(self) -> Set[half_edge_elements._MeshElementBase]:

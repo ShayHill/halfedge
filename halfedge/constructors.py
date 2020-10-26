@@ -130,7 +130,9 @@ def edges_from_vlvi(
 
 
 def edges_from_vr(
-    vr: List[List[Vert]], hr: Optional[List[List[Vert]]] = None
+    vr: List[List[Vert]],
+    hr: Optional[List[List[Vert]]] = None,
+    mesh_type=StaticHalfEdges,
 ) -> Set[Edge]:
     """A set of half edges from raw mesh information.
 
@@ -150,11 +152,11 @@ def edges_from_vr(
         hr = []
 
     # everything except pairs
-    edges = cast(Set[Edge], set())
+    edges = cast(Set[mesh_type.edge_type], set())
     for hole in hr:
-        edges.update(_create_face_edges(hole, Hole()))
+        edges.update(_create_face_edges(hole, mesh_type.hole_type()))
     for face in vr:
-        edges.update(_create_face_edges(face, Face()))
+        edges.update(_create_face_edges(face, mesh_type.face_type()))
 
     find_pairs(edges)
     return infer_holes(edges)
