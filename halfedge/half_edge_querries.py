@@ -32,11 +32,12 @@ This module is all the lookups. Transformations elsewhere.
 """
 from operator import attrgetter
 from typing import Dict, List, Optional, Set, Tuple
+from .constructors import BlindHalfEdges
 
 from . import half_edge_elements
 
 
-class StaticHalfEdges:
+class StaticHalfEdges(BlindHalfEdges):
     """
     Basic half edge lookups.
 
@@ -44,16 +45,9 @@ class StaticHalfEdges:
     explicitly defined holes. Holes provide enough information to pair and link all
     half edges, but will be ignored in any "for face in" constructs.
     """
-    vert_type = half_edge_elements.Vert
-    edge_type = half_edge_elements.Edge
-    face_type = half_edge_elements.Face
-    hole_type = half_edge_elements.Hole
 
     def __init__(self, edges: Optional[Set[half_edge_elements.Edge]] = None) -> None:
-        if edges is None:
-            self.edges = set()
-        else:
-            self.edges = edges
+        super().__init__(edges)
 
     @property
     def verts(self) -> Set[half_edge_elements.Vert]:

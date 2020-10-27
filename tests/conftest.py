@@ -11,12 +11,16 @@ from typing import Any, Dict, List, Sequence, Set, Tuple, cast
 import pytest
 
 from ..halfedge import half_edge_elements
-from ..halfedge.constructors import edges_from_vlvi
+
+# TODO: fix imports
+# from ..halfedge.constructors import edges_from_vlvi
+
 from ..halfedge.half_edge_querries import StaticHalfEdges
 import os
 import sys
 
 sys.path.append(os.path.join(__file__, "../.."))
+
 
 @pytest.fixture
 def he_triangle() -> Dict[str, List[Any]]:
@@ -24,8 +28,12 @@ def he_triangle() -> Dict[str, List[Any]]:
     mesh = StaticHalfEdges()
     verts = [half_edge_elements.Vert(coordinate=x) for x in ((-1, 0), (1, 0), (0, 1))]
     faces = [half_edge_elements.Face(), half_edge_elements.Hole()]
-    inner_edges = [half_edge_elements.Edge(orig=verts[x], face=faces[0]) for x in range(3)]
-    outer_edges = [half_edge_elements.Edge(orig=verts[1 - x], face=faces[1]) for x in range(3)]
+    inner_edges = [
+        half_edge_elements.Edge(orig=verts[x], face=faces[0]) for x in range(3)
+    ]
+    outer_edges = [
+        half_edge_elements.Edge(orig=verts[1 - x], face=faces[1]) for x in range(3)
+    ]
     mesh.edges.update(inner_edges, outer_edges)
 
     for i in range(3):
@@ -76,16 +84,14 @@ def meshes_vlvi() -> Dict[str, Any]:
 @pytest.fixture
 def he_meshes(meshes_vlvi: Dict[str, Any]) -> Dict[str, Any]:
     """A cube and a 3 x 3 grid as HalfEdges instances"""
-    cube = StaticHalfEdges(
-        edges_from_vlvi(meshes_vlvi["cube_vl"], meshes_vlvi["cube_vi"])
+    cube = StaticHalfEdges.mesh_from_vlvi(
+        meshes_vlvi["cube_vl"], meshes_vlvi["cube_vi"]
     )
     for elem in cube.verts | cube.faces | cube.holes:
         elem.mesh = cube
 
-    grid = StaticHalfEdges(
-        edges_from_vlvi(
-            meshes_vlvi["grid_vl"], meshes_vlvi["grid_vi"] #, meshes_vlvi["grid_hi"]
-        )
+    grid = StaticHalfEdges.mesh_from_vlvi(
+        meshes_vlvi["grid_vl"], meshes_vlvi["grid_vi"]  # , meshes_vlvi["grid_hi"]
     )
     for elem in grid.verts | grid.faces | grid.holes:
         elem.mesh = grid
@@ -94,7 +100,7 @@ def he_meshes(meshes_vlvi: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def compare_circular(seq_a: Sequence[Any], seq_b: Sequence[Any]) -> bool:
-    """ Start sequence at lowest value
+    """Start sequence at lowest value
 
     To help compare circular sequences
     """
@@ -108,7 +114,7 @@ def compare_circular(seq_a: Sequence[Any], seq_b: Sequence[Any]) -> bool:
 
 
 def compare_circular_2(seq_a: List[List[Any]], seq_b: List[List[Any]]) -> bool:
-    """"
+    """ "
     Compare_circular with a nested list
     """
     seq_a = deepcopy(seq_a)
@@ -136,7 +142,9 @@ def _canon_he_rep(edges: Set[half_edge_elements.Edge]) -> Tuple[List[Any], List[
 
     faces or holes = [canon_face_rep(face), ...]
     """
-    faces = set(x.face for x in edges if not isinstance(x.face, half_edge_elements.Hole))
+    faces = set(
+        x.face for x in edges if not isinstance(x.face, half_edge_elements.Hole)
+    )
     holes = set(x.face for x in edges if isinstance(x.face, half_edge_elements.Hole))
     face_reps = cast(List[Any], [_canon_face_rep(x) for x in faces])
     hole_reps = cast(List[Any], [_canon_face_rep(x) for x in holes])

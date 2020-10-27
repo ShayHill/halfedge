@@ -13,7 +13,7 @@ import pytest
 from ..halfedge import operations as ops
 from ..halfedge.half_edge_elements import ManifoldMeshError, Vert, Hole
 from ..halfedge.half_edge_querries import StaticHalfEdges
-from ..halfedge.constructors import mesh_from_vlvi
+from ..halfedge.half_edge_object import HalfEdges
 from ..halfedge.validations import validate_mesh
 from . import are_equivalent_meshes
 from operator import attrgetter
@@ -57,7 +57,7 @@ def test_remove_edge_bridge(meshes_vlvi: Dict[str, Any]) -> None:
     """
     row_vl = meshes_vlvi["grid_vl"][:8]
     row_vi = {x for x in meshes_vlvi["grid_vi"] if not any(y > 7 for y in x)}
-    mesh = mesh_from_vlvi(row_vl, row_vi)
+    mesh = HalfEdges.mesh_from_vlvi(row_vl, row_vi)
     outer_center_edges = [
         x for x in mesh.edges
         if x.orig.valence == 3 and x.dest.valence == 3 and x.pair.face in mesh.holes
@@ -94,7 +94,7 @@ def test_remove_vert_corner(he_meshes: Dict[str, Any]) -> None:
     # mesh with faces removed
     vl = [x.coordinate for x in test.vl]
     vi = test.fi
-    ctrl = mesh_from_vlvi(vl, {x for x in vi if not {0, 3, 12, 15} & set(x)})
+    ctrl = HalfEdges.mesh_from_vlvi(vl, {x for x in vi if not {0, 3, 12, 15} & set(x)})
 
     for corner in tuple(x for x in test.verts if x.valence == 2):
         ops.remove_vert(test, corner)
@@ -197,7 +197,7 @@ def test_insert_edge_marks_changes(he_meshes: Dict[str, Any]) -> None:
 
 def test_insert_edge_0to1() -> None:
     """Creates a valid mesh from either direction."""
-    mesh = mesh_from_vlvi(
+    mesh = HalfEdges.mesh_from_vlvi(
         [(0, 0), (1, 0), (2, 0), (2, 1), (1, 1), (0, 1)], {(0, 1, 2, 3, 4, 5)}
     )
     face = next(iter(mesh.faces))
@@ -207,7 +207,7 @@ def test_insert_edge_0to1() -> None:
 
 
 def test_insert_edge_1to0() -> None:
-    mesh = mesh_from_vlvi(
+    mesh = HalfEdges.mesh_from_vlvi(
         [(0, 0), (1, 0), (2, 0), (2, 1), (1, 1), (0, 1)], {(0, 1, 2, 3, 4, 5)}
     )
     face = next(iter(mesh.faces))
@@ -222,8 +222,8 @@ def test_remove_then_insert(meshes_vlvi: Dict[str, Any]) -> None:
         (meshes_vlvi["cube_vl"], meshes_vlvi["cube_vi"]),
         (meshes_vlvi["grid_vl"], meshes_vlvi["grid_vi"]),
     ):
-        ctrl = mesh_from_vlvi(vl, vi)
-        test = mesh_from_vlvi(vl, vi)
+        ctrl = HalfEdges.mesh_from_vlvi(vl, vi)
+        test = HalfEdges.mesh_from_vlvi(vl, vi)
 
         for edge in tuple(e for e in test.edges if e.sn < e.pair.sn):
             ops.remove_edge(test, edge)
@@ -238,7 +238,7 @@ def test_insert_edge_new_vert() -> None:
     """Vert object added to face results in two additional face edges."""
     corners = [(0.0, 0), (1, 0), (1, 1), (0, 1)]
     faces = {(0, 1, 2, 3)}
-    mesh = mesh_from_vlvi(corners, faces)
+    mesh = HalfEdges.mesh_from_vlvi(corners, faces)
     max_sn = mesh.last_issued_sn
 
     face = sorted_by_sn(mesh.faces)[0]
@@ -322,7 +322,7 @@ def test_add_edge_vert_passes_all_attrs() -> None:
     """Every new edge inherits from edge or edge.pair."""
     vl = [(0, 0, 0)] * 6
     vi = {(0, 1, 4, 5), (1, 2, 3, 4)}
-    mesh = mesh_from_vlvi(vl, vi)
+    mesh = HalfEdges.mesh_from_vlvi(vl, vi)
     validate_mesh(mesh)
     max_sn = mesh.last_issued_sn
 
