@@ -66,96 +66,10 @@ def full_edges_only(edges: Set[Edge]) -> Generator[Edge, Set[Edge], None]:
             yield half
 
 
-def remove_edge(mesh: StaticHalfEdges, edge: Edge) -> None:
-    """
-    Cut an edge out of the mesh.
-
-    Will not allow you to break (make non-manifold) the mesh. For example,
-    here's a mesh with three faces, one in each square, and a third face or
-    hole around the outside. If I remove that long edge, the hole would have
-    two small, square faces inside of it. The hole would point to a half edge
-    around one or the other square, but that edge would just "next" around its
-    own small square. The other square could never be found.
-     _       _
-    |_|_____|_|
-
-    Attempting to pop such edges will raise a ManifoldMeshError.
-
-    Always removes the edge's face and expands the pair's face (if they are
-    different).
-
-    """
-    pair = edge.pair
-
-    if edge not in mesh.edges:
-        raise ValueError("edge {} does not exist in mesh".format(edge.sn))
-
-    if edge.orig.valence > 1 and edge.dest.valence > 1 and edge.face == pair.face:
-        raise ManifoldMeshError("would create non-manifold mesh")
-
-    # make sure orig and dest do not point to this edge (if there's another option)
-    edge.next.orig = edge.next.orig
-    pair.next.orig = pair.next.orig
-
-    # set all faces equal to pair.face
-    for edge_ in (x for x in edge.face_edges if x not in (edge, edge.pair)):
-        edge_.face = pair.face
-
-    # disconnect from previous edges
-    edge.prev.next = pair.next
-    pair.prev.next = edge.next
-    mesh.edges -= {edge, pair}
 
 
-def remove_vert(mesh: StaticHalfEdges, vert: Vert) -> None:
-    """
-    Remove all edges around a vert.
 
-    :raises: ManifoldMeshError if the error was caught before any edges were removed
-        (this SHOULD always be the case).
-    :raises: RuntimeError if a problem was found after we started removing edges
-        (this SHOULD never happen).
 
-    remove_edge checks for bridge faces like so:
-        * is orig valence > 1
-        * is dest valence > 1
-        * is edge.face == pair.face
-
-    If all of these are true, remove_edge assumes the edge is bridging between two
-    faces, which would be disjoint if the edge were removed.
-
-    A vert may have peninsula edges radiating from it. That is, edges that do not
-    split a face. These would be left floating if any bridge edges were removed.
-
-          |
-        --*-----FACE
-          |
-
-    Remove peninsula edges first to avoid this.
-    """
-    # examine the vert edges to see if removing vert is safe
-    peninsulas = {x for x in vert.edges if x.dest.valence == 1}
-    true_edges = set(vert.edges) - peninsulas
-    vert_faces = {x.face for x in true_edges}
-    if len(true_edges) != len(vert_faces):
-        raise ManifoldMeshError("would create non-manifold mesh")
-
-    # remove peninsula edges then others.
-    for edge in peninsulas:
-        remove_edge(mesh, edge)
-    try:
-        for edge in vert.edges:
-            if edge.face in mesh.faces:
-                remove_edge(mesh, edge)
-            else:
-                remove_edge(mesh, edge.pair)
-    except ManifoldMeshError:
-        raise RuntimeError(
-            "Unexpected error. This should have been caught at the beginning of the "
-            "function. A bridge edge was found (e.i., we discovered that this vert "
-            "cannot be removed), but some vert edges may have been removed before this "
-            "was realized. We've found a bug in the module."
-        )
 
 
 def remove_face(mesh: StaticHalfEdges, face: Face) -> None:
@@ -170,7 +84,7 @@ def remove_face(mesh: StaticHalfEdges, face: Face) -> None:
 
     try:
         for edge in edges:
-            remove_edge(mesh, edge)
+            mesh.remove_edge(edge)
     except ManifoldMeshError:
         raise RuntimeError(
             "Unexpected error. This should have been caught at the beginning of the "
@@ -273,7 +187,7 @@ def split_edge(mesh: StaticHalfEdges, edge: Edge, **vert_kwargs) -> Vert:
         new_edge = insert_edge(mesh, orig, dest, edge.face)
         new_edge.fill_from(edge.pair)
         new_edge.pair.fill_from(edge)
-    remove_edge(mesh, edge)
+    mesh.remove_edge(edge)
     return new_vert
 
 

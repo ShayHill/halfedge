@@ -16,19 +16,17 @@ then passing that raw data to mesh_from_vr would create a mesh with 6 faces and
 24 (not 8!) Vert instances.
 """
 
-# TODO: test `edges_from_vr`
-# TODO: factor out coordinates from `edges_from_vlvi`
-# TODO: combine `edges_from_vlvi` and `edges_from_vr`. Update tests.
 # TODO: factor out most or all of constructors module
 # TODO: test element-switching from Base object (e.g., a different Edge class)
-# TODO: refactor constructors (now that mesh element setattr is mirrored)
 
 from __future__ import annotations
 
-from typing import Any, List, Optional, Set, cast
+from typing import Any, Dict, Iterable, List, Optional, Set, Tuple, Union, Hashable
 
 from .half_edge_elements import Edge, Face, Hole, ManifoldMeshError, Vert
-# from .half_edge_querries import StaticHalfEdges
+
+VertCastable = Union[Vert, Dict[str, Any], Any]
+Vr = Iterable[Iterable[Vert]]
 
 
 class BlindHalfEdges:
@@ -43,7 +41,7 @@ class BlindHalfEdges:
         else:
             self.edges = edges
 
-    def infer_holes(self) -> None:
+    def _infer_holes(self) -> None:
         """
         Fill in missing hole faces where unambiguous.
 
@@ -63,7 +61,9 @@ class BlindHalfEdges:
         This function can also fill in holes inside the mesh.
         """
         hole_edges = {
-            self.edge_type(orig=x.dest, pair=x) for x in self.edges if not hasattr(x, "pair")
+            self.edge_type(orig=x.dest, pair=x)
+            for x in self.edges
+            if not hasattr(x, "pair")
         }
         orig2hole_edge = {x.orig: x for x in hole_edges}
 
@@ -82,14 +82,14 @@ class BlindHalfEdges:
                 edge = edge.next
         self.edges.update(hole_edges)
 
-    def _create_face_edges(self, face_verts: List[Vert], face: Face) -> List[Edge]:
+    def _create_face_edges(self, face_verts: Iterable[Vert], face: Face) -> List[Edge]:
         """Create edges around a face defined by vert indices."""
         new_edges = [self.edge_type(orig=vert, face=face) for vert in face_verts]
         for idx, edge in enumerate(new_edges):
             new_edges[idx - 1].next = edge
         return new_edges
 
-    def find_pairs(self) -> None:
+    def _find_pairs(self) -> None:
         """Match edge pairs, where possible."""
         endpoints2edge = {(edge.orig, edge.dest): edge for edge in self.edges}
         for edge in self.edges:
@@ -98,9 +98,57 @@ class BlindHalfEdges:
             except KeyError:
                 continue
 
-    def edges_from_vlvi(
-        self, vl: List[Any], vi: List[List[int]], hi: Optional[List[List[int]]] = None
-    ) -> None:
+    @classmethod
+    def new_vert(cls, source: VertCastable, attr_name: Optional[str] = None) -> Vert:
+        """
+        A new Vert instance of cls.vert_type
+
+        :param source: attr value or Vert instance or dict {name: val, name: val}
+        :param attr_name: optionally pass source as Vert.attr_name = source
+        :return: instance of cls.vert_type
+
+        This one is a little "magical"
+        if attr_name is given -> new vert with vert.attr_name = source
+        elif source is a Vert -> source vert recast as cls.vert_type
+        else source is assumed to be a dict -> cls.vert_type(**source)
+        """
+        if attr_name is not None:
+            return cls.vert_type(**{attr_name: source})
+        if isinstance(source, Vert):
+            return cls.vert_type(source)
+        try:
+            return cls.vert_type(**source)
+        except TypeError:
+            raise NotImplementedError(f"no provision for casting {source} into Vert")
+
+    @classmethod
+    def new_verts(
+        cls,
+        sources: Iterable[VertCastable],
+        attr_name: Optional[str] = None,
+    ) -> List[Vert]:
+        """
+        Iteratively call self.new_vert
+
+        :param sources: attr values or Vert instances or dicts {name: val, name: val}
+        :param attr_name: optionally pass source as Vert.attr_name = source
+        :return: list of instances of cls.vert_type
+
+        This one is a little "magical"
+        if attr_name is given -> new verts with vert.attr_name = source
+        elif sources are Vert instances -> source verts recast as cls.vert_type
+        else sources are assumed to be dicts -> cls.vert_type(**source)
+        """
+        return [cls.new_vert(x, attr_name) for x in sources]
+
+    @classmethod
+    def from_vlvi(
+        cls,
+        vl: List[VertCastable],
+        vi: Set[Tuple[int, ...]],
+        hi: Optional[Set[Tuple[int, ...]]] = (),
+        attr_name: Optional[str] = None,
+    ) -> BlindHalfEdges:
         """A set of half edges from a vertex list and vertex index.
 
         :vl (vertex list): a seq of vertices
@@ -126,72 +174,17 @@ class BlindHalfEdges:
         ---------------------
 
         Will silently remove unused verts
-
         """
-        if hi is None:
-            hi = set()
+        vl = cls.new_verts(vl, attr_name)
+        vr = {tuple(vl[x] for x in y) for y in vi}
+        hr = {tuple(vl[x] for x in y) for y in hi}
 
-        # everything except pairs
-        verts = [self.vert_type(coordinate=v) for v in vl]
-        # self.edges: Set[Edge] = set()
-
-        for vert_indices in vi | hi:
-            face_verts = [verts[idx] for idx in vert_indices]
-            if vert_indices in hi:
-                self.edges.update(self._create_face_edges(face_verts, self.hole_type()))
-            else:
-                self.edges.update(self._create_face_edges(face_verts, self.face_type()))
-
-        self.find_pairs()
-        self.infer_holes()
-
-    def edges_from_vr(
-        self,
-        vr: List[List[Vert]],
-        hr: Optional[List[List[Vert]]] = None,
-    ) -> None:
-        """A set of half edges from raw mesh information.
-
-        Unlike edges_from_vlvi, this will not create Verts from coordinate (vertex
-        list) information. That would involve tests for equality, which are
-        problematic with user-defined objects (equal on id) and numpy. Input must
-        be a list of lists of Verts. Vert coordinates are not considered here in any
-        way.
-
-        :vr (vertex raw): a list of faces, each face a list of Verts
-        :hr (holes raw): an optional list of holes, each hole a list of Verts
-
-        Holes will only be used to pair up edges. Will attempt to infer holes if
-        none are given.
-        """
-        if hr is None:
-            hr = []
-
-        verts = set(sum(hr + vr, start=[]))
-        breakpoint()
-
-        for hole in hr:
-            self.edges.update(self._create_face_edges(hole, self.hole_type()))
-        for face in vr:
-            self.edges.update(self._create_face_edges(face, self.face_type()))
-
-        self.find_pairs()
-        self.infer_holes()
-
-    @classmethod
-    def mesh_from_vlvi(
-        cls, vl: List[Any], vi: List[List[int]], hi: Optional[List[List[int]]] = None
-    ) -> BlindHalfEdges:
-        """A HalfEdges instance from vl, vi, and optionally hi."""
         mesh = cls()
-        mesh.edges_from_vlvi(vl, vi, hi)
+        for face_verts in vr:
+            mesh.edges.update(mesh._create_face_edges(face_verts, mesh.face_type()))
+        for face_verts in hr:
+            mesh.edges.update(mesh._create_face_edges(face_verts, mesh.hole_type()))
+        mesh._find_pairs()
+        mesh._infer_holes()
         return mesh
 
-    @classmethod
-    def mesh_from_vr(
-        cls, vr: List[List[Vert]], hr: Optional[List[List[Vert]]] = None
-    ) -> StaticHalfEdges:
-        """A HalfEdges instance from vr and optionally hr."""
-        mesh = cls()
-        mesh.edges_from_vlvi(vr, hr)
-        return mesh

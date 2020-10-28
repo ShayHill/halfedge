@@ -15,7 +15,7 @@ from ..halfedge import half_edge_elements
 # TODO: fix imports
 # from ..halfedge.constructors import edges_from_vlvi
 
-from ..halfedge.half_edge_querries import StaticHalfEdges
+from ..halfedge.half_edge_object import HalfEdges
 import os
 import sys
 
@@ -25,7 +25,7 @@ sys.path.append(os.path.join(__file__, "../.."))
 @pytest.fixture
 def he_triangle() -> Dict[str, List[Any]]:
     """A simple triangle (inside and outside faces) for Mesh Element tests"""
-    mesh = StaticHalfEdges()
+    mesh = HalfEdges()
     verts = [half_edge_elements.Vert(coordinate=x) for x in ((-1, 0), (1, 0), (0, 1))]
     faces = [half_edge_elements.Face(), half_edge_elements.Hole()]
     inner_edges = [
@@ -60,11 +60,13 @@ def meshes_vlvi() -> Dict[str, Any]:
     # fmt: off
     cube_vl = [(-1, -1, -1), (1, -1, -1), (1, 1, -1), (-1, 1, -1),
                (-1, -1, 1), (1, -1, 1), (1, 1, 1), (-1, 1, 1)]
+    cube_vl = [{'coordinate': x} for x in cube_vl]
 
     cube_vi = {(0, 1, 2, 3), (0, 3, 7, 4), (0, 4, 5, 1),
                (1, 5, 6, 2), (2, 6, 7, 3), (4, 7, 6, 5)}
 
     grid_vl = [(x, y) for x, y in product(range(4), range(4))]
+    grid_vl = [{'coordinate': x} for x in grid_vl]
 
     grid_vi = {
         (x + y, x + y + 1, x + y + 5, x + y + 4)
@@ -84,13 +86,14 @@ def meshes_vlvi() -> Dict[str, Any]:
 @pytest.fixture
 def he_meshes(meshes_vlvi: Dict[str, Any]) -> Dict[str, Any]:
     """A cube and a 3 x 3 grid as HalfEdges instances"""
-    cube = StaticHalfEdges.mesh_from_vlvi(
+    cube_vl = [HalfEdges.vert_type(**x) for x in meshes_vlvi['cube_vl']]
+    cube = HalfEdges.from_vlvi(
         meshes_vlvi["cube_vl"], meshes_vlvi["cube_vi"]
     )
     for elem in cube.verts | cube.faces | cube.holes:
         elem.mesh = cube
 
-    grid = StaticHalfEdges.mesh_from_vlvi(
+    grid = HalfEdges.from_vlvi(
         meshes_vlvi["grid_vl"], meshes_vlvi["grid_vi"]  # , meshes_vlvi["grid_hi"]
     )
     for elem in grid.verts | grid.faces | grid.holes:

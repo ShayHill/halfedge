@@ -42,7 +42,7 @@ def test_remove_edge_increases_sns(he_meshes: Dict[str, Any]) -> None:
         edge = next(iter(mesh.edges))
         orig, dest = edge.orig, edge.dest
         edge_face, pair_face = edge.face, edge.pair.face
-        ops.remove_edge(mesh, edge)
+        mesh.remove_edge(edge)
         validate_mesh(mesh)
 
         # other sns not altered
@@ -57,14 +57,15 @@ def test_remove_edge_bridge(meshes_vlvi: Dict[str, Any]) -> None:
     """
     row_vl = meshes_vlvi["grid_vl"][:8]
     row_vi = {x for x in meshes_vlvi["grid_vi"] if not any(y > 7 for y in x)}
-    mesh = HalfEdges.mesh_from_vlvi(row_vl, row_vi)
+    mesh = HalfEdges.from_vlvi(row_vl, row_vi)
     outer_center_edges = [
-        x for x in mesh.edges
+        x
+        for x in mesh.edges
         if x.orig.valence == 3 and x.dest.valence == 3 and x.pair.face in mesh.holes
     ]
-    ops.remove_edge(mesh, outer_center_edges[0])
+    mesh.remove_edge(outer_center_edges[0])
     with pytest.raises(ManifoldMeshError) as err:
-        ops.remove_edge(mesh, outer_center_edges[1])
+        mesh.remove_edge(outer_center_edges[1])
     assert "would create non-manifold" in err.value.args[0]
 
 
@@ -80,7 +81,7 @@ def test_remove_edge_to_empty_mesh(he_meshes: Dict[str, Any]) -> None:
             random.shuffle(edges)
             for edge in edges:
                 try:
-                    ops.remove_edge(mesh, edge)
+                    mesh.remove_edge(edge)
                 except (ValueError, ManifoldMeshError):
                     pass
                 validate_mesh(mesh)
@@ -92,12 +93,12 @@ def test_remove_vert_corner(he_meshes: Dict[str, Any]) -> None:
     test = he_meshes["grid"]
 
     # mesh with faces removed
-    vl = [x.coordinate for x in test.vl]
+    vl = [{"coordinate": x.coordinate} for x in test.vl]
     vi = test.fi
-    ctrl = HalfEdges.mesh_from_vlvi(vl, {x for x in vi if not {0, 3, 12, 15} & set(x)})
+    ctrl = HalfEdges.from_vlvi(vl, {x for x in vi if not {0, 3, 12, 15} & set(x)})
 
     for corner in tuple(x for x in test.verts if x.valence == 2):
-        ops.remove_vert(test, corner)
+        test.remove_vert(corner)
 
     assert are_equivalent_meshes(test, ctrl)
 
@@ -107,7 +108,7 @@ def test_remove_vert_interior(he_meshes: Dict[str, Any]) -> None:
     test = he_meshes["grid"]
 
     for interior_vert in tuple(x for x in test.verts if x.valence == 4):
-        ops.remove_vert(test, interior_vert)
+        test.remove_vert(interior_vert)
 
     assert [len(x.edges) for x in test.faces] == [12]
     assert [len(x.edges) for x in test.holes] == [12]
@@ -118,11 +119,11 @@ def test_remove_vert_bridge(he_meshes: Dict[str, Any]) -> None:
     mesh = he_meshes["grid"]
     verts = sorted_by_sn(mesh.verts)
     for i in (0, 5, 10):
-        ops.remove_vert(mesh, verts[i])
+        mesh.remove_vert(verts[i])
         validate_mesh(mesh)
     snapshot = StaticHalfEdges(mesh.edges)
     with pytest.raises(ManifoldMeshError) as err:
-        ops.remove_vert(mesh, verts[15])
+        mesh.remove_vert(verts[15])
     assert "would create non-manifold" in err.value.args[0]
 
     # fails before altering mesh
@@ -137,8 +138,8 @@ def test_remove_vert_peninsulas(he_meshes: Dict[str, Any]) -> None:
     mesh = he_meshes["grid"]
     interior_vert = sorted_by_sn(mesh.verts)[5]
     for edge in [x for x in mesh.edges if x.pair.face in mesh.holes]:
-        ops.remove_edge(mesh, edge)
-    ops.remove_vert(mesh, interior_vert)  # assert NOT raises
+        mesh.remove_edge(edge)
+    mesh.remove_vert(interior_vert)  # assert NOT raises
     assert len(mesh.edges) == 16
 
 
@@ -197,8 +198,9 @@ def test_insert_edge_marks_changes(he_meshes: Dict[str, Any]) -> None:
 
 def test_insert_edge_0to1() -> None:
     """Creates a valid mesh from either direction."""
-    mesh = HalfEdges.mesh_from_vlvi(
-        [(0, 0), (1, 0), (2, 0), (2, 1), (1, 1), (0, 1)], {(0, 1, 2, 3, 4, 5)}
+    mesh = HalfEdges.from_vlvi(
+        [{"coordinate": x} for x in [(0, 0), (1, 0), (2, 0), (2, 1), (1, 1), (0, 1)]],
+        {(0, 1, 2, 3, 4, 5)},
     )
     face = next(iter(mesh.faces))
     verts = sorted_by_sn(mesh.verts)[1::3]
@@ -207,8 +209,9 @@ def test_insert_edge_0to1() -> None:
 
 
 def test_insert_edge_1to0() -> None:
-    mesh = HalfEdges.mesh_from_vlvi(
-        [(0, 0), (1, 0), (2, 0), (2, 1), (1, 1), (0, 1)], {(0, 1, 2, 3, 4, 5)}
+    mesh = HalfEdges.from_vlvi(
+        [{"coordinate": x} for x in [(0, 0), (1, 0), (2, 0), (2, 1), (1, 1), (0, 1)]],
+        {(0, 1, 2, 3, 4, 5)},
     )
     face = next(iter(mesh.faces))
     verts = sorted_by_sn(mesh.verts)[1::3]
@@ -222,12 +225,12 @@ def test_remove_then_insert(meshes_vlvi: Dict[str, Any]) -> None:
         (meshes_vlvi["cube_vl"], meshes_vlvi["cube_vi"]),
         (meshes_vlvi["grid_vl"], meshes_vlvi["grid_vi"]),
     ):
-        ctrl = HalfEdges.mesh_from_vlvi(vl, vi)
-        test = HalfEdges.mesh_from_vlvi(vl, vi)
+        ctrl = HalfEdges.from_vlvi(vl, vi)
+        test = HalfEdges.from_vlvi(vl, vi)
 
         for edge in tuple(e for e in test.edges if e.sn < e.pair.sn):
-            ops.remove_edge(test, edge)
-            ops.insert_edge(test, edge.orig, edge.dest, edge.pair.face)
+            test.remove_edge(edge)
+            test.insert_edge(edge.orig, edge.dest, edge.pair.face)
             # try:
             #     assert are_equivalent_meshes(test, ctrl)
             # except:
@@ -236,9 +239,9 @@ def test_remove_then_insert(meshes_vlvi: Dict[str, Any]) -> None:
 
 def test_insert_edge_new_vert() -> None:
     """Vert object added to face results in two additional face edges."""
-    corners = [(0.0, 0), (1, 0), (1, 1), (0, 1)]
+    corners = [{'coordinate': x} for x in [(0.0, 0), (1, 0), (1, 1), (0, 1)]]
     faces = {(0, 1, 2, 3)}
-    mesh = HalfEdges.mesh_from_vlvi(corners, faces)
+    mesh = HalfEdges.from_vlvi(corners, faces)
     max_sn = mesh.last_issued_sn
 
     face = sorted_by_sn(mesh.faces)[0]
@@ -321,8 +324,9 @@ def test_split_edge_destroys_old_edges(he_meshes: Dict[str, Any]) -> None:
 def test_add_edge_vert_passes_all_attrs() -> None:
     """Every new edge inherits from edge or edge.pair."""
     vl = [(0, 0, 0)] * 6
+    vl = [{'coordinate': x} for x in vl]
     vi = {(0, 1, 4, 5), (1, 2, 3, 4)}
-    mesh = HalfEdges.mesh_from_vlvi(vl, vi)
+    mesh = HalfEdges.from_vlvi(vl, vi)
     validate_mesh(mesh)
     max_sn = mesh.last_issued_sn
 

@@ -55,7 +55,7 @@ class TestMeshElementBase:
         assert all((x.last_issued_sn == instances[-1].sn for x in instances))
 
     def test_children_share_serial_numbers(self) -> None:
-        """ child classes share set of serial numbers
+        """child classes share set of serial numbers
 
         A serial number will never duplicate and will always be sequential
         between _MeshElementBase and any children
@@ -75,7 +75,7 @@ class TestMeshElementBase:
         assert all(x.last_issued_sn == instances[-1].sn for x in instances)
         assert all(instances[x].sn < instances[x + 1].sn for x in range(3))
 
-    #TODO: remove after successfully factoring out < and >
+    # TODO: remove after successfully factoring out < and >
     # def test_lt_gt(self) -> None:
     #     """Sorts by serial number."""
     #     elem1 = _MeshElementBase()
@@ -101,7 +101,6 @@ class TestMeshElementBase:
         a_is_2 = _MeshElementBase(b_is_3, a=2)
         assert getattr(a_is_2, "a") == 2
         assert getattr(a_is_2, "b") == 3
-
 
 
 def test_edge_lap_succeeds(he_triangle: Dict[str, Any]) -> None:
@@ -155,9 +154,7 @@ class TestElementSubclasses:
 
     def test_init_vert(self) -> None:
         """Will not set missing attrs. sets others."""
-        self.check_init(
-            Vert, {"coordinate": (0, 0, 0), "some_kwarg": 20}
-        )
+        self.check_init(Vert, {"coordinate": (0, 0, 0), "some_kwarg": 20})
 
     def test_init_edge(self) -> None:
         """Will not set missing attrs. sets others."""
@@ -217,7 +214,6 @@ class TestElementSubclasses:
         for edge in he_triangle["edges"]:
             assert edge.dest is edge.next.orig
 
-
     @staticmethod
     def test_face_verts(he_triangle: Dict[str, Any]) -> None:
         """Returns orig for every edge in face_verts."""
@@ -250,18 +246,22 @@ class TestHalfEdges:
 
     def test_vl(self, meshes_vlvi: Dict[str, Any], he_meshes: Dict[str, Any]) -> None:
         """Converts unaltered mesh verts back to input vl."""
-        assert [x.coordinate for x in he_meshes["cube"].vl] == meshes_vlvi["cube_vl"]
-        assert [x.coordinate for x in he_meshes["grid"].vl] == meshes_vlvi["grid_vl"]
+        assert [
+            {"coordinate": x.coordinate} for x in he_meshes["cube"].vl
+        ] == meshes_vlvi["cube_vl"]
+        assert [
+            {"coordinate": x.coordinate} for x in he_meshes["grid"].vl
+        ] == meshes_vlvi["grid_vl"]
 
     def test_vi(self, meshes_vlvi: Dict[str, Any], he_meshes: Dict[str, Any]) -> None:
         """Convert unaltered mesh faces back to input vi."""
-        for label in ('cube', 'grid'):
-            assert compare_circular_2(he_meshes[label].fi, meshes_vlvi[label + '_vi'])
+        for label in ("cube", "grid"):
+            assert compare_circular_2(he_meshes[label].fi, meshes_vlvi[label + "_vi"])
 
     def test_hi(self, meshes_vlvi: Dict[str, Any], he_meshes: Dict[str, Any]) -> None:
         """Convert unaltered mesh holes back to input holes."""
         hi_test = he_meshes["grid"].hi
-        hi_cont = meshes_vlvi['grid_hi']
+        hi_cont = meshes_vlvi["grid_hi"]
         assert len(hi_test) == len(hi_cont)
         assert compare_circular_2(hi_test, hi_cont)
 
@@ -292,5 +292,3 @@ def test_half_edges_interior_verts(he_meshes: Dict[str, Any]) -> None:
     verts = he_meshes["grid"].interior_verts
     assert len(verts) == 4
     assert all(x.valence == 4 for x in verts)
-
-
