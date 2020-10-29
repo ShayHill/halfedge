@@ -46,6 +46,7 @@ class ManifoldMeshError(ValueError):
     require valid, manifold mesh data to infer.
     """
 
+
 def array_equal(*args: Any):
     with suppress(ValueError):
         # should work for everything except numpy
@@ -55,7 +56,9 @@ def array_equal(*args: Any):
         return all(all(x == args[0]) for x in args[1:])  # type: ignore
     raise ValueError(f"module does not support equality test between {args}")
 
+
 KeyT = TypeVar("KeyT")
+
 
 def get_dict_intersection(*dicts: Dict[KeyT, Any]) -> Dict[KeyT, Any]:
     """
@@ -98,31 +101,36 @@ class _MeshElementBase:
         """
         Create an instance withe a new serial number (and copy attrs from fill_from).
 
-        :param fill_from: an instance of the same class
+        :param fill_from: instances of the same class
         :param kwargs: attributes for new instance
 
         Priority for attributes
-        1. attributes passes as kwargs to init
-        2. attributes inherited from fill_from argument
+        high: attributes passes as kwargs to init
+        low: attributes inherited from fill_from argument
         """
-        # TODO: remove assertion after 100% test coverage
-        assert 'fill_from' not in kwargs
-
-        attrs = get_dict_intersection(*(x.__dict__ for x in fill_from))
-        attrs.update(kwargs)
-        for key, val in attrs.items():
-            if key in self.__annotations__:
-                key = key.lstrip('_')
-            setattr(self, key, val)
-
         _MeshElementBase.last_issued_sn += 1
         self.sn = self.last_issued_sn
+        self.update(*fill_from, **kwargs)
 
-    def fill_from(self: T, other: T) -> None:
-        """Copy attributes from :other:. Do not overwrite existing self attributes."""
-        for key, val in other.__dict__.items():
-            setattr(self, key, getattr(self, key, val))
+    def update(self, *fill_from, **kwargs: Any) -> None:
+        """ Add or replace attributes (except sn) gt"""
+        attrs = get_dict_intersection(*(x.__dict__ for x in fill_from))
+        attrs.update(kwargs)
+        attrs["sn"] = self.sn
+        for key, val in attrs.items():
+            if key in self.__annotations__:
+                key = key.lstrip("_")
+            setattr(self, key, val)
 
+    def extend(self, *fill_from, **kwargs: Any) -> None:
+        """ Add attributes only. Do not replace. """
+        attrs = get_dict_intersection(*(x.__dict__ for x in fill_from))
+        attrs.update(kwargs)
+        attrs.update(self.__dict__)
+        for key, val in attrs.items():
+            if key in self.__annotations__:
+                key = key.lstrip("_")
+            setattr(self, key, val)
 
 
 FLapArgT = TypeVar("FLapArgT")
@@ -167,19 +175,31 @@ class Vert(_MeshElementBase):
     @property
     def edges(self) -> List[Edge]:
         """ Half edges radiating from vert. """
-        if hasattr(self, 'edge'):
+        if hasattr(self, "edge"):
             return self.edge.vert_edges
         return []
 
     @property
     def faces(self) -> List[Face]:
         """ Faces radiating from vert """
+        return [x for x in self.all_faces if type(x).__name__ == "Face"]
+
+    @property
+    def holes(self) -> List[Hole]:
+        """ Faces radiating from vert """
+        return [x for x in self.all_faces if type(x).__name__ == "Hole"]
+
+    @property
+    def all_faces(self) -> List[Union[Face, Hole]]:
+        """ Faces radiating from vert """
         return [x.face for x in self.edges]
 
     @property
     def neighbors(self) -> List[Vert]:
         """ Evert vert connected to vert by one edge. """
-        return [x.dest for x in self.edges]
+        if hasattr(self, "edge"):
+            return self.edge.vert_neighbors
+        return []
 
     @property
     def valence(self) -> int:
@@ -278,7 +298,7 @@ class Edge(_MeshElementBase):
         return _function_lap(lambda x: x.pair.next, self)
 
     @property
-    def vert_verts(self) -> List[Vert]:
+    def vert_neighbors(self) -> List[Vert]:
         """ All verts connected to vert by one edge. """
         return [edge.dest for edge in self.vert_edges]
 
@@ -305,15 +325,17 @@ class Face(_MeshElementBase):
     @property
     def edges(self) -> List[Edge]:
         """ Look up all edges around face. """
-        return self.edge.face_edges
+        if hasattr(self, "edge"):
+            return self.edge.face_edges
+        return []
 
     @property
     def verts(self) -> List[Vert]:
         """ Look up all verts around face. """
-        return self.edge.face_verts
+        if hasattr(self, "edge"):
+            return [x.orig for x in self.edges]
+        return []
 
 
 class Hole(Face):
     """ A copy of Face to differentiate b/t interior edges and boundaries. """
-
-

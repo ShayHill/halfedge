@@ -20,42 +20,38 @@ def test_validate_mesh_empty() -> None:
     validate_mesh(mesh)
 
 
-def test_validate_mesh_next_pair_share_origin(he_meshes: Dict[str, Any]) -> None:
+def test_validate_mesh_next_pair_share_origin(he_mesh) -> None:
     """Fails if next and pair do not share origin."""
-    cube = he_meshes["cube"]
-    next(iter(cube.edges)).orig = Vert()
+    next(iter(he_mesh.edges)).orig = Vert()
     with pytest.raises(ManifoldMeshError) as err:
-        validate_mesh(cube)
+        validate_mesh(he_mesh)
     assert "next or pair error" in err.value.args[0]
 
 
-def test_validate_mesh_loop_edge(he_meshes: Dict[str, Any]) -> None:
+def test_validate_mesh_loop_edge(he_mesh) -> None:
     """Fails if edge orig and dest are the same."""
-    cube = he_meshes["cube"]
-    edge = next(iter(cube.edges))
+    edge = next(iter(he_mesh.edges))
     edge.orig = edge.next.orig
     with pytest.raises(ManifoldMeshError) as err:
-        validate_mesh(cube)
+        validate_mesh(he_mesh)
     assert "loop edge" in err.value.args[0]
 
 
-def test_validate_mesh_edge_orig(he_meshes: Dict[str, Any]) -> None:
+def test_validate_mesh_edge_orig(he_mesh) -> None:
     """Fails if edge does not point to correct origin."""
-    cube = he_meshes["cube"]
-    edge = next(iter(cube.edges))
+    edge = next(iter(he_mesh.edges))
     edge.orig = edge.next.dest
     with pytest.raises(ManifoldMeshError) as err:
-        validate_mesh(cube)
+        validate_mesh(he_mesh)
     assert "next or pair error" in err.value.args[0]
 
 
-def test_validate_mesh_edge_face(he_meshes: Dict[str, Any]) -> None:
+def test_validate_mesh_edge_face(he_mesh) -> None:
     """Fails if edge points to wrong face."""
-    cube = he_meshes["cube"]
-    edge = next(iter(cube.edges))
+    edge = next(iter(he_mesh.edges))
     edge.face = edge.pair.face
     with pytest.raises(ManifoldMeshError) as err:
-        validate_mesh(cube)
+        validate_mesh(he_mesh)
     assert "wrong face" in err.value.args[0]
 
 

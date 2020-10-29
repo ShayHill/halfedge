@@ -16,7 +16,6 @@ then passing that raw data to mesh_from_vr would create a mesh with 6 faces and
 24 (not 8!) Vert instances.
 """
 
-# TODO: factor out most or all of constructors module
 # TODO: test element-switching from Base object (e.g., a different Edge class)
 
 from __future__ import annotations

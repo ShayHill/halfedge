@@ -239,56 +239,48 @@ def test_half_edges_init(he_triangle: Dict[str, Any]) -> None:
 class TestHalfEdges:
     """Keep the linter happy."""
 
-    def test_last_issued_sn(self, he_meshes: Dict[str, Any]) -> None:
+    def test_last_issued_sn(self, he_mesh: Dict[str, Any]) -> None:
         """Matches highest serial number of any _MeshElementBase instance."""
-        for mesh in he_meshes.values():
-            assert mesh.last_issued_sn == _MeshElementBase.last_issued_sn
+        assert he_mesh.last_issued_sn == _MeshElementBase.last_issued_sn
 
-    def test_vl(self, meshes_vlvi: Dict[str, Any], he_meshes: Dict[str, Any]) -> None:
-        """Converts unaltered mesh verts back to input vl."""
-        assert [
-            {"coordinate": x.coordinate} for x in he_meshes["cube"].vl
-        ] == meshes_vlvi["cube_vl"]
-        assert [
-            {"coordinate": x.coordinate} for x in he_meshes["grid"].vl
-        ] == meshes_vlvi["grid_vl"]
 
-    def test_vi(self, meshes_vlvi: Dict[str, Any], he_meshes: Dict[str, Any]) -> None:
+
+    def test_vi(self, meshes_vlvi: Dict[str, Any], he_grid, he_cube) -> None:
         """Convert unaltered mesh faces back to input vi."""
-        for label in ("cube", "grid"):
-            assert compare_circular_2(he_meshes[label].fi, meshes_vlvi[label + "_vi"])
+        for mesh, key in ((he_grid, 'grid'), (he_cube, 'cube')):
+            assert compare_circular_2(mesh.fi, meshes_vlvi[key + "_vi"])
 
-    def test_hi(self, meshes_vlvi: Dict[str, Any], he_meshes: Dict[str, Any]) -> None:
+    def test_hi(self, meshes_vlvi: Dict[str, Any], he_grid) -> None:
         """Convert unaltered mesh holes back to input holes."""
-        hi_test = he_meshes["grid"].hi
+        hi_test = he_grid.hi
         hi_cont = meshes_vlvi["grid_hi"]
         assert len(hi_test) == len(hi_cont)
         assert compare_circular_2(hi_test, hi_cont)
 
 
-def test_half_edges_boundary_edges(he_meshes: Dict[str, Any]) -> None:
+def test_half_edges_boundary_edges(he_grid) -> None:
     """12 edges on grid. All face holes."""
-    edges = he_meshes["grid"].boundary_edges
+    edges = he_grid.boundary_edges
     assert len(edges) == 12
     assert all(isinstance(x.face, Hole) for x in edges)
 
 
-def test_half_edges_boundary_verts(he_meshes: Dict[str, Any]) -> None:
+def test_half_edges_boundary_verts(he_grid) -> None:
     """12 verts on grid. All valence 2 or 3."""
-    verts = he_meshes["grid"].boundary_verts
+    verts = he_grid.boundary_verts
     assert len(verts) == 12
     assert all(x.valence in (2, 3) for x in verts)
 
 
-def test_half_edges_interior_edges(he_meshes: Dict[str, Any]) -> None:
+def test_half_edges_interior_edges(he_grid) -> None:
     """36 in grid. All face Faces."""
-    edges = he_meshes["grid"].interior_edges
+    edges = he_grid.interior_edges
     assert len(edges) == 36
     assert not any(isinstance(x.face, Hole) for x in edges)
 
 
-def test_half_edges_interior_verts(he_meshes: Dict[str, Any]) -> None:
+def test_half_edges_interior_verts(he_grid) -> None:
     """4 in grid. All valence 4"""
-    verts = he_meshes["grid"].interior_verts
+    verts = he_grid.interior_verts
     assert len(verts) == 4
     assert all(x.valence == 4 for x in verts)

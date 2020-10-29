@@ -1,3 +1,10 @@
+A somewhat typical halfedges data structure.
+
+The big difference is holes. A "triangle" mesh is 2D will never be entirely triangular (and also manifold). There will
+be a boundary around the triangles. This module keeps track of these holes and tries to keep them out of your way.,
+
+edge.hole may show a hole or face, but vert.faces and mesh.faces will not list holes. they should be safe to ignore.
+
 A proper half-edge data structure stores:
     a set of verts (redundant)
     a set of edges
@@ -6,10 +13,9 @@ A proper half-edge data structure stores:
     for each vert, a pointer to an edge (redundant)
     for each face, a pointer to an edge (redundant)
 
-This implementation only stores a set of edges. Face and Vert edge pointers (which had to be updated) have been replaced
-with pointers to the entire mesh (which do not have to be updated). Sets of verts and faces are generated from
-iterating through references in edge instances. Vert.edge references and face.edge references are found the same way[1].
-This makes for slower code, but does not violate DRY and makes for dramatically cleaner code.
+This implementation only stores a set of edges. Sets of verts and faces are generated from iterating through references
+in edge instances. Vert.edge references and face.edge references are found the same way. This makes for slower code,
+but does not violate DRY and makes for dramatically cleaner code.
 
 This means that verts and faces cannot do much if their associated edges have not been added to mesh.edges.
 
@@ -20,8 +26,4 @@ The only thing guaranteed besides connectivity is element sn. This allows code s
     last_issued_sn = mesh.last_issued_sn
     # do some things
     new_edges = {x for x in mesh.edges if x.sn > last_issued_sn}
-
-[1] When searching for an associated (with a vert or face) edge, the lowest sn associated edge will be returned. This
-preserves, under some circumstances, input face edge order. This order may be important if you need to know precisely
-where the path around a face begins. Again, this slows execution.
 

@@ -3,23 +3,16 @@
 
 created: 181121 13:14:06
 """
-
 from copy import deepcopy
 from itertools import product
-from typing import Any, Dict, List, Sequence, Set, Tuple, cast
+from typing import Any, Dict, List, Sequence, Tuple
 
 import pytest
+from pytest_lazyfixture import lazy_fixture
 
 from ..halfedge import half_edge_elements
-
-# TODO: fix imports
-# from ..halfedge.constructors import edges_from_vlvi
-
+from ..halfedge.half_edge_elements import Edge, Face
 from ..halfedge.half_edge_object import HalfEdges
-import os
-import sys
-
-sys.path.append(os.path.join(__file__, "../.."))
 
 
 @pytest.fixture
@@ -60,13 +53,11 @@ def meshes_vlvi() -> Dict[str, Any]:
     # fmt: off
     cube_vl = [(-1, -1, -1), (1, -1, -1), (1, 1, -1), (-1, 1, -1),
                (-1, -1, 1), (1, -1, 1), (1, 1, 1), (-1, 1, 1)]
-    cube_vl = [{'coordinate': x} for x in cube_vl]
 
     cube_vi = {(0, 1, 2, 3), (0, 3, 7, 4), (0, 4, 5, 1),
                (1, 5, 6, 2), (2, 6, 7, 3), (4, 7, 6, 5)}
 
     grid_vl = [(x, y) for x, y in product(range(4), range(4))]
-    grid_vl = [{'coordinate': x} for x in grid_vl]
 
     grid_vi = {
         (x + y, x + y + 1, x + y + 5, x + y + 4)
@@ -82,24 +73,56 @@ def meshes_vlvi() -> Dict[str, Any]:
     # fmt: on
 
 
-# noinspection Pylint
-@pytest.fixture
-def he_meshes(meshes_vlvi: Dict[str, Any]) -> Dict[str, Any]:
+@pytest.fixture(scope="function")
+def he_cube(meshes_vlvi: Dict[str, Any]) -> HalfEdges:
+    return HalfEdges.from_vlvi(meshes_vlvi["cube_vl"], meshes_vlvi["cube_vi"], attr_name='coordinate')
+
+
+@pytest.fixture(scope="function")
+def he_grid(meshes_vlvi: Dict[str, Any]) -> HalfEdges:
+    return HalfEdges.from_vlvi(meshes_vlvi["grid_vl"], meshes_vlvi["grid_vi"], attr_name='coordinate')
+
+
+@pytest.fixture(params=[lazy_fixture("he_grid"), lazy_fixture("he_cube")])
+def he_mesh(request, he_cube, he_grid) -> HalfEdges:
     """A cube and a 3 x 3 grid as HalfEdges instances"""
-    cube_vl = [HalfEdges.vert_type(**x) for x in meshes_vlvi['cube_vl']]
-    cube = HalfEdges.from_vlvi(
-        meshes_vlvi["cube_vl"], meshes_vlvi["cube_vi"]
-    )
-    for elem in cube.verts | cube.faces | cube.holes:
-        elem.mesh = cube
+    return request.param
 
-    grid = HalfEdges.from_vlvi(
-        meshes_vlvi["grid_vl"], meshes_vlvi["grid_vi"]  # , meshes_vlvi["grid_hi"]
-    )
-    for elem in grid.verts | grid.faces | grid.holes:
-        elem.mesh = grid
 
-    return {"cube": cube, "grid": grid}
+@pytest.fixture(scope="function", params=range(9))
+def grid_faces(request, he_grid) -> Tuple[HalfEdges, Face]:
+    """A cube and a 3 x 3 grid as HalfEdges instances"""
+    return he_grid, he_grid.fl[request.param]
+
+
+@pytest.fixture(scope="function", params=range(6))
+def cube_faces(request, he_cube) -> Tuple[HalfEdges, Face]:
+    """A cube and a 3 x 3 grid as HalfEdges instances"""
+    return he_cube, he_cube.fl[request.param]
+
+
+@pytest.fixture(params=[lazy_fixture("grid_faces"), lazy_fixture("cube_faces")])
+def mesh_faces(request) -> Tuple[HalfEdges, Face]:
+    """A cube and a 3 x 3 grid as HalfEdges instances"""
+    return request.param
+
+
+@pytest.fixture(scope="function", params=range(48))
+def grid_edges(request, he_grid) -> Tuple[HalfEdges, Edge]:
+    """A cube and a 3 x 3 grid as HalfEdges instances"""
+    return he_grid, he_grid.el[request.param]
+
+
+@pytest.fixture(scope="function", params=range(24))
+def cube_edges(request, he_cube) -> Tuple[HalfEdges, Edge]:
+    """A cube and a 3 x 3 grid as HalfEdges instances"""
+    return he_cube, he_cube.el[request.param]
+
+
+@pytest.fixture(params=[lazy_fixture("grid_edges"), lazy_fixture("cube_edges")])
+def mesh_edges(request) -> Tuple[HalfEdges, Edge]:
+    """A cube and a 3 x 3 grid as HalfEdges instances"""
+    return request.param
 
 
 def compare_circular(seq_a: Sequence[Any], seq_b: Sequence[Any]) -> bool:
@@ -131,45 +154,3 @@ def compare_circular_2(seq_a: List[List[Any]], seq_b: List[List[Any]]) -> bool:
     if seq_b:
         return False
     return True
-
-
-def _canon_face_rep(face: half_edge_elements.Face) -> List[Any]:
-    """Canonical face representation: value tuples starting at min."""
-    coordinates = [x.coordinate for x in face.verts]
-    idx_min = coordinates.index(min(coordinates))
-    return coordinates[idx_min:] + coordinates[:idx_min]
-
-
-def _canon_he_rep(edges: Set[half_edge_elements.Edge]) -> Tuple[List[Any], List[Any]]:
-    """Canonical mesh representation [faces, holes].
-
-    faces or holes = [canon_face_rep(face), ...]
-    """
-    faces = set(
-        x.face for x in edges if not isinstance(x.face, half_edge_elements.Hole)
-    )
-    holes = set(x.face for x in edges if isinstance(x.face, half_edge_elements.Hole))
-    face_reps = cast(List[Any], [_canon_face_rep(x) for x in faces])
-    hole_reps = cast(List[Any], [_canon_face_rep(x) for x in holes])
-
-    return sorted(face_reps), sorted(hole_reps)
-
-
-def are_equivalent_edges(
-    edges_a: Set[half_edge_elements.Edge], edges_b: Set[half_edge_elements.Edge]
-) -> bool:
-    """Do edges lay on the same vert values with same geometry?"""
-    faces_a, holes_a = _canon_he_rep(edges_a)
-    faces_b, holes_b = _canon_he_rep(edges_b)
-
-    are_same = len(faces_a) == len(faces_b) and len(holes_a) == len(holes_b)
-
-    for a, b in zip(faces_a + holes_a, faces_b + holes_b):
-        are_same = are_same and a == b
-
-    return are_same
-
-
-def are_equivalent_meshes(mesh_a, mesh_b) -> bool:
-    """Do meshes lay on the same vert values with same geometry?"""
-    return are_equivalent_edges(mesh_a.edges, mesh_b.edges)

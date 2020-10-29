@@ -71,6 +71,11 @@ class StaticHalfEdges(BlindHalfEdges):
         }
 
     @property
+    def all_faces(self) -> Set[half_edge_elements.Hole]:
+        """ Look up all faces and holes in mesh """
+        return {x.face for x in self.edges}
+
+    @property
     def elements(self) -> Set[half_edge_elements._MeshElementBase]:
         """All elements in mesh"""
         return self.verts | self.edges | self.faces | self.holes

@@ -2,5 +2,4 @@
 
 from .halfedge.half_edge_elements import *
 from .halfedge.constructors import *
-from .halfedge.operations import *
 from .halfedge.validations import *
