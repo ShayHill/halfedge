@@ -60,15 +60,19 @@ class HalfEdges(StaticHalfEdges):
         """
         Infer which face two verts lie on.
 
+<<<<<<< HEAD
+        :return: face (if unambiguous) on which verts lie
+=======
         :elem: vert or edge (presumably on the face)
         :return: face (if unambiguous) on which vert or edge lies
+>>>>>>> origin/reflection/wip
 
         Able to infer from:
             * both verts on same face: that face
             * empty mesh: a new Hole
         """
         if not self.edges:
-            return self.hole_type()
+            return Hole()
         orig_faces = _get_edge_or_vert_faces(orig)
         dest_faces = _get_edge_or_vert_faces(dest)
         with suppress(ValueError):
@@ -145,8 +149,8 @@ class HalfEdges(StaticHalfEdges):
 
         face_edges = face.edges
 
-        edge = self.edge_type(next=Edge())
-        edge.pair = self.edge_type(pair=edge, next=edge, prev=edge)
+        edge = Edge(next=Edge())
+        edge.pair = Edge(pair=edge, next=edge, prev=edge)
 
         edge_orig, edge_prev = self._infer_wing(orig, face, edge.pair)
         edge_dest, pair_prev = self._infer_wing(dest, face, edge)
@@ -174,13 +178,19 @@ class HalfEdges(StaticHalfEdges):
             *face_edges, orig=edge_dest, prev=pair_prev, next=edge_next, **edge_kwargs
         )
 
-        _face_edges(self.face_type(face), edge)
+        _face_edges(Face(face), edge)
         _face_edges(face, edge.pair)
 
         self.edges.update({edge, edge.pair})
 
         return edge
 
+<<<<<<< HEAD
+    def remove_edge(self, edge: Edge) -> None:
+        """
+        Cut an edge out of the mesh.
+
+=======
     def insert_vert(self, face: Face, **vert_kwargs: Any) -> Vert:
         """
         Insert a new vert into face then triangulate face.
@@ -201,7 +211,7 @@ class HalfEdges(StaticHalfEdges):
             * shared face.edges attributes passed to new edges
             * shared face.verts attributes passed to new vert
         """
-        new_vert = self.vert_type(*face.verts, **vert_kwargs)
+        new_vert = Vert(*face.verts, **vert_kwargs)
         try:
             for vert in face.verts:
                 self.insert_edge(vert, new_vert, face)
@@ -213,7 +223,7 @@ class HalfEdges(StaticHalfEdges):
         """
         Cut an edge out of the mesh.
 
-        :param edge: edge to remove
+        :param Edge: edge to remove
         :param face_kwargs: optional attributes for new face
         :returns: Newly joined (if edge split face) face, else new face that replaces
             previously shared face.
@@ -221,6 +231,7 @@ class HalfEdges(StaticHalfEdges):
             * edge not in mesh
             * edge is a "bridge edge"
 
+>>>>>>> origin/reflection/wip
         Will not allow you to break (make non-manifold) the mesh. For example,
         here's a mesh with three faces, one in each square, and a third face or
         hole around the outside. If I remove that long edge, the hole would have
@@ -230,11 +241,22 @@ class HalfEdges(StaticHalfEdges):
          _       _
         |_|_____|_|
 
+<<<<<<< HEAD
+        Attempting to pop such edges will raise a ManifoldMeshError.
+=======
         Attempting to remove such edges will raise a ManifoldMeshError.
+>>>>>>> origin/reflection/wip
 
         Always removes the edge's face and expands the pair's face (if they are
         different).
 
+<<<<<<< HEAD
+        """
+        pair = edge.pair
+
+        if edge not in self.edges:
+            raise ValueError("edge {} does not exist in mesh".format(edge.sn))
+=======
         Passes attributes:
             * shared face attributes passed to new face
 
@@ -243,38 +265,56 @@ class HalfEdges(StaticHalfEdges):
             raise ManifoldMeshError("edge {} does not exist in mesh".format(edge.sn))
 
         pair = edge.pair
+>>>>>>> origin/reflection/wip
 
         if edge.orig.valence > 1 and edge.dest.valence > 1 and edge.face == pair.face:
             raise ManifoldMeshError("would create non-manifold mesh")
 
+<<<<<<< HEAD
+=======
         edge_face_edges = set(edge.face_edges)
         pair_face_edges = set(pair.face_edges)
 
+>>>>>>> origin/reflection/wip
         # make sure orig and dest do not point to this edge (if there's another option)
         edge.next.orig = edge.next.orig
         pair.next.orig = pair.next.orig
 
+<<<<<<< HEAD
+        # set all faces equal to pair.face
+        for edge_ in (x for x in edge.face_edges if x not in (edge, edge.pair)):
+            edge_.face = pair.face
+=======
         # set all faces equal to new face
         if isinstance(pair.face, Hole):
-            new_face = self.hole_type(*{edge.face, pair.face}, **face_kwargs)
+            new_face = Hole(*{edge.face, pair.face}, **face_kwargs)
         else:
-            new_face = self.face_type(*{edge.face, pair.face}, **face_kwargs)
+            new_face = Face(*{edge.face, pair.face}, **face_kwargs)
         for edge_ in (edge_face_edges | pair_face_edges) - {edge, pair}:
             edge_.face = new_face
+>>>>>>> origin/reflection/wip
 
         # disconnect from previous edges
         edge.prev.next = pair.next
         pair.prev.next = edge.next
         self.edges -= {edge, pair}
 
+<<<<<<< HEAD
+    def remove_vert(self, vert: Vert) -> None:
+=======
         return new_face
 
     def remove_vert(self, vert: Vert, **face_kwargs: Any) -> Face:
+>>>>>>> origin/reflection/wip
         """
         Remove all edges around a vert.
 
         :raises: ManifoldMeshError if the error was caught before any edges were removed
             (this SHOULD always be the case).
+<<<<<<< HEAD
+        :raises: RuntimeError if a problem was found after we started removing edges
+            (this SHOULD never happen).
+=======
         :raises: UnrecoverableManifoldMeshError if a problem was found after we started
             removing edges (this SHOULD never happen).
 
@@ -284,6 +324,7 @@ class HalfEdges(StaticHalfEdges):
             * orients remove_edge(orig, dest) calls so that holes fill hole-adjacent
               spaces rather than faces fill holes.
             * identifies and removes (one edge long) peninsula edges first
+>>>>>>> origin/reflection/wip
 
         remove_edge checks for bridge faces like so:
             * is orig valence > 1
@@ -301,14 +342,39 @@ class HalfEdges(StaticHalfEdges):
               |
 
         Remove peninsula edges first to avoid this.
+<<<<<<< HEAD
+        """
+        # examine the vert edges to see if removing vert is safe
+=======
 
         Passes attributes:
             * shared face attributes passed to new face
         """
+>>>>>>> origin/reflection/wip
         peninsulas = {x for x in vert.edges if x.dest.valence == 1}
         true_edges = set(vert.edges) - peninsulas
         vert_faces = {x.face for x in true_edges}
         if len(true_edges) != len(vert_faces):
+<<<<<<< HEAD
+            raise ManifoldMeshError("would create non-manifold mesh")
+
+        # remove peninsula edges then others.
+        for edge in peninsulas:
+            self.remove_edge(edge)
+        try:
+            for edge in vert.edges:
+                if edge.face in self.faces:
+                    self.remove_edge(edge)
+                else:
+                    self.remove_edge(edge.pair)
+        except ManifoldMeshError:
+            raise RuntimeError(
+                "Unexpected error. This should have been caught at the beginning of the "
+                "function. A bridge edge was found (e.i., we discovered that this vert "
+                "cannot be removed), but some vert edges may have been removed before this "
+                "was realized. We've found a bug in the module."
+            )
+=======
             raise ManifoldMeshError("removing vert would create non-manifold mesh")
 
         # remove peninsula edges then others.
@@ -372,7 +438,7 @@ class HalfEdges(StaticHalfEdges):
         remove_edge will replace the original faces, so these are restored at the end
         of the method.
         """
-        new_vert = self.vert_type(*{edge.orig, edge.dest}, **vert_kwargs)
+        new_vert = Vert(*{edge.orig, edge.dest}, **vert_kwargs)
         edge_face = edge.face
         pair_face = edge.pair.face
         for orig, dest in ((edge.dest, new_vert), (new_vert, edge.orig)):
@@ -383,31 +449,6 @@ class HalfEdges(StaticHalfEdges):
         _face_edges(edge_face, new_edge.pair)
         _face_edges(pair_face, new_edge)
         return new_vert
-
-    def flip_edge(self, edge: Edge) -> Edge:
-        """
-        Flip an edge between two triangles.
-
-        :param edge: Edge instance in self
-        :return: None
-
-        * The edge must be between two triangles.
-        * Only shared edge attributes will remain.
-        * Only shared face attributes will remain.
-
-        Warning: This can break your mesh if the quadrangle formed by the triangles
-        on either side of the flipped edge is not convex. Not useful without some
-        coordinate information to avoid this non-convex case.
-        """
-        pair = edge.pair
-        if len(edge.face_edges) != 3 or len(pair.face_edges) != 3:
-            raise ValueError("can only flip an edge between two triangles")
-        new_orig = edge.next.dest
-        new_dest = pair.next.dest
-        face = self.remove_edge(edge)
-        new_edge = self.insert_edge(new_orig, new_dest, face)
-        new_edge.update(edge, pair)
-        return new_edge
 
     def collapse_edge(self, edge: Edge, **vert_kwargs) -> Vert:
         """
@@ -420,12 +461,13 @@ class HalfEdges(StaticHalfEdges):
         Passes attributes:
             * shared vert attributes passed to new vert
 
-        Warning: Some ugly things can happen here than can only be recognized and
-        avoided by examining the geometry. This module only addresses connectivity,
+        Some ugly things can happen here than can only be recognized and avoided by
+        examining the geometry. This module only addresses connectivity,
         not geometry, but I've included this operation to experiment with and use
-        carefully. Can really, really break things.
+        carefully. Can really, really break things when you aren't using a triangle
+        mesh.
         """
-        new_vert = self.vert_type(edge.orig, edge.dest, **vert_kwargs)
+        new_vert = Vert(edge.orig, edge.dest, **vert_kwargs)
         for edge_ in set(edge.orig.edges) | set(edge.dest.edges):
             edge_.orig = new_vert
         self.edges.remove(edge)
@@ -436,3 +478,6 @@ class HalfEdges(StaticHalfEdges):
             face_edges[0].pair.pair = face_edges[1].pair
             self.edges -= set(face_edges)
         return new_vert
+
+
+>>>>>>> origin/reflection/wip

@@ -182,12 +182,12 @@ class Vert(_MeshElementBase):
     @property
     def faces(self) -> List[Face]:
         """ Faces radiating from vert """
-        return [x for x in self.all_faces if type(x).__name__ == "Face"]
+        return [x for x in self.all_faces if not isinstance(x, Hole)]
 
     @property
     def holes(self) -> List[Hole]:
         """ Faces radiating from vert """
-        return [x for x in self.all_faces if type(x).__name__ == "Hole"]
+        return [x for x in self.all_faces if isinstance(x, Hole)]
 
     @property
     def all_faces(self) -> List[Union[Face, Hole]]:
