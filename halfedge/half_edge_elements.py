@@ -51,9 +51,11 @@ def array_equal(*args: Any):
     with suppress(ValueError):
         # should work for everything except numpy
         return all(x == args[0] for x in args[1:])
-    with suppress(TypeError):
+    with suppress(ValueError, TypeError):
         # for numpy, which would return [True, True, ...]
         return all(all(x == args[0]) for x in args[1:])  # type: ignore
+    with suppress(TypeError):
+        return all(all(x == y) for x, y in zip(*args))
     raise ValueError(f"module does not support equality test between {args}")
 
 

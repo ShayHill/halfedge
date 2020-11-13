@@ -88,7 +88,7 @@ class StaticHalfEdges(BlindHalfEdges):
     @property
     def boundary_edges(self) -> Set[half_edge_elements.Edge]:
         """Look up edges on holes."""
-        return {x for x in self.edges if type(x.face).__name__ == "Hole"}
+        return {x for x in self.edges if isinstance(x.face, half_edge_elements.Hole)}
 
     @property
     def boundary_verts(self) -> Set[half_edge_elements.Vert]:
