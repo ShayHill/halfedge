@@ -30,11 +30,10 @@ This module is all the lookups. Transformations elsewhere.
 # 2006 June 05
 # 2012 September 30
 """
-from operator import attrgetter
 from typing import Dict, List, Optional, Set, Tuple
-from .constructors import BlindHalfEdges
 
 from . import half_edge_elements
+from .constructors import BlindHalfEdges
 
 
 class StaticHalfEdges(BlindHalfEdges):
@@ -104,21 +103,6 @@ class StaticHalfEdges(BlindHalfEdges):
     def vl(self) -> List[half_edge_elements.Vert]:
         """Sorted list of verts"""
         return sorted(self.verts)
-
-    # @property
-    # def el(self) -> List[half_edge_elements.Edge]:
-    #     """Sorted list of edges"""
-    #     return sorted(self.edges)
-    #
-    # @property
-    # def fl(self) -> List[half_edge_elements.Face]:
-    #     """Sorted list of faces"""
-    #     return sorted(self.faces)
-    #
-    # @property
-    # def hl(self) -> List[half_edge_elements.Hole]:
-    #     """Sorted list of holes"""
-    #     return sorted(self.holes)
 
     @property
     def _vert2list_index(self) -> Dict[half_edge_elements.Vert, int]:

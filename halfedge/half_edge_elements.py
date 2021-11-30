@@ -85,32 +85,15 @@ def get_dict_intersection(*dicts: Dict[KeyT, Any]) -> Dict[KeyT, Any]:
     return intersection
 
 
-_TMeshElementBase = TypeVar("_TMeshElementBase", bound="_MeshElementBase")
+_TMeshElem = TypeVar("_TMeshElementBase", bound="_MeshElementBase")
 
 
 class _MeshElementBase:
     """
-    A namespace that == on id, not equivalency. counts instances.
-
-    * Vert, Edge, Face, and Hole elements are assigned a serial number at creation.
-    * Vert, Edge, Face, and Hole share a sequence of serial numbers (i.e., there will
-        be no duplicate serial numbers between instances of child classes of
-        _MeshElementBase).
-    * current highest serial number is available as self.last_issued_sn
-
-    This allows for
-
-        1. capture last issued serial number;
-        2. transform mesh; then
-        3. filter for new serial numbers.
+    A namespace that == on id, not equivalency.
     """
 
-    sn: int
-    last_issued_sn: int = -1
-
-    def __init__(
-        self: _TMeshElementBase, *fill_from: _TMeshElementBase, **kwargs: Any
-    ) -> None:
+    def __init__(self: _TMeshElem, *fill_from: _TMeshElem, **kwargs: Any) -> None:
         """
         Create an instance with a new serial number (and copy attrs from fill_from).
 
@@ -121,42 +104,30 @@ class _MeshElementBase:
         high: attributes passed as kwargs to init
         low: attributes inherited from fill_from argument
         """
-        _MeshElementBase.last_issued_sn += 1
-        self.sn = self.last_issued_sn
         self.update(*fill_from, **kwargs)
-        self.T = TypeVar("T", bound=_MeshElementBase)
 
-    def update(
-        self: _TMeshElementBase, *fill_from: _TMeshElementBase, **kwargs: Any
-    ) -> None:
+    def update(self: _TMeshElem, *fill_from: _TMeshElem, **kwargs: Any) -> None:
         """
-        Add or replace attributes (except sn)
+        Add or replace attributes
 
         :param fill_from: instances of the same type
         :param kwargs: new attribute values (supersede fill_from attributes)
         """
         attrs = get_dict_intersection(*(x.__dict__ for x in fill_from))
         attrs.update(kwargs)
-        attrs["sn"] = self.sn
         for key, val in attrs.items():
-            if key in self.__annotations__:
-                key = key.lstrip("_")
             setattr(self, key, val)
 
-    def extend(
-        self: _TMeshElementBase, *fill_from: _TMeshElementBase, **kwargs: Any
-    ) -> None:
-        """ Add attributes only. Do not replace. """
+    def extend(self: _TMeshElem, *fill_from: _TMeshElem, **kwargs: Any) -> None:
+        """Add attributes only. Do not replace."""
         attrs = get_dict_intersection(*(x.__dict__ for x in fill_from))
         attrs.update(kwargs)
         attrs.update(self.__dict__)
         for key, val in attrs.items():
-            if key in self.__annotations__:
-                key = key.lstrip("_")
             setattr(self, key, val)
 
-    def __lt__(self: _TMeshElementBase, other: _TMeshElementBase) -> bool:
-        """ Sort by id """
+    def __lt__(self: _TMeshElem, other: _TMeshElem) -> bool:
+        """Sort by id"""
         return id(self) < id(other)
 
 
@@ -180,7 +151,7 @@ def _function_lap(
         if lap[-1] == lap[0]:
             return lap[:-1]
         if lap[-1] in lap[1:-1]:
-            raise ManifoldMeshError(f"infinite function lap {[x.sn for x in lap]}")
+            raise ManifoldMeshError(f"infinite function lap {[id(x) for x in lap]}")
 
 
 class Vert(_MeshElementBase):

@@ -28,7 +28,7 @@ VERT_IN_ANOTHER_FACE = "orig or dest in mesh but not on given face"
 
 class TestInsertEdge:
     def test_insert_into_empty_mesh(self) -> None:
-        """ First edge into empty mesh creates Hole """
+        """First edge into empty mesh creates Hole"""
         mesh = HalfEdges()
         mesh.insert_edge(Vert(), Vert())
         assert len(tuple(mesh.verts)) == 2
@@ -38,7 +38,7 @@ class TestInsertEdge:
 
     @pytest.mark.parametrize("index", range(4))
     def test_infer_face_both_verts(self, index, mesh_faces) -> None:
-        """ Infer face when two verts on face given """
+        """Infer face when two verts on face given"""
         mesh, face = mesh_faces
         new_edge = mesh.insert_edge(face.verts[index], face.verts[index - 2])
         assert new_edge.pair.face == face
@@ -46,7 +46,7 @@ class TestInsertEdge:
 
     @pytest.mark.parametrize("index", range(4))
     def test_squares_become_two_triangles(self, index, mesh_faces) -> None:
-        """ Infer face when two verts on face given """
+        """Infer face when two verts on face given"""
         mesh, face = mesh_faces
         new_edge = mesh.insert_edge(face.verts[index], face.verts[index - 2], face)
         assert len(new_edge.face_edges) == 3
@@ -55,7 +55,7 @@ class TestInsertEdge:
 
     @pytest.mark.parametrize("index", range(4))
     def test_orig_on_face(self, index, mesh_faces) -> None:
-        """ Connect to new vert from orig on face """
+        """Connect to new vert from orig on face"""
         mesh, face = mesh_faces
         orig = face.verts[index]
         new_edge = mesh.insert_edge(orig, Vert(), face)
@@ -65,7 +65,7 @@ class TestInsertEdge:
 
     @pytest.mark.parametrize("index", range(4))
     def test_dest_on_face(self, index, mesh_faces) -> None:
-        """ Connect to dest on face from new vert """
+        """Connect to dest on face from new vert"""
         mesh, face = mesh_faces
         dest = face.verts[index]
         new_edge = mesh.insert_edge(Vert(), dest, face)
@@ -75,7 +75,7 @@ class TestInsertEdge:
 
     @pytest.mark.parametrize("index", range(4))
     def test_infer_edge(self, index, mesh_faces) -> None:
-        """ Infer correct vert when edge passed as orig_elem """
+        """Infer correct vert when edge passed as orig_elem"""
         mesh, face = mesh_faces
         orig = face.edges[index]
         new_edge = mesh.insert_edge(orig, Vert(), face)
@@ -85,7 +85,7 @@ class TestInsertEdge:
 
     @pytest.mark.parametrize("index", range(4))
     def test_insert_will_not_overwrite(self, index, mesh_faces) -> None:
-        """ Raise ManifoldMeshError if attempting to overwrite existing edge. """
+        """Raise ManifoldMeshError if attempting to overwrite existing edge."""
         mesh, face = mesh_faces
         with pytest.raises(ManifoldMeshError) as err:
             mesh.insert_edge(face.verts[index], face.verts[index - 1], face)
@@ -93,7 +93,7 @@ class TestInsertEdge:
 
     @pytest.mark.parametrize("index", range(4))
     def test_orig_off_face(self, index, mesh_faces) -> None:
-        """ Raise ManifoldMeshError if any vert in mesh but not on given face """
+        """Raise ManifoldMeshError if any vert in mesh but not on given face"""
         mesh, face = mesh_faces
         dest = face.verts[index]
         orig = next(
@@ -105,7 +105,7 @@ class TestInsertEdge:
 
     @pytest.mark.parametrize("index", range(4))
     def test_dest_off_face(self, index, mesh_faces) -> None:
-        """ Raise ManifoldMeshError if any vert in mesh but not on given face """
+        """Raise ManifoldMeshError if any vert in mesh but not on given face"""
         mesh, face = mesh_faces
         orig = face.verts[index]
         dest = next(
@@ -116,7 +116,7 @@ class TestInsertEdge:
         assert VERT_IN_ANOTHER_FACE in err.value.args[0]
 
     def test_orig_and_dest_off_face(self, mesh_faces) -> None:
-        """ Raise ManifoldMeshError if any vert in mesh but not on given face """
+        """Raise ManifoldMeshError if any vert in mesh but not on given face"""
         mesh, face = mesh_faces
         orig = next(x for x in mesh.verts if x not in face.verts)
         dest = next(
@@ -130,7 +130,7 @@ class TestInsertEdge:
 
     @pytest.mark.parametrize("index", range(4))
     def test_orig_eq_dest(self, index, mesh_faces) -> None:
-        """ Raise ManifoldMeshError if orig == dest """
+        """Raise ManifoldMeshError if orig == dest"""
         mesh, face = mesh_faces
         orig = face.verts[index]
         with pytest.raises(ManifoldMeshError) as err:
@@ -138,14 +138,14 @@ class TestInsertEdge:
         assert "orig and dest are the same" in err.value.args[0]
 
     def test_floating_edge(self, mesh_faces) -> None:
-        """ Raise ManifoldMeshError neither vert in mesh (and mesh not empty) """
+        """Raise ManifoldMeshError neither vert in mesh (and mesh not empty)"""
         mesh, face = mesh_faces
         with pytest.raises(ManifoldMeshError) as err:
             mesh.insert_edge(Vert(), Vert(), face)
         assert "adding floating edge to existing face" in err.value.args[0]
 
     def test_fail_to_infer(self, he_mesh) -> None:
-        """ Raise ValueError if face not given and not unambiguous """
+        """Raise ValueError if face not given and not unambiguous"""
         mesh = he_mesh
         with pytest.raises(ValueError) as err:
             mesh.insert_edge(Vert(), Vert())
@@ -153,7 +153,7 @@ class TestInsertEdge:
 
     @pytest.mark.parametrize("index", range(4))
     def test_face_attrs_pass(self, index, mesh_faces) -> None:
-        """ Pass attributes from face when face is split """
+        """Pass attributes from face when face is split"""
         mesh, face = mesh_faces
         face.some_attr = "orange"
         edge = mesh.insert_edge(face.verts[0], face.verts[2], some_attr="blue")
@@ -162,7 +162,7 @@ class TestInsertEdge:
 
     @pytest.mark.parametrize("index", range(4))
     def test_edge_kwargs(self, index, mesh_faces) -> None:
-        """ Assign edge_kwargs as attributes """
+        """Assign edge_kwargs as attributes"""
         mesh, face = mesh_faces
         edge = mesh.insert_edge(face.verts[0], face.verts[2], some_attr="blue")
         assert edge.some_attr == "blue"
@@ -170,7 +170,7 @@ class TestInsertEdge:
 
     @pytest.mark.parametrize("index", range(4))
     def test_edge_attrs_pass(self, index, mesh_faces) -> None:
-        """ Shared face edge attributes pass to new edge """
+        """Shared face edge attributes pass to new edge"""
         mesh, face = mesh_faces
         for edge in face.edges:
             edge.some_attr = "red"
@@ -181,7 +181,7 @@ class TestInsertEdge:
 
 class TestInsertVert:
     def test_vert_attrs_pass(self, mesh_faces) -> None:
-        """ Shared face.verts attrs pass to new vert """
+        """Shared face.verts attrs pass to new vert"""
         mesh, face = mesh_faces
         for vert in face.verts:
             vert.some_attr = "purple"
@@ -189,7 +189,7 @@ class TestInsertVert:
         assert new_vert.some_attr == "purple"  # type: ignore
 
     def test_vert_kwargs_pass(self, mesh_faces) -> None:
-        """ vert_kwargs assigned to new vert """
+        """vert_kwargs assigned to new vert"""
         mesh, face = mesh_faces
         new_vert = mesh.insert_vert(face, some_attr="teal")
         assert new_vert.some_attr == "teal"  # type: ignore
@@ -197,7 +197,7 @@ class TestInsertVert:
 
 class TestRemoveEdge:
     def test_face_attributes_passed(self, mesh_edges) -> None:
-        """ face attributed inherited """
+        """face attributed inherited"""
         mesh, edge = mesh_edges
         edge.face.some_attr = "brown"
         edge.pair.face.some_attr = "brown"
@@ -206,13 +206,13 @@ class TestRemoveEdge:
         assert new_face.some_attr == "brown"
 
     def test_face_kwargs_passed(self, mesh_edges) -> None:
-        """ face_kwargs become attributes """
+        """face_kwargs become attributes"""
         mesh, edge = mesh_edges
         new_face = mesh.remove_edge(edge, some_attr="green")
         assert new_face.some_attr == "green"
 
     def test_missing_edge(self, he_mesh) -> None:
-        """ Raise ManifoldMeshError if edge not in mesh """
+        """Raise ManifoldMeshError if edge not in mesh"""
         with pytest.raises(ManifoldMeshError) as err:
             he_mesh.remove_edge(Edge())
         assert "does not exist" in err.value.args[0]
@@ -252,7 +252,7 @@ class TestRemoveEdge:
         assert he_mesh.edges == set()
 
     def test_pair_type_is_new_face_type(self, mesh_edges) -> None:
-        """ edge pair is Hole, new_face is Hole """
+        """edge pair is Hole, new_face is Hole"""
         mesh, edge = mesh_edges
         pair_face = edge.pair.face
         new_face = mesh.remove_edge(edge)
@@ -261,8 +261,8 @@ class TestRemoveEdge:
 
 class TestRemoveAddEdge:
     def test_remove_then_add(self, he_mesh) -> None:
-        """ Remove then re-add each edge """
-        for edge in tuple(x for x in he_mesh.edges if x.sn > x.pair.sn):
+        """Remove then re-add each edge"""
+        for edge in tuple(x for x in he_mesh.edges if id(x) > id(x.pair)):
             orig, dest = edge.orig, edge.dest
             face = he_mesh.remove_edge(edge)
             validate_mesh(he_mesh)
@@ -270,8 +270,8 @@ class TestRemoveAddEdge:
             validate_mesh(he_mesh)
 
     def test_remove_then_add2(self, he_mesh) -> None:
-        """ Same as above with opposite edges """
-        for edge in tuple(x for x in he_mesh.edges if x.sn < x.pair.sn):
+        """Same as above with opposite edges"""
+        for edge in tuple(x for x in he_mesh.edges if id(x) < id(x.pair)):
             orig, dest = edge.orig, edge.dest
             face = he_mesh.remove_edge(edge)
             validate_mesh(he_mesh)
@@ -281,7 +281,7 @@ class TestRemoveAddEdge:
 
 class TestRemoveVert:
     def test_remove_vert_corner(self, he_grid) -> None:
-        """ Remove outside verts to get five-face plus sign."""
+        """Remove outside verts to get five-face plus sign."""
         corners = {x for x in he_grid.verts if x.valence == 2}
         for corner in corners:
             he_grid.remove_vert(corner)
@@ -289,7 +289,7 @@ class TestRemoveVert:
         assert sorted(len(x.edges) for x in he_grid.holes) == [12]
 
     def test_interior_verts(self, he_grid) -> None:
-        """ Remove interior verts from grid leaves one big face."""
+        """Remove interior verts from grid leaves one big face."""
         corners = {x for x in he_grid.verts if x.valence == 4}
         for corner in corners:
             he_grid.remove_vert(corner)
@@ -300,7 +300,7 @@ class TestRemoveVert:
         "i, j", chain(*(permutations(x) for x in combinations(range(4), 2)))
     )
     def test_remove_vert_bridge(self, i, j, he_grid) -> None:
-        """ Raise ManifoldMeshError if vert has a bridge edge. """
+        """Raise ManifoldMeshError if vert has a bridge edge."""
         # create plus
         corners = {x for x in he_grid.verts if x.valence == 2}
         for corner in corners:
@@ -316,7 +316,7 @@ class TestRemoveVert:
 
 class TestRemoveThenInsertVert:
     def test_remove_then_insert(self, he_cube) -> None:
-        """ Remove then replace any vert (not against a hole) and keep mesh intact """
+        """Remove then replace any vert (not against a hole) and keep mesh intact"""
         for vert in tuple(he_cube.verts):
             new_face = he_cube.remove_vert(vert)
             he_cube.insert_vert(new_face)
@@ -335,7 +335,7 @@ class TestRemoveFace:
 
 class TestSplitEdge:
     def test_vert_attributes_passed_to_new_vert(self, mesh_edges) -> None:
-        """ New vert inherits common attributes of orig and dest verts. """
+        """New vert inherits common attributes of orig and dest verts."""
         mesh, edge = mesh_edges
         edge.orig.some_attr = "black"
         edge.dest.some_attr = "black"
@@ -356,7 +356,7 @@ class TestSplitEdge:
         assert all(x.some_attr == "blue" for x in new_pairs)
 
     def test_geometry(self, mesh_edges) -> None:
-        """ Add one to number of face edges. """
+        """Add one to number of face edges."""
         mesh, edge = mesh_edges
         edge_face = edge.face
         len_edge_face = len(edge_face.edges)
@@ -383,7 +383,7 @@ class TestFlipEdge:
 
 class TestCollapseEdge:
     def test_collapse_to_empty(self, he_mesh) -> None:
-        """ Collapse edge till mesh is empty """
+        """Collapse edge till mesh is empty"""
         while he_mesh.edges:
             he_mesh.collapse_edge(next(iter(he_mesh.edges)))
             assert all(len(x.edges) > 2 for x in he_mesh.faces)

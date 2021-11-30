@@ -43,47 +43,6 @@ def valid_identifier():
 
 
 class TestMeshElementBase:
-    @pytest.mark.parametrize("count", [random.randint(2, 5) for x in range(5)])
-    def test_sequential_serial_numbers(self, count) -> None:
-        """Assigns sequential serial numbers."""
-        sns = [_MeshElementBase().sn for _ in range(count)]
-        assert sns == sorted(sns)
-
-    @pytest.mark.parametrize("count", [random.randint(2, 5) for x in range(5)])
-    def test_last_issued_sn(self, count) -> None:
-        """The last_issued_sn == last sn issued to ANY instance."""
-        instances = [_MeshElementBase() for _ in range(count)]
-        assert all((x.last_issued_sn == instances[-1].sn for x in instances))
-
-    def test_children_share_serial_numbers(self) -> None:
-        """child classes share set of serial numbers
-
-        A serial number will never duplicate and will always be sequential
-        between _MeshElementBase and any children
-
-        """
-
-        class MeshElemA(_MeshElementBase):
-            """Subclass _MeshElementBase to test for sn sharing."""
-
-        class MeshElemB(_MeshElementBase):
-            """Subclass _MeshElementBase to test for sn sharing."""
-
-        class MeshElemC(_MeshElementBase):
-            """Subclass _MeshElementBase to test for sn sharing."""
-
-        instances = [x() for x in (_MeshElementBase, MeshElemA, MeshElemB, MeshElemC)]
-        assert all(x.last_issued_sn == instances[-1].sn for x in instances)
-        assert all(instances[x].sn < instances[x + 1].sn for x in range(3))
-
-    # TODO: remove after successfully factoring out < and >
-    # def test_lt_gt(self) -> None:
-    #     """Sorts by serial number."""
-    #     elem1 = _MeshElementBase()
-    #     elem2 = _MeshElementBase()
-    #     assert elem1 < elem2
-    #     assert elem2 > elem1
-
     @pytest.mark.parametrize("name,value", [(valid_identifier(), random.randint(1, 5))])
     def test_kwargs(self, name, value) -> None:
         """Sets kwargs."""

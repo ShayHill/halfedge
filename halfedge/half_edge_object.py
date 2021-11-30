@@ -250,7 +250,7 @@ class HalfEdges(StaticHalfEdges):
 
         """
         if edge not in self.edges:
-            raise ManifoldMeshError("edge {} does not exist in mesh".format(edge.sn))
+            raise ManifoldMeshError("edge {} does not exist in mesh".format(id(edge)))
 
         pair = edge.pair
 
