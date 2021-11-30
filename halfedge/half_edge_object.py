@@ -7,9 +7,15 @@ from .half_edge_querries import StaticHalfEdges
 EV = Union[Edge, Vert]
 
 
-def _face_edges(face: Face, edge: Edge) -> None:
+def _update_face_edges(face: Face, edge: Edge) -> None:
     """
-    Add or update face attribute for each edge in edge.face_edges
+    Add of update face attribute for each edge in edge.face_edges
+
+    :param face: each edge will point to this face
+    :param edge: one edge on the face (even if the edge doesn't point to the face yet)
+
+    This is the only way to add a face to a mesh, because faces only exist as long as
+    there is an edge pointing to them.
     """
     for edge_ in edge.face_edges:
         edge_.face = face
@@ -184,8 +190,9 @@ class HalfEdges(StaticHalfEdges):
             *face_edges, orig=edge_dest, prev=pair_prev, next=edge_next, **edge_kwargs
         )
 
-        _face_edges(self.face_type(face), edge)
-        _face_edges(face, edge.pair)
+        # if face is not split, new face will be created then immediately written over
+        _update_face_edges(self.face_type(face), edge)
+        _update_face_edges(face, edge.pair)
 
         self.edges.update({edge, edge.pair})
 
@@ -390,8 +397,8 @@ class HalfEdges(StaticHalfEdges):
             new_edge.extend(edge.pair)
             new_edge.pair.extend(edge)
         self.remove_edge(edge)
-        _face_edges(edge_face, new_edge.pair)
-        _face_edges(pair_face, new_edge)
+        _update_face_edges(edge_face, new_edge.pair)
+        _update_face_edges(pair_face, new_edge)
         return new_vert
 
     def flip_edge(self, edge: Edge) -> Edge:
@@ -434,6 +441,8 @@ class HalfEdges(StaticHalfEdges):
         avoided by examining the geometry. This module only addresses connectivity,
         not geometry, but I've included this operation to experiment with and use
         carefully. Can really, really break things.
+
+        TODO: Document slit removal and only check left and right of edge for slits.
         """
         new_vert = self.vert_type(edge.orig, edge.dest, **vert_kwargs)
         for edge_ in set(edge.orig.edges) | set(edge.dest.edges):
