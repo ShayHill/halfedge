@@ -85,7 +85,7 @@ def get_dict_intersection(*dicts: Dict[KeyT, Any]) -> Dict[KeyT, Any]:
     return intersection
 
 
-T = TypeVar("T")
+_TMeshElementBase = TypeVar("_TMeshElementBase", bound="_MeshElementBase")
 
 
 class _MeshElementBase:
@@ -108,7 +108,9 @@ class _MeshElementBase:
     sn: int
     last_issued_sn: int = -1
 
-    def __init__(self: T, *fill_from: T, **kwargs: Any) -> None:
+    def __init__(
+        self: _TMeshElementBase, *fill_from: _TMeshElementBase, **kwargs: Any
+    ) -> None:
         """
         Create an instance with a new serial number (and copy attrs from fill_from).
 
@@ -122,8 +124,11 @@ class _MeshElementBase:
         _MeshElementBase.last_issued_sn += 1
         self.sn = self.last_issued_sn
         self.update(*fill_from, **kwargs)
+        self.T = TypeVar("T", bound=_MeshElementBase)
 
-    def update(self, *fill_from, **kwargs: Any) -> None:
+    def update(
+        self: _TMeshElementBase, *fill_from: _TMeshElementBase, **kwargs: Any
+    ) -> None:
         """
         Add or replace attributes (except sn)
 
@@ -138,8 +143,10 @@ class _MeshElementBase:
                 key = key.lstrip("_")
             setattr(self, key, val)
 
-    def extend(self, *fill_from, **kwargs: Any) -> None:
-        """Add attributes only. Do not replace."""
+    def extend(
+        self: _TMeshElementBase, *fill_from: _TMeshElementBase, **kwargs: Any
+    ) -> None:
+        """ Add attributes only. Do not replace. """
         attrs = get_dict_intersection(*(x.__dict__ for x in fill_from))
         attrs.update(kwargs)
         attrs.update(self.__dict__)
@@ -148,13 +155,18 @@ class _MeshElementBase:
                 key = key.lstrip("_")
             setattr(self, key, val)
 
+    def __lt__(self: _TMeshElementBase, other: _TMeshElementBase) -> bool:
+        """ Sort by id """
+        return id(self) < id(other)
 
-FLapArgT = TypeVar("FLapArgT")
+
+# argument to a function that returns an instance of the input argument
+_TFLapArg = TypeVar("_TFLapArg")
 
 
 def _function_lap(
-    func: Callable[[FLapArgT], FLapArgT], first_arg: FLapArgT
-) -> List[FLapArgT]:
+    func: Callable[[_TFLapArg], _TFLapArg], first_arg: _TFLapArg
+) -> List[_TFLapArg]:
     """
     Repeatedly apply func till first_arg is reached again.
 

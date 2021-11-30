@@ -5,7 +5,8 @@ created: 181121 13:14:06
 """
 from copy import deepcopy
 from itertools import product
-from typing import Any, Dict, List, Sequence, Tuple
+from typing import Any, Dict, List, Sequence, Tuple, Set, Iterable, Hashable, TypeVar
+from contextlib import suppress
 
 import pytest
 from pytest_lazyfixture import lazy_fixture
@@ -158,3 +159,71 @@ def compare_circular_2(seq_a: List[List[Any]], seq_b: List[List[Any]]) -> bool:
     if seq_b:
         return False
     return True
+
+
+_TVert = TypeVar("_TVert", bound=Hashable)
+
+
+def get_canonical_vr(vr: Set[Tuple[Tuple[_TVert]]]) -> Set[Tuple[Tuple[_TVert]]]:
+    """
+    Rotate each tuple in a set to start with its min item.
+
+    See docstring for canonical_mesh.
+    """
+    vr_aligned = set()
+    for tuple_ in vr:
+        min_item_idx = tuple_.index(min(tuple_))
+        vr_aligned.add(tuple_[min_item_idx:] + tuple_[:min_item_idx])
+    # noinspection PyTypeChecker
+    return vr_aligned
+
+
+def get_canonical_mesh(
+    vl: Sequence[_TVert], vi: Iterable[Tuple[int]]
+) -> Set[Tuple[Tuple[_TVert]]]:
+    """
+    A canonical mesh representation.
+
+    Methods in this library represent meshes as
+
+        * vertex list (vl) - ordered Vert items
+        * vertex index (fi) - unordered set of tuples of indices to the vertex list
+
+    The vertex list holds the vertices of the mesh, and the vertex index holds a
+    tuple of vertex-list indices for each face. So, a triangle would be
+
+        vl = [point_a, point_b, point_c]
+        fi = {(0, 1, 2)}
+
+    Such representations are slightly tricky to compare, because the above is
+    equivalent to
+
+        vl = [point_a, point_b, point_c]
+        fi = {(1, 2, 0)}
+
+    or
+
+        vl = [point_a, point_c, point_b]
+        fi = {(0, 2, 1)}
+
+    The order of the set of input tuples doesn't matter. The order of index tuples
+    *does* matter, but the starting point does not (e.i., these indices are
+    "circular" -> 012 ~= 120 ~= 201).
+
+    ------
+
+    Methods in this library also produce vr (vertex raw) representations:
+
+        vr = {(point_a, point_b_, point_c)}
+
+    These remove some of the ambiguities of the vl / vi representation, but the
+    starting point of each face is still ambiguous. That is:
+
+        {(point_a, point_b, point_c)} is equivalent to
+        {(point_b, point_c, point_a)} is equivalent to
+        {(point_c, point_a, point_b)}
+
+    This function produces an unambiguous representation so that such methods can be
+    tested.
+    """
+    return get_canonical_vr({tuple(vl[x] for x in y) for y in vi})

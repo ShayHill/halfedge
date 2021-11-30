@@ -13,7 +13,7 @@ from typing import Any, Callable, Dict
 import pytest
 
 # noinspection PyProtectedMember,PyProtectedMember
-from .conftest import compare_circular, compare_circular_2
+from .conftest import compare_circular, compare_circular_2, get_canonical_mesh
 from ..halfedge.half_edge_elements import (
     Edge,
     Face,
@@ -24,6 +24,7 @@ from ..halfedge.half_edge_elements import (
     _function_lap,
 )
 from ..halfedge.half_edge_querries import StaticHalfEdges
+
 
 alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 identifiers = (
@@ -239,23 +240,20 @@ def test_half_edges_init(he_triangle: Dict[str, Any]) -> None:
 class TestHalfEdges:
     """Keep the linter happy."""
 
-    def test_last_issued_sn(self, he_mesh: Dict[str, Any]) -> None:
-        """Matches highest serial number of any _MeshElementBase instance."""
-        assert he_mesh.last_issued_sn == _MeshElementBase.last_issued_sn
-
-
-
     def test_vi(self, meshes_vlvi: Dict[str, Any], he_grid, he_cube) -> None:
         """Convert unaltered mesh faces back to input vi."""
-        for mesh, key in ((he_grid, 'grid'), (he_cube, 'cube')):
-            assert compare_circular_2(mesh.fi, meshes_vlvi[key + "_vi"])
+        for mesh, key in ((he_grid, "grid"), (he_cube, "cube")):
+            input_vl, input_vi = meshes_vlvi[key + "_vl"], meshes_vlvi[key + "_vi"]
+            expect = get_canonical_mesh(input_vl, input_vi)
+            result = get_canonical_mesh([x.coordinate for x in mesh.vl], mesh.fi)
+            assert expect == result
 
     def test_hi(self, meshes_vlvi: Dict[str, Any], he_grid) -> None:
         """Convert unaltered mesh holes back to input holes."""
-        hi_test = he_grid.hi
-        hi_cont = meshes_vlvi["grid_hi"]
-        assert len(hi_test) == len(hi_cont)
-        assert compare_circular_2(hi_test, hi_cont)
+        input_vl, input_hi = meshes_vlvi["grid_vl"], meshes_vlvi["grid_hi"]
+        expect = get_canonical_mesh(input_vl, input_hi)
+        result = get_canonical_mesh([x.coordinate for x in he_grid.vl], he_grid.hi)
+        assert expect == result
 
 
 def test_half_edges_boundary_edges(he_grid) -> None:

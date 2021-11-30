@@ -8,6 +8,7 @@ import itertools
 import random
 from keyword import iskeyword
 from typing import Any, Callable, Dict
+from .conftest import get_canonical_mesh
 
 import pytest
 
@@ -28,9 +29,6 @@ alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 identifiers = (
     "".join(random.choice(alphabet) for _ in range(10)) for _ in itertools.count()
 )
-
-# mesh = HalfEdges()
-
 
 def valid_identifier():
     """Return a strategy which generates a valid Python Identifier"""
@@ -77,11 +75,11 @@ class TestMeshElementBase:
         assert all(instances[x].sn < instances[x + 1].sn for x in range(3))
 
     def test_lt_gt(self) -> None:
-        """Sorts by serial number."""
+        """Sorts by id."""
         elem1 = _MeshElementBase()
         elem2 = _MeshElementBase()
-        assert elem1.sn < elem2.sn
-        assert elem2.sn > elem1.sn
+        assert (elem1 < elem2) == (id(elem1) < id(elem2))
+        assert (elem2 > elem1) == (id(elem2) > id(elem1))
 
     @pytest.mark.parametrize("name,value", [(valid_identifier(), random.randint(1, 5))])
     def test_kwargs(self, name, value) -> None:
@@ -254,14 +252,10 @@ def test_half_edges_init(he_triangle: Dict[str, Any]) -> None:
 class TestHalfEdges:
     """Keep the linter happy."""
 
-    def test_last_issued_sn(self, he_mesh) -> None:
-        """Matches highest serial number of any _MeshElementBase instance."""
-        assert he_mesh.last_issued_sn == _MeshElementBase.last_issued_sn
-
     def test_vl(self, meshes_vlvi: Dict[str, Any], he_cube, he_grid) -> None:
         """Converts unaltered mesh verts back to input vl."""
-        assert [x.coordinate for x in he_cube.vl] == meshes_vlvi["cube_vl"]
-        assert [x.coordinate for x in he_grid.vl] == meshes_vlvi["grid_vl"]
+        assert {x.coordinate for x in he_cube.vl} == set(meshes_vlvi["cube_vl"])
+        assert {x.coordinate for x in he_grid.vl} == set(meshes_vlvi["grid_vl"])
 
     def test_vi(self, meshes_vlvi: Dict[str, Any], he_cube, he_grid) -> None:
         """Convert unaltered mesh faces back to input vi.
@@ -272,7 +266,9 @@ class TestHalfEdges:
 
     def test_hi(self, meshes_vlvi: Dict[str, Any], he_grid) -> None:
         """Convert unaltered mesh holes back to input holes."""
-        assert compare_circular_2(he_grid.hi, meshes_vlvi["grid_hi"])
+        expect = get_canonical_mesh(meshes_vlvi["grid_vl"], meshes_vlvi["grid_hi"])
+        result = get_canonical_mesh([x.coordinate for x in he_grid.vl], he_grid.hi)
+        assert expect == result
 
 
 def test_half_edges_boundary_edges(he_grid) -> None:

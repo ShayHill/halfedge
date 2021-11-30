@@ -17,13 +17,13 @@ This is a typical halfedges data structure. Exceptions:
       Boundary verts, and boundary edges are identified by these holes, but that all
       happens internally, so the holes can again be ignored for most things.
 
-    * Orig, pair, face, and next assignments are mirrored, so a.pair = b will
-      set a.pair = b and b.pair = a. This makes edge insertion, etc. cleaner,
-      but the whole thing is still easy to break. Hopefully, I've provided enough
-      insertion / removal code to get you over the pitfalls. Halfedges is clever when
-      it's all built, but a lot has to be temporarily broken down to transform the
-      mesh. All I can say is, write a lot of tests if you want to extend the
-      insertion / removal methods here.
+    * Orig, pair, face, and next assignments are mirrored, so a.pair = b will set
+    a.pair = b and b.pair = a. This makes edge insertion, etc. cleaner, but the whole
+    thing is still easy to break. Hopefully, I've provided enough insertion / removal
+    code to get you over the pitfalls. The halfedge data structure (always, not just
+    this implementation) is clever when it's all built, but a lot has to be
+    temporarily broken down to transform the mesh. All I can say is, write a lot of
+    tests if you want to extend the insertion / removal methods here.
 
 This module is all the lookups. Transformations elsewhere.
 
@@ -72,18 +72,13 @@ class StaticHalfEdges(BlindHalfEdges):
 
     @property
     def all_faces(self) -> Set[half_edge_elements.Hole]:
-        """ Look up all faces and holes in mesh """
+        """Look up all faces and holes in mesh"""
         return {x.face for x in self.edges}
 
     @property
     def elements(self) -> Set[half_edge_elements._MeshElementBase]:
         """All elements in mesh"""
         return self.verts | self.edges | self.faces | self.holes
-
-    @property
-    def last_issued_sn(self) -> int:
-        """Look up the last serial number issued to any mesh element."""
-        return next(iter(self.edges)).last_issued_sn
 
     @property
     def boundary_edges(self) -> Set[half_edge_elements.Edge]:
@@ -107,23 +102,23 @@ class StaticHalfEdges(BlindHalfEdges):
 
     @property
     def vl(self) -> List[half_edge_elements.Vert]:
-        """ Sorted list of verts """
-        return sorted(self.verts, key=Attrgetter("sn"))
+        """Sorted list of verts"""
+        return sorted(self.verts)
 
     @property
     def el(self) -> List[half_edge_elements.Edge]:
-        """ Sorted list of edges """
-        return sorted(self.edges, key=attrgetter("sn"))
+        """Sorted list of edges"""
+        return sorted(self.edges)
 
     @property
     def fl(self) -> List[half_edge_elements.Face]:
-        """ Sorted list of faces """
-        return sorted(self.faces, key=attrgetter("sn"))
+        """Sorted list of faces"""
+        return sorted(self.faces)
 
     @property
     def hl(self) -> List[half_edge_elements.Hole]:
-        """ Sorted list of holes """
-        return sorted(self.holes, key=attrgetter("sn"))
+        """Sorted list of holes"""
+        return sorted(self.holes)
 
     @property
     def _vert2list_index(self) -> Dict[half_edge_elements.Vert, int]:
