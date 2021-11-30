@@ -5,8 +5,7 @@ created: 181121 13:14:06
 """
 from copy import deepcopy
 from itertools import product
-from typing import Any, Dict, List, Sequence, Tuple, Set, Iterable, Hashable, TypeVar
-from contextlib import suppress
+from typing import Any, Dict, Hashable, Iterable, List, Sequence, Set, Tuple, TypeVar
 
 import pytest
 from pytest_lazyfixture import lazy_fixture
@@ -97,13 +96,13 @@ def he_mesh(request, he_cube, he_grid) -> HalfEdges:
 @pytest.fixture(scope="function", params=range(9))
 def grid_faces(request, he_grid) -> Tuple[HalfEdges, Face]:
     """A cube and a 3 x 3 grid as HalfEdges instances"""
-    return he_grid, he_grid.fl[request.param]
+    return he_grid, sorted(he_grid.faces)[request.param]
 
 
 @pytest.fixture(scope="function", params=range(6))
 def cube_faces(request, he_cube) -> Tuple[HalfEdges, Face]:
     """A cube and a 3 x 3 grid as HalfEdges instances"""
-    return he_cube, he_cube.fl[request.param]
+    return he_cube, sorted(he_cube.faces)[request.param]
 
 
 @pytest.fixture(params=[lazy_fixture("grid_faces"), lazy_fixture("cube_faces")])
@@ -115,13 +114,13 @@ def mesh_faces(request) -> Tuple[HalfEdges, Face]:
 @pytest.fixture(scope="function", params=range(48))
 def grid_edges(request, he_grid) -> Tuple[HalfEdges, Edge]:
     """A cube and a 3 x 3 grid as HalfEdges instances"""
-    return he_grid, he_grid.el[request.param]
+    return he_grid, sorted(he_grid.edges)[request.param]
 
 
 @pytest.fixture(scope="function", params=range(24))
 def cube_edges(request, he_cube) -> Tuple[HalfEdges, Edge]:
     """A cube and a 3 x 3 grid as HalfEdges instances"""
-    return he_cube, he_cube.el[request.param]
+    return he_cube, sorted(he_cube.edges)[request.param]
 
 
 @pytest.fixture(params=[lazy_fixture("grid_edges"), lazy_fixture("cube_edges")])
