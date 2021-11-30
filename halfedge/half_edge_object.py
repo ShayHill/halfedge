@@ -75,20 +75,30 @@ class HalfEdges(StaticHalfEdges):
             return _get_unit_set_item(orig_faces & dest_faces)
         raise ValueError("face cannot be determined from orig and dest")
 
-    def _infer_wing(self, elem: EV, face: Face, default: Edge) -> Tuple[Vert, Edge]:
+    @staticmethod
+    def _infer_wing(elem: EV, face: Face, default: Edge) -> Tuple[Vert, Edge]:
         """
         Given a vert or edge, try to return vert and edge such that edge.dest == vert
 
         :param elem: vert or edge in the mesh
         :param face: face on which vert or edge lies
         :param default: edge value if vert is new (no connected edges)
+            - this will always be the edge pair.
         :return: a vert on the face (or presumed to be) and the edge ENDING at vert
         :raises: ValueError if very and edge are ambiguous
 
-        elem is an edge: edge.dest and edge
-        elem is a vert:
-            vert on face? edge ending in vert if ambiguous
-            vert not on face? (presume floating) prev edge is default
+        This is a subroutine of insert_edge, which accepts a vert or edge as origin
+        and destination arguments. The wing returned is
+
+            * the origin of the edge to be inserted.
+            * the edge *before* the edge to be inserted (the prev edge)
+
+        elem (insert_edge orig or dest argument) is an edge: edge.dest and edge
+        elem (insert_edge orig or dest argument) is a vert:
+
+            vert on face? the prev edge is the face edge ending in vert
+
+            vert not on face? (presume floating) the prev edge is default
                 (new_edge.pair from outer scope)
         """
         if isinstance(elem, Edge):

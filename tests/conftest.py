@@ -75,12 +75,16 @@ def meshes_vlvi() -> Dict[str, Any]:
 
 @pytest.fixture(scope="function")
 def he_cube(meshes_vlvi: Dict[str, Any]) -> HalfEdges:
-    return HalfEdges.from_vlvi(meshes_vlvi["cube_vl"], meshes_vlvi["cube_vi"], attr_name='coordinate')
+    return HalfEdges.from_vlvi(
+        meshes_vlvi["cube_vl"], meshes_vlvi["cube_vi"], attr_name="coordinate"
+    )
 
 
 @pytest.fixture(scope="function")
 def he_grid(meshes_vlvi: Dict[str, Any]) -> HalfEdges:
-    return HalfEdges.from_vlvi(meshes_vlvi["grid_vl"], meshes_vlvi["grid_vi"], attr_name='coordinate')
+    return HalfEdges.from_vlvi(
+        meshes_vlvi["grid_vl"], meshes_vlvi["grid_vi"], attr_name="coordinate"
+    )
 
 
 @pytest.fixture(params=[lazy_fixture("he_grid"), lazy_fixture("he_cube")])
@@ -136,7 +140,7 @@ def compare_circular(seq_a: Sequence[Any], seq_b: Sequence[Any]) -> bool:
     if beg not in seq_b:
         return False
     idx = seq_b.index(beg)
-    return seq_a == seq_b[idx:] + seq_b[:idx]
+    return tuple(seq_a) == tuple(seq_b[idx:]) + tuple(seq_b[:idx])
 
 
 def compare_circular_2(seq_a: List[List[Any]], seq_b: List[List[Any]]) -> bool:

@@ -17,13 +17,13 @@ This is a typical halfedges data structure. Exceptions:
       Boundary verts, and boundary edges are identified by these holes, but that all
       happens internally, so the holes can again be ignored for most things.
 
-    * Orig, pair, face, and next assignments are mirrored, so a.pair = b will
-      set a.pair = b and b.pair = a. This makes edge insertion, etc. cleaner,
-      but the whole thing is still easy to break. Hopefully, I've provided enough
-      insertion / removal code to get you over the pitfalls. Halfedges is clever when
-      it's all built, but a lot has to be temporarily broken down to transform the
-      mesh. All I can say is, write a lot of tests if you want to extend the
-      insertion / removal methods here.
+    * Orig, pair, face, and next assignments are mirrored, so a.pair = b will set
+      a.pair = b and b.pair = a. This makes edge insertion, etc. cleaner, but the
+      whole thing is still easy to break. Hopefully, I've provided enough insertion /
+      removal code to get you over the pitfalls. Halfedges (as a data structure,
+      not just this implementation) is clever when it's all built, but a lot has to
+      be temporarily broken down to transform the mesh. All I can say is, write a lot
+      of tests if you want to extend the insertion / removal methods here.
 
 This module is all the base elements (Vert, Edge, Face, Hole).
 
@@ -32,8 +32,8 @@ This module is all the base elements (Vert, Edge, Face, Hole).
 """
 from __future__ import annotations
 
-from typing import Any, Callable, List, Optional, TypeVar, Union, Dict
 from contextlib import suppress
+from typing import Any, Callable, Dict, List, TypeVar, Union
 
 
 class ManifoldMeshError(ValueError):
@@ -47,16 +47,19 @@ class ManifoldMeshError(ValueError):
     """
 
 
-def array_equal(*args: Any):
-    with suppress(ValueError):
-        # should work for everything except numpy
+def all_equal(*args: Any):
+    """
+    Are all arguments equal, including type?
+
+    :param args: will work with items or sequences
+    """
+    if len({type(x) for x in args}) > 1:
+        return False
+    with suppress(ValueError, TypeError):
         return all(x == args[0] for x in args[1:])
     with suppress(ValueError, TypeError):
-        # for numpy, which would return [True, True, ...]
-        return all(all(x == args[0]) for x in args[1:])  # type: ignore
-    with suppress(TypeError):
-        return all(all(x == y) for x, y in zip(*args))
-    raise ValueError(f"module does not support equality test between {args}")
+        return all(all_equal(*x) for x in zip(args))
+    raise NotImplementedError(f"module does not support equality test between {args}")
 
 
 KeyT = TypeVar("KeyT")
@@ -66,13 +69,19 @@ def get_dict_intersection(*dicts: Dict[KeyT, Any]) -> Dict[KeyT, Any]:
     """
     Identical key: value items from multiple dictionaries.
 
+    :param dicts: any number of dictionaries
+
+    Return a dictionary of keys: values where key and value are equal for all input
+    dicts.
+
     """
     if not dicts:
         return {}
     intersection = {}
     for key in set.intersection(*(set(x.keys()) for x in dicts)):
-        if array_equal(*(x[key] for x in dicts)):
-            intersection[key] = dicts[0][key]
+        with suppress(KeyError):
+            if all_equal(*(x[key] for x in dicts)):
+                intersection[key] = dicts[0][key]
     return intersection
 
 
@@ -101,13 +110,13 @@ class _MeshElementBase:
 
     def __init__(self: T, *fill_from: T, **kwargs: Any) -> None:
         """
-        Create an instance withe a new serial number (and copy attrs from fill_from).
+        Create an instance with a new serial number (and copy attrs from fill_from).
 
         :param fill_from: instances of the same class
         :param kwargs: attributes for new instance
 
         Priority for attributes
-        high: attributes passes as kwargs to init
+        high: attributes passed as kwargs to init
         low: attributes inherited from fill_from argument
         """
         _MeshElementBase.last_issued_sn += 1
@@ -115,7 +124,12 @@ class _MeshElementBase:
         self.update(*fill_from, **kwargs)
 
     def update(self, *fill_from, **kwargs: Any) -> None:
-        """ Add or replace attributes (except sn) gt"""
+        """
+        Add or replace attributes (except sn)
+
+        :param fill_from: instances of the same type
+        :param kwargs: new attribute values (supersede fill_from attributes)
+        """
         attrs = get_dict_intersection(*(x.__dict__ for x in fill_from))
         attrs.update(kwargs)
         attrs["sn"] = self.sn
@@ -125,7 +139,7 @@ class _MeshElementBase:
             setattr(self, key, val)
 
     def extend(self, *fill_from, **kwargs: Any) -> None:
-        """ Add attributes only. Do not replace. """
+        """Add attributes only. Do not replace."""
         attrs = get_dict_intersection(*(x.__dict__ for x in fill_from))
         attrs.update(kwargs)
         attrs.update(self.__dict__)
@@ -176,36 +190,36 @@ class Vert(_MeshElementBase):
 
     @property
     def edges(self) -> List[Edge]:
-        """ Half edges radiating from vert. """
+        """Half edges radiating from vert."""
         if hasattr(self, "edge"):
             return self.edge.vert_edges
         return []
 
     @property
     def faces(self) -> List[Face]:
-        """ Faces radiating from vert """
+        """Faces radiating from vert"""
         return [x for x in self.all_faces if not isinstance(x, Hole)]
 
     @property
     def holes(self) -> List[Hole]:
-        """ Faces radiating from vert """
+        """Faces radiating from vert"""
         return [x for x in self.all_faces if isinstance(x, Hole)]
 
     @property
     def all_faces(self) -> List[Union[Face, Hole]]:
-        """ Faces radiating from vert """
+        """Faces radiating from vert"""
         return [x.face for x in self.edges]
 
     @property
     def neighbors(self) -> List[Vert]:
-        """ Evert vert connected to vert by one edge. """
+        """Evert vert connected to vert by one edge."""
         if hasattr(self, "edge"):
             return self.edge.vert_neighbors
         return []
 
     @property
     def valence(self) -> int:
-        """ The number of edges incident to vertex. """
+        """The number of edges incident to vertex."""
         return len(self.edges)
 
 
@@ -261,7 +275,7 @@ class Edge(_MeshElementBase):
 
     @property
     def prev(self) -> Edge:
-        """ Look up the edge before self. """
+        """Look up the edge before self."""
         try:
             return self.face_edges[-1]
         except (AttributeError, ManifoldMeshError):
@@ -273,7 +287,7 @@ class Edge(_MeshElementBase):
 
     @property
     def dest(self) -> Vert:
-        """ Vert at the end of the edge (opposite of orig). """
+        """Vert at the end of the edge (opposite of orig)."""
         try:
             return self.next.orig
         except AttributeError:
@@ -281,12 +295,12 @@ class Edge(_MeshElementBase):
 
     @property
     def face_edges(self) -> List[Edge]:
-        """ All edges around an edge.face. """
+        """All edges around an edge.face."""
         return _function_lap(lambda x: x.next, self)
 
     @property
     def face_verts(self) -> List[Vert]:
-        """ All verts around an edge.vert. """
+        """All verts around an edge.vert."""
         return [edge.orig for edge in self.face_edges]
 
     @property
@@ -301,7 +315,7 @@ class Edge(_MeshElementBase):
 
     @property
     def vert_neighbors(self) -> List[Vert]:
-        """ All verts connected to vert by one edge. """
+        """All verts connected to vert by one edge."""
         return [edge.dest for edge in self.vert_edges]
 
 
@@ -316,28 +330,28 @@ class Face(_MeshElementBase):
 
     @property
     def edge(self) -> Edge:
-        """ One edge on the face """
+        """One edge on the face"""
         return self._edge
 
     @edge.setter
     def edge(self, edge: Edge) -> None:
-        """ Point face.edge back to face. """
+        """Point face.edge back to face."""
         self._edge = edge
 
     @property
     def edges(self) -> List[Edge]:
-        """ Look up all edges around face. """
+        """Look up all edges around face."""
         if hasattr(self, "edge"):
             return self.edge.face_edges
         return []
 
     @property
     def verts(self) -> List[Vert]:
-        """ Look up all verts around face. """
+        """Look up all verts around face."""
         if hasattr(self, "edge"):
             return [x.orig for x in self.edges]
         return []
 
 
 class Hole(Face):
-    """ A copy of Face to differentiate b/t interior edges and boundaries. """
+    """A copy of Face to differentiate b/t interior edges and boundaries."""

@@ -108,7 +108,7 @@ class StaticHalfEdges(BlindHalfEdges):
     @property
     def vl(self) -> List[half_edge_elements.Vert]:
         """ Sorted list of verts """
-        return sorted(self.verts, key=attrgetter("sn"))
+        return sorted(self.verts, key=Attrgetter("sn"))
 
     @property
     def el(self) -> List[half_edge_elements.Edge]:

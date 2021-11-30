@@ -6,21 +6,11 @@ As far as I know. These functions are deprecated, replaced by methods in HalfEdg
 TODO: see how much of that is true
 """
 
-from typing import (
-    Generator,
-    Set,
-    Hashable,
-    Any,
-    Dict,
-    cast,
-    overload,
-    TypeVar,
-    Optional,
-)
+from contextlib import suppress
+from typing import Any, Dict, Generator, Optional, Set, TypeVar
 
 from .half_edge_elements import Edge, Face, ManifoldMeshError, Vert, _MeshElementBase
 from .half_edge_querries import StaticHalfEdges
-from contextlib import suppress
 
 
 def array_equal(*args: Any):
@@ -46,8 +36,6 @@ def get_dict_intersection(*dicts: Dict[KeyT, Any]) -> Dict[KeyT, Any]:
         if array_equal(*(x[key] for x in dicts)):
             intersection[key] = dicts[0][key]
     return intersection
-
-
 
 
 def full_edges_only(edges: Set[Edge]) -> Generator[Edge, Set[Edge], None]:
@@ -212,7 +200,7 @@ def insert_edge(
         if len(shared_faces) == 1:
             face = shared_faces.pop()
         else:
-            raise ValueError('face cannot be determined from orig and dest')
+            raise ValueError("face cannot be determined from orig and dest")
 
     face_edges = face.edges
     orig2edge = {x.orig: x for x in face_edges}
@@ -267,7 +255,7 @@ def inherit_kwargs(*ancestors: _MeshElementBase, **kwargs: Any) -> Dict[str, Any
 
 
 def split_edge(mesh: StaticHalfEdges, edge: Edge, **vert_kwargs) -> Vert:
-    """ Add a vert to the middle of an edge. """
+    """Add a vert to the middle of an edge."""
     new_vert = Vert(**inherit_kwargs(edge.orig, edge.dest, **vert_kwargs))
     for orig, dest in ((edge.dest, new_vert), (new_vert, edge.orig)):
         new_edge = insert_edge(mesh, orig, dest, edge.face)

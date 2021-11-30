@@ -7,12 +7,11 @@ created: 170204 14:22:23
 import itertools
 import random
 from keyword import iskeyword
-from operator import attrgetter
 from typing import Any, Callable, Dict
-from .conftest import compare_circular, compare_circular_2
 
 import pytest
 
+from .conftest import compare_circular_2
 # noinspection PyProtectedMember,PyProtectedMember
 from ..halfedge.half_edge_elements import (
     Edge,
@@ -23,7 +22,6 @@ from ..halfedge.half_edge_elements import (
     _MeshElementBase,
     _function_lap,
 )
-
 from ..halfedge.half_edge_querries import StaticHalfEdges
 
 alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
@@ -45,13 +43,13 @@ def valid_identifier():
 
 
 class TestMeshElementBase:
-    @pytest.mark.parametrize("count", [random.randint(2, 5) for x in range(5)])
+    @pytest.mark.parametrize("count", [random.randint(2, 5) for _ in range(5)])
     def test_sequential_serial_numbers(self, count) -> None:
         """Assigns sequential serial numbers."""
         sns = [_MeshElementBase().sn for _ in range(count)]
         assert sns == sorted(sns)
 
-    @pytest.mark.parametrize("count", [random.randint(2, 5) for x in range(5)])
+    @pytest.mark.parametrize("count", [random.randint(2, 5) for _ in range(5)])
     def test_last_issued_sn(self, count) -> None:
         """The last_issued_sn == last sn issued to ANY instance."""
         instances = [_MeshElementBase() for _ in range(count)]
