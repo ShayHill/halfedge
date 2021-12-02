@@ -5,17 +5,33 @@
 :author: Shay Hill
 :created: 12/1/2021
 """
+from typing import Tuple, Union
 
 from ..halfedge.half_edge_elements import Vert, Edge, Face, Hole
 
 
 # TODO: delete this module
-# class TestInheritance:
+# class TestNewElement:
 #     def test_new_element_types(self) -> None:
 #         """"""
-#         class MyVert(Vert):
-#             def __init__(self, inherit_from, coordinate, **kwargs) -> None:
-#         vert_type = type(
-#             MyVert,
-#             (vert,),
-#         )
+#         MyVert = element_type("MyVert", Vert, {"coordinate": str})
+# def element_type(
+#     name: str, base: MeshElementBase, *new_attributes: Union[str, Tuple[str, object]]
+# ) -> MeshElementBase:
+#     """
+#     # TODO: complete docstring
+#     Inherit from parent and add attributes
+#
+#     :param name:
+#     :param parent:
+#     :param attributes:
+#     :return:
+#     """
+#
+#     class MyVert(Vert):
+#         coordinate: Tuple[float, ...]
+#
+#     class MyHalfEdges(HalfEdges):
+#         vert_type = MyVert
+#
+#     vert = MyHalfEdges().new_vert()

@@ -20,20 +20,20 @@ then passing that raw data to mesh_from_vr would create a mesh with 6 faces and
 
 from __future__ import annotations
 
-from typing import Any, Dict, Iterable, List, Optional, Set, Tuple, Union, Hashable
+from typing import Any, Iterable, List, Optional, Set, TYPE_CHECKING, Tuple
 
-from .half_edge_elements import Edge, Face, Hole, ManifoldMeshError, Vert
-import itertools
+from . import half_edge_elements
+from .half_edge_elements import ManifoldMeshError
 
-VertCastable = Union[Vert, Dict[str, Any], Any]
-Vr = Iterable[Iterable[Vert]]
+if TYPE_CHECKING:
+    from .half_edge_elements import Vert, Edge, Face
 
 
 class BlindHalfEdges:
-    vert_type = Vert
-    edge_type = Edge
-    face_type = Face
-    hole_type = Hole
+    vert_type = half_edge_elements.Vert
+    edge_type = half_edge_elements.Edge
+    face_type = half_edge_elements.Face
+    hole_type = half_edge_elements.Hole
 
     def __init__(self, edges: Optional[Set[Edge]] = None) -> None:
         if edges is None:
@@ -99,66 +99,28 @@ class BlindHalfEdges:
                 continue
 
     @classmethod
-    def new_vert(cls, source: VertCastable, attr_name: Optional[str] = None) -> Vert:
-        """
-        A new Vert instance of cls.vert_type
-
-        :param source: attr value or Vert instance or dict {name: val, name: val}
-        :param attr_name: optionally pass source as Vert.attr_name = source
-        :return: instance of cls.vert_type
-
-        This one is a little "magical"
-        if attr_name is given -> new vert with vert.attr_name = source
-        elif source is a Vert -> source vert recast as cls.vert_type
-        else source is assumed to be a dict -> cls.vert_type(**source)
-        """
-        if attr_name is not None:
-            return cls.vert_type(**{attr_name: source})
-        if isinstance(source, Vert):
-            return cls.vert_type(source)
-        try:
-            return cls.vert_type(**source)
-        except TypeError:
-            raise NotImplementedError(f"no provision for casting {source} into Vert")
-
-    @classmethod
-    def new_verts(
-        cls,
-        sources: Iterable[VertCastable],
-        attr_name: Optional[str] = None,
-    ) -> List[Vert]:
-        """
-        Iteratively call self.new_vert
-
-        :param sources: attr values or Vert instances or dicts {name: val, name: val}
-        :param attr_name: optionally pass source as Vert.attr_name = source
-        :return: list of instances of cls.vert_type
-
-        This one is a little "magical"
-        if attr_name is given -> new verts with vert.attr_name = source
-        elif sources are Vert instances -> source verts recast as cls.vert_type
-        else sources are assumed to be dicts -> cls.vert_type(**source)
-        """
-        return [cls.new_vert(x, attr_name) for x in sources]
-
-    @classmethod
     def from_vlvi(
         cls,
-        vl: List[VertCastable],
-        vi: Set[Tuple[int, ...]],
+        vl: List[Any],
+        fi: Set[Tuple[int, ...]],
         hi: Optional[Set[Tuple[int, ...]]] = (),
-        attr_name: Optional[str] = None,
+        attr_name: str = "coordinate",
     ) -> BlindHalfEdges:
         """A set of half edges from a vertex list and vertex index.
 
-        :vl (vertex list): a seq of vertices
+        :param vl: (vertex list) a seq of vertices
         [(12.3, 42.02, 4.2), (23.1, 3.55, 3.2) ...]
 
-        :vi (vertex index): a seq of face indices (indices to vl)
+        :param fi: (face index) a seq of face indices (indices to vl)
         [(0, 1, 3), (4, 2, 5, 7) ...]
 
-        :hi (hole index): empty faces (same format as vi) that will be used to pair
-        all edges then sit ignored afterward
+        :param hi: (hole index) optionally provide empty faces (same format as fi)
+        that will be used to pair all edges
+
+        :param attr_name: optionally override the default attribute name: "coordinate"
+
+        Presumably, the vl is a list of coordinate values. These will be assigned,
+        by default, to ``vert_instance.coordinate.``
 
         Will attempt to add missing hole edges. This is intended for fields of
         faces on a plane (like a 2D Delaunay triangulation), but the algorithm
@@ -175,8 +137,8 @@ class BlindHalfEdges:
 
         Will silently remove unused verts
         """
-        vl = cls.new_verts(vl, attr_name)
-        vr = [tuple(vl[x] for x in y) for y in vi]
+        vl = [cls.vert_type(**{attr_name: x}) for x in vl]
+        vr = [tuple(vl[x] for x in y) for y in fi]
         hr = [tuple(vl[x] for x in y) for y in hi]
 
         mesh = cls()

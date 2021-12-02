@@ -30,10 +30,14 @@ This module is all the lookups. Transformations elsewhere.
 # 2006 June 05
 # 2012 September 30
 """
-from typing import Dict, List, Optional, Set, Tuple
+from __future__ import annotations
 
-from . import half_edge_elements
+from typing import Dict, List, Optional, Set, TYPE_CHECKING, Tuple, Union
+
 from .constructors import BlindHalfEdges
+
+if TYPE_CHECKING:
+    from .half_edge_elements import Vert, Edge, Face, Hole
 
 
 class StaticHalfEdges(BlindHalfEdges):
@@ -45,41 +49,41 @@ class StaticHalfEdges(BlindHalfEdges):
     half edges, but will be ignored in any "for face in" constructs.
     """
 
-    def __init__(self, edges: Optional[Set[half_edge_elements.Edge]] = None) -> None:
+    def __init__(self, edges: Optional[Set[Edge]] = None) -> None:
         super().__init__(edges)
 
     @property
-    def verts(self) -> Set[half_edge_elements.Vert]:
+    def verts(self) -> Set[Vert]:
         """Look up all verts in mesh."""
         return {x.orig for x in self.edges}
 
     @property
-    def faces(self) -> Set[half_edge_elements.Face]:
+    def faces(self) -> Set[Face]:
         """Look up all faces in mesh."""
         return self.all_faces - self.holes
 
     @property
-    def holes(self) -> Set[half_edge_elements.Hole]:
+    def holes(self) -> Set[Hole]:
         """Look up all holes in mesh."""
         return {x for x in self.all_faces if isinstance(x, self.hole_type)}
 
     @property
-    def all_faces(self) -> Set[half_edge_elements.Hole]:
+    def all_faces(self) -> Set[Hole]:
         """Look up all faces and holes in mesh"""
         return {x.face for x in self.edges}
 
     @property
-    def elements(self) -> Set[half_edge_elements._MeshElementBase]:
+    def elements(self) -> Set[Union[Vert, Edge, Face, Hole]]:
         """All elements in mesh"""
         return self.verts | self.edges | self.faces | self.holes
 
     @property
-    def boundary_edges(self) -> Set[half_edge_elements.Edge]:
+    def boundary_edges(self) -> Set[Edge]:
         """Look up edges on holes."""
-        return {x for x in self.edges if isinstance(x.face, half_edge_elements.Hole)}
+        return {x for x in self.edges if isinstance(x.face, self.hole_type)}
 
     @property
-    def boundary_verts(self) -> Set[half_edge_elements.Vert]:
+    def boundary_verts(self) -> Set[Vert]:
         """Look up all verts on hole boundaries."""
         return {x.orig for x in self.boundary_edges}
 
@@ -89,17 +93,17 @@ class StaticHalfEdges(BlindHalfEdges):
         return self.edges - self.boundary_edges
 
     @property
-    def interior_verts(self) -> Set[half_edge_elements.Vert]:
+    def interior_verts(self) -> Set[Vert]:
         """Look up all verts not on hole boundaries."""
         return self.verts - self.boundary_verts
 
     @property
-    def vl(self) -> List[half_edge_elements.Vert]:
+    def vl(self) -> List[Vert]:
         """ "vertex list" - Sorted list of verts"""
         return sorted(self.verts)
 
     @property
-    def _vert2list_index(self) -> Dict[half_edge_elements.Vert, int]:
+    def _vert2list_index(self) -> Dict[Vert, int]:
         """self.vl mapped to list indices."""
         return {vert: cnt for cnt, vert in enumerate(self.vl)}
 

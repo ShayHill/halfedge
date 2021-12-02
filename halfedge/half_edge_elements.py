@@ -85,43 +85,47 @@ def get_dict_intersection(*dicts: Dict[KeyT, Any]) -> Dict[KeyT, Any]:
     return intersection
 
 
-_TMeshElem = TypeVar("_TMeshElementBase", bound="_MeshElementBase")
+_TMeshElem = TypeVar("_TMeshElem", bound="MeshElementBase")
 
 
-class _MeshElementBase:
+class MeshElementBase:
     """
     A namespace that == on id, not equivalency.
     """
 
-    def __init__(self: _TMeshElem, *fill_from: _TMeshElem, **kwargs: Any) -> None:
+    def __init__(self: _TMeshElem, *fill_from: _TMeshElem, **attributes: Any) -> None:
         """
-        Create an instance with a new serial number (and copy attrs from fill_from).
+        Create an instance (and copy attrs from fill_from).
 
         :param fill_from: instances of the same class
-        :param kwargs: attributes for new instance
+        :param attributes: attributes for new instance
 
         Priority for attributes
         high: attributes passed as kwargs to init
         low: attributes inherited from fill_from argument
         """
-        self.update(*fill_from, **kwargs)
+        self.update(*fill_from, **attributes)
 
-    def update(self: _TMeshElem, *fill_from: _TMeshElem, **kwargs: Any) -> None:
+    def update(
+        self: _TMeshElem, *fill_from: MeshElementBase, **attributes: Any
+    ) -> None:
         """
         Add or replace attributes
 
         :param fill_from: instances of the same type
-        :param kwargs: new attribute values (supersede fill_from attributes)
+        :param attributes: new attribute values (supersede fill_from attributes)
         """
         attrs = get_dict_intersection(*(x.__dict__ for x in fill_from))
-        attrs.update(kwargs)
+        attrs.update(attributes)
         for key, val in attrs.items():
             setattr(self, key, val)
 
-    def extend(self: _TMeshElem, *fill_from: _TMeshElem, **kwargs: Any) -> None:
+    def extend(
+        self: _TMeshElem, *fill_from: MeshElementBase, **attributes: Any
+    ) -> None:
         """Add attributes only. Do not replace."""
         attrs = get_dict_intersection(*(x.__dict__ for x in fill_from))
-        attrs.update(kwargs)
+        attrs.update(attributes)
         attrs.update(self.__dict__)
         for key, val in attrs.items():
             setattr(self, key, val)
@@ -154,7 +158,7 @@ def _function_lap(
             raise ManifoldMeshError(f"infinite function lap {[id(x) for x in lap]}")
 
 
-class Vert(_MeshElementBase):
+class Vert(MeshElementBase):
     """Half-edge mesh vertices.
 
     required attributes
@@ -162,16 +166,15 @@ class Vert(_MeshElementBase):
     """
 
     _edge: Edge
-    coordinate: Any
 
     @property
     def edge(self) -> Edge:
-        breakpoint()
         return self._edge
 
     @edge.setter
     def edge(self, edge: Edge) -> None:
         self._edge = edge
+        edge._vert = self
 
     @property
     def edges(self) -> List[Edge]:
@@ -208,7 +211,7 @@ class Vert(_MeshElementBase):
         return len(self.edges)
 
 
-class Edge(_MeshElementBase):
+class Edge(MeshElementBase):
     """Half-edge mesh edges.
 
     required attributes
@@ -230,7 +233,7 @@ class Edge(_MeshElementBase):
     @orig.setter
     def orig(self, orig: Vert) -> None:
         self._orig = orig
-        orig.edge = self
+        orig._edge = self
 
     @property
     def pair(self) -> Edge:
@@ -248,7 +251,7 @@ class Edge(_MeshElementBase):
     @face.setter
     def face(self, face: Face) -> None:
         self._face = face
-        face.edge = self
+        face._edge = self
 
     @property
     def next(self) -> Edge:
@@ -304,7 +307,7 @@ class Edge(_MeshElementBase):
         return [edge.dest for edge in self.vert_edges]
 
 
-class Face(_MeshElementBase):
+class Face(MeshElementBase):
     """Half-edge mesh faces.
 
     required attribute
@@ -322,6 +325,7 @@ class Face(_MeshElementBase):
     def edge(self, edge: Edge) -> None:
         """Point face.edge back to face."""
         self._edge = edge
+        edge._face = self
 
     @property
     def edges(self) -> List[Edge]:

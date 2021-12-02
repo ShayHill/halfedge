@@ -20,7 +20,7 @@ from ..halfedge.half_edge_elements import (
     Hole,
     ManifoldMeshError,
     Vert,
-    _MeshElementBase,
+    MeshElementBase,
     _function_lap,
 )
 from ..halfedge.half_edge_querries import StaticHalfEdges
@@ -46,19 +46,19 @@ class TestMeshElementBase:
     @pytest.mark.parametrize("name,value", [(valid_identifier(), random.randint(1, 5))])
     def test_kwargs(self, name, value) -> None:
         """Sets kwargs."""
-        a = _MeshElementBase(**{name: value})
+        a = MeshElementBase(**{name: value})
         assert getattr(a, name) == value
 
     def test_fill_from_preserves_attrs(self) -> None:
         """Does not overwrite attrs."""
-        a_is_1 = _MeshElementBase(a=1)
-        a_is_2 = _MeshElementBase(a_is_1, a=2)
+        a_is_1 = MeshElementBase(a=1)
+        a_is_2 = MeshElementBase(a_is_1, a=2)
         assert getattr(a_is_2, "a") == 2
 
     def test_fill_attrs_from_fills_missing(self) -> None:
         """Fills attrs if not present."""
-        b_is_3 = _MeshElementBase(a=1, b=3)
-        a_is_2 = _MeshElementBase(b_is_3, a=2)
+        b_is_3 = MeshElementBase(a=1, b=3)
+        a_is_2 = MeshElementBase(b_is_3, a=2)
         assert getattr(a_is_2, "a") == 2
         assert getattr(a_is_2, "b") == 3
 

@@ -1,22 +1,18 @@
-from contextlib import suppress
-from typing import Any, Optional, Set, Tuple, Union
+from __future__ import annotations
 
-from .half_edge_elements import (
-    Edge,
-    Face,
-    Hole,
-    ManifoldMeshError,
-    Vert,
-    _MeshElementBase,
-)
+from contextlib import suppress
+from typing import Any, Optional, Set, TYPE_CHECKING, Tuple, TypeVar, Union
+
+from .half_edge_elements import ManifoldMeshError
 from .half_edge_querries import StaticHalfEdges
 
-EV = Union[Edge, Vert]
+if TYPE_CHECKING:
+    from .half_edge_elements import Vert, Edge, Face
 
 
 def _update_face_edges(face: Face, edge: Edge) -> None:
     """
-    Add of update face attribute for each edge in edge.face_edges
+    Add or update face attribute for each edge in edge.face_edges
 
     :param face: each edge will point to this face
     :param edge: one edge on the face (even if the edge doesn't point to the face yet)
@@ -28,31 +24,15 @@ def _update_face_edges(face: Face, edge: Edge) -> None:
         edge_.face = face
 
 
-def _get_unit_set_item(one: Set) -> Any:
+def _get_singleton_item(one: Set) -> Any:
     """
     If a set has exactly one item, return that item.
 
     :param one: A set with presumably one item
     :return:
     """
-    if len(one) == 1:
-        return next(iter(one))
-    else:
-        raise ValueError("argument is not a unit set")
-
-
-def _get_edge_or_vert_faces(elem: EV) -> Set[Face]:
-    """
-    Get faces (unordered) adjacent to a vert or edge
-
-    :param elem: Vert or Edge instance
-    :return: Face instances adjacent
-
-    This is a subroutine for insert_edge.
-    """
-    if isinstance(elem, Edge):
-        return {elem.face}
-    return set(elem.faces)
+    (item,) = one
+    return item
 
 
 class UnrecoverableManifoldMeshError(ValueError):
@@ -68,8 +48,28 @@ class UnrecoverableManifoldMeshError(ValueError):
         super().__init__(self, message)
 
 
+_TMeshElem = TypeVar("_TMeshElem", bound="MeshElementBase")
+
+
 class HalfEdges(StaticHalfEdges):
-    def _infer_face(self, orig: EV, dest: EV) -> Face:
+    def _get_edge_or_vert_faces(self, elem: Union[Edge, Vert]) -> Set[Face]:
+        """
+        Get faces (unordered) adjacent to a vert or edge
+
+        :param elem: Vert or Edge instance
+        :return: Face instances adjacent
+
+        This is a subroutine for insert_edge.
+        """
+        if isinstance(elem, self.edge_type):
+            return {elem.face}
+        return set(elem.faces)
+
+    def _infer_face(
+        self: _TMeshElem,
+        orig: Union[Edge, Vert],
+        dest: Union[Edge, Vert],
+    ) -> Face:
         """
         Infer which face two verts lie on.
 
@@ -82,14 +82,15 @@ class HalfEdges(StaticHalfEdges):
         """
         if not self.edges:
             return self.hole_type()
-        orig_faces = _get_edge_or_vert_faces(orig)
-        dest_faces = _get_edge_or_vert_faces(dest)
+        orig_faces = self._get_edge_or_vert_faces(orig)
+        dest_faces = self._get_edge_or_vert_faces(dest)
         with suppress(ValueError):
-            return _get_unit_set_item(orig_faces & dest_faces)
+            return _get_singleton_item(orig_faces & dest_faces)
         raise ValueError("face cannot be determined from orig and dest")
 
-    @staticmethod
-    def _infer_wing(elem: EV, face: Face, default: Edge) -> Tuple[Vert, Edge]:
+    def _infer_wing(
+        self, elem: Union[Edge, Vert], face: Face, default: Edge
+    ) -> Tuple[Vert, Edge]:
         """
         Given a vert or edge, try to return vert and edge such that edge.dest == vert
 
@@ -114,17 +115,21 @@ class HalfEdges(StaticHalfEdges):
             vert not on face? (presume floating) the prev edge is default
                 (new_edge.pair from outer scope)
         """
-        if isinstance(elem, Edge):
+        if isinstance(elem, self.edge_type):
             return elem.dest, elem
         if elem not in face.verts:
             return elem, default
         with suppress(ValueError):
-            prev_edge = _get_unit_set_item({x for x in face.edges if x.dest is elem})
+            prev_edge = _get_singleton_item({x for x in face.edges if x.dest is elem})
             return elem, prev_edge
-        raise ValueError("edge cannot be determined from orig and face")
+        raise ValueError("edge cannot be inferred from orig and face")
 
     def insert_edge(
-        self, orig: EV, dest: EV, face: Optional[Face] = None, **edge_kwargs: Any
+        self,
+        orig: Union[Edge, Vert],
+        dest: Union[Edge, Vert],
+        face: Optional[Face] = None,
+        **edge_kwargs: Any
     ) -> Edge:
         """
         Insert a new edge between two verts.
@@ -164,7 +169,7 @@ class HalfEdges(StaticHalfEdges):
 
         face_edges = face.edges
 
-        edge = self.edge_type(next=Edge())
+        edge = self.edge_type(next=self.edge_type())
         edge.pair = self.edge_type(pair=edge, next=edge, prev=edge)
 
         edge_orig, edge_prev = self._infer_wing(orig, face, edge.pair)
@@ -275,10 +280,10 @@ class HalfEdges(StaticHalfEdges):
         pair.next.orig = pair.next.orig
 
         # set all faces equal to new face
-        if isinstance(pair.face, Hole):
-            new_face = self.hole_type(*{edge.face, pair.face}, **face_kwargs)
-        else:
+        if not isinstance(pair.face, self.hole_type):
             new_face = self.face_type(*{edge.face, pair.face}, **face_kwargs)
+        else:
+            new_face = self.hole_type(*{edge.face, pair.face}, **face_kwargs)
         for edge_ in (edge_face_edges | pair_face_edges) - {edge, pair}:
             edge_.face = new_face
 
@@ -335,11 +340,12 @@ class HalfEdges(StaticHalfEdges):
         for edge in peninsulas:
             face = self.remove_edge(edge, **face_kwargs)
         try:
+            # remove face edges, not hole edges, so holes will fill faces.
             for edge in vert.edges:
-                if edge.face in self.faces:
-                    face = self.remove_edge(edge, **face_kwargs)
-                else:
+                if isinstance(edge.face, self.hole_type):
                     face = self.remove_edge(edge.pair, **face_kwargs)
+                else:
+                    face = self.remove_edge(edge, **face_kwargs)
         except ManifoldMeshError as exc:
             raise UnrecoverableManifoldMeshError(str(exc))
         return face
@@ -443,9 +449,7 @@ class HalfEdges(StaticHalfEdges):
         Warning: Some ugly things can happen here than can only be recognized and
         avoided by examining the geometry. This module only addresses connectivity,
         not geometry, but I've included this operation to experiment with and use
-        carefully. Can really, really break things.
-
-        TODO: Document slit removal and only check left and right of edge for slits.
+        carefully. Can flip faces and create linear faces.
         """
         new_vert = self.vert_type(edge.orig, edge.dest, **vert_kwargs)
         for edge_ in set(edge.orig.edges) | set(edge.dest.edges):
@@ -453,42 +457,10 @@ class HalfEdges(StaticHalfEdges):
         adjacent_faces = {edge.face, edge.pair.face}
         self.edges.remove(edge)
 
+        # TODO: remove nested slits.
         # remove slits
         for face in (x for x in adjacent_faces if len(x.edges) == 2):
             face_edges = face.edges
             face_edges[0].pair.pair = face_edges[1].pair
             self.edges -= set(face_edges)
         return new_vert
-
-# TODO: delete below
-
-# def new_element(name, parent, *attributes: str) -> _MeshElementBase:
-#     """
-#     Inherit from parent and add attributes
-#     :param name:
-#     :param parent:
-#     :param attributes:
-#     :return:
-#     """
-#
-#     def init(self, fill_from, *attributes, **kwargs):
-#         for attribute in attributes:
-#             self.att
-#
-#
-# def new_halfedges_type(
-#     vert_type: Vert = Vert,
-#     edge_type: Edge = Edge,
-#     face_type: Face = Face,
-#     hole_type: Optional[Hole] = None,
-# ) -> HalfEdges:
-#     """
-#     Create a new HalfEdges class with specified element types.
-#
-#     :param vert_type:
-#     :param edge_type:
-#     :param face_type:
-#     :param hole_type:
-#     :return:
-#     """
-#     breakpoint()
