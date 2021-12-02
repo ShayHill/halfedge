@@ -56,18 +56,12 @@ class StaticHalfEdges(BlindHalfEdges):
     @property
     def faces(self) -> Set[half_edge_elements.Face]:
         """Look up all faces in mesh."""
-        return {
-            x.face
-            for x in self.edges
-            if not isinstance(x.face, half_edge_elements.Hole)
-        }
+        return self.all_faces - self.holes
 
     @property
     def holes(self) -> Set[half_edge_elements.Hole]:
         """Look up all holes in mesh."""
-        return {
-            x.face for x in self.edges if isinstance(x.face, half_edge_elements.Hole)
-        }
+        return {x for x in self.all_faces if isinstance(x, self.hole_type)}
 
     @property
     def all_faces(self) -> Set[half_edge_elements.Hole]:
@@ -101,7 +95,7 @@ class StaticHalfEdges(BlindHalfEdges):
 
     @property
     def vl(self) -> List[half_edge_elements.Vert]:
-        """Sorted list of verts"""
+        """ "vertex list" - Sorted list of verts"""
         return sorted(self.verts)
 
     @property
@@ -112,7 +106,7 @@ class StaticHalfEdges(BlindHalfEdges):
     @property
     def ei(self) -> Set[Tuple[int, int]]:
         """
-        Edges as a set of paired vert indices.
+        "edge indices" - Edges as a set of paired vert indices.
 
         :returns: {(0, 1), (2, 3), (1, 4), ...}
         """
@@ -122,7 +116,7 @@ class StaticHalfEdges(BlindHalfEdges):
     @property
     def fi(self) -> Set[Tuple[int, ...]]:
         """
-        Faces as a set of tuples of vl indices.
+        "face indices" - Faces as a set of tuples of vl indices.
 
         :returns: {(0, 1, 2, 3), (1, 0, 4, 5) ...}
         """
@@ -132,7 +126,7 @@ class StaticHalfEdges(BlindHalfEdges):
     @property
     def hi(self) -> Set[Tuple[int, ...]]:
         """
-        Holes as a set of tuples of vl indices.
+        "hole indices" - Holes as a set of tuples of vl indices.
 
         :returns: {(0, 1, 2, 3), (1, 0, 4, 5) ...}
         """

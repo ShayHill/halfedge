@@ -162,9 +162,11 @@ class Vert(_MeshElementBase):
     """
 
     _edge: Edge
+    coordinate: Any
 
     @property
     def edge(self) -> Edge:
+        breakpoint()
         return self._edge
 
     @edge.setter

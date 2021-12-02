@@ -1,7 +1,14 @@
 from contextlib import suppress
 from typing import Any, Optional, Set, Tuple, Union
 
-from .half_edge_elements import Edge, Face, Hole, ManifoldMeshError, Vert
+from .half_edge_elements import (
+    Edge,
+    Face,
+    Hole,
+    ManifoldMeshError,
+    Vert,
+    _MeshElementBase,
+)
 from .half_edge_querries import StaticHalfEdges
 
 EV = Union[Edge, Vert]
@@ -117,11 +124,7 @@ class HalfEdges(StaticHalfEdges):
         raise ValueError("edge cannot be determined from orig and face")
 
     def insert_edge(
-        self,
-        orig: EV,
-        dest: EV,
-        face: Optional[Face] = None,
-        **edge_kwargs: Any,
+        self, orig: EV, dest: EV, face: Optional[Face] = None, **edge_kwargs: Any
     ) -> Edge:
         """
         Insert a new edge between two verts.
@@ -447,11 +450,45 @@ class HalfEdges(StaticHalfEdges):
         new_vert = self.vert_type(edge.orig, edge.dest, **vert_kwargs)
         for edge_ in set(edge.orig.edges) | set(edge.dest.edges):
             edge_.orig = new_vert
+        adjacent_faces = {edge.face, edge.pair.face}
         self.edges.remove(edge)
 
         # remove slits
-        for face in (x.face for x in new_vert.edges if len(x.face.edges) == 2):
+        for face in (x for x in adjacent_faces if len(x.edges) == 2):
             face_edges = face.edges
             face_edges[0].pair.pair = face_edges[1].pair
             self.edges -= set(face_edges)
         return new_vert
+
+# TODO: delete below
+
+# def new_element(name, parent, *attributes: str) -> _MeshElementBase:
+#     """
+#     Inherit from parent and add attributes
+#     :param name:
+#     :param parent:
+#     :param attributes:
+#     :return:
+#     """
+#
+#     def init(self, fill_from, *attributes, **kwargs):
+#         for attribute in attributes:
+#             self.att
+#
+#
+# def new_halfedges_type(
+#     vert_type: Vert = Vert,
+#     edge_type: Edge = Edge,
+#     face_type: Face = Face,
+#     hole_type: Optional[Hole] = None,
+# ) -> HalfEdges:
+#     """
+#     Create a new HalfEdges class with specified element types.
+#
+#     :param vert_type:
+#     :param edge_type:
+#     :param face_type:
+#     :param hole_type:
+#     :return:
+#     """
+#     breakpoint()
