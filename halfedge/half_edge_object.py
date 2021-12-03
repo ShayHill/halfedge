@@ -5,10 +5,14 @@ from typing import Any, Optional, Set, TYPE_CHECKING, Tuple, TypeVar, Union
 
 from .half_edge_elements import ManifoldMeshError
 from .half_edge_querries import StaticHalfEdges
+from .validations import validate_mesh
 
 if TYPE_CHECKING:
     from .half_edge_elements import Vert, Edge, Face
 
+# TODO: remove LOG
+
+log = []
 
 def _update_face_edges(face: Face, edge: Edge) -> None:
     """
@@ -123,6 +127,33 @@ class HalfEdges(StaticHalfEdges):
             prev_edge = _get_singleton_item({x for x in face.edges if x.dest is elem})
             return elem, prev_edge
         raise ValueError("edge cannot be inferred from orig and face")
+
+    def _point_away_from_edge(self, edge: Edge) -> None:
+        """
+        Prepare edge to be removed. Remove vert and face pointers to edge.
+
+        :param edge: any edge in mesh
+        :effects: points edge.orig and edge.face to another edge
+
+        Each vert and each face point to an adjacent edge. *Which* adjacent edge is
+        incidental. This method tries to point an edge's origin and face to
+        *something else*.
+
+        This method requires an intact mesh and produces an intact mesh. After this
+        method, the mesh will be perfectly equivalent to its previous state. However,
+        this method has to be called *before* we start other preparation to remove
+        the edge, because *those* preparations *will* alter the mesh and prevent
+        *this* method from working.
+
+        The method will fail silently if the edge.orig or edge.face doesn't have
+        another edge to point to. But that won't matter, because that orig or face
+        will go out of scope when the edge is removed.
+        """
+        pair = edge.pair
+        for edge_ in (edge, pair):
+            edge_.orig.edge = edge_.pair.next
+            safe_edges = set(edge_.face.edges) - {edge, pair}
+            edge_.face.edge = next(iter(safe_edges), edge_)
 
     def insert_edge(
         self,
@@ -264,6 +295,8 @@ class HalfEdges(StaticHalfEdges):
             * shared face attributes passed to new face
 
         """
+        #TODO: incorporate point_Away_From_edge
+        #TODO: new hole every time
         if edge not in self.edges:
             raise ManifoldMeshError("edge {} does not exist in mesh".format(id(edge)))
 
@@ -272,12 +305,14 @@ class HalfEdges(StaticHalfEdges):
         if edge.orig.valence > 1 and edge.dest.valence > 1 and edge.face == pair.face:
             raise ManifoldMeshError("would create non-manifold mesh")
 
+        self._point_away_from_edge(edge)
+
         edge_face_edges = set(edge.face_edges)
         pair_face_edges = set(pair.face_edges)
 
-        # make sure orig and dest do not point to this edge (if there's another option)
-        edge.next.orig = edge.next.orig
-        pair.next.orig = pair.next.orig
+        # # make sure orig and dest do not point to this edge (if there's another option)
+        # edge.next.orig = edge.next.orig
+        # pair.next.orig = pair.next.orig
 
         # set all faces equal to new face
         if not isinstance(pair.face, self.hole_type):
@@ -330,6 +365,7 @@ class HalfEdges(StaticHalfEdges):
         Passes attributes:
             * shared face attributes passed to new face
         """
+        # TODO: review why peninsulas need to be removed.
         peninsulas = {x for x in vert.edges if x.dest.valence == 1}
         true_edges = set(vert.edges) - peninsulas
         vert_faces = {x.face for x in true_edges}
@@ -451,16 +487,33 @@ class HalfEdges(StaticHalfEdges):
         not geometry, but I've included this operation to experiment with and use
         carefully. Can flip faces and create linear faces.
         """
-        new_vert = self.vert_type(edge.orig, edge.dest, **vert_kwargs)
-        for edge_ in set(edge.orig.edges) | set(edge.dest.edges):
-            edge_.orig = new_vert
-        adjacent_faces = {edge.face, edge.pair.face}
-        self.edges.remove(edge)
+        self._point_away_from_edge(edge)
 
-        # TODO: remove nested slits.
+        new_vert = self.vert_type(edge.orig, edge.dest, **vert_kwargs)
+        for edge_ in (set(edge.orig.edges) | set(edge.dest.edges)) - {edge, edge.pair}:
+            edge_.orig = new_vert
+
+        pair = edge.pair
+        edge.prev.next = edge.next
+        pair.prev.next = pair.next
+        adjacent_faces = {edge.face, edge.pair.face}
+        self.edges -= {edge, pair}
+
         # remove slits
-        for face in (x for x in adjacent_faces if len(x.edges) == 2):
+        while adjacent_faces:
+            face = adjacent_faces.pop()
+            if face.edge not in self.edges or len(face.edges) > 2:
+                continue
+            if (
+                any(x.valence == 2 for x in face.verts)
+                and len(face.edge.pair.face.verts) == 4
+            ):
+                adjacent_faces.add(face.edge.pair.face)
+                self.remove_edge(face.edge.next)
+                self.remove_edge(face.edge)
+                continue
             face_edges = face.edges
             face_edges[0].pair.pair = face_edges[1].pair
+            self._point_away_from_edge(face.edge)
             self.edges -= set(face_edges)
         return new_vert

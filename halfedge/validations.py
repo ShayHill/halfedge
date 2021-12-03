@@ -42,6 +42,16 @@ def validate_mesh(mesh: StaticHalfEdges) -> None:
     if not mesh.edges:
         return
 
+    for vert in mesh.verts:
+        try:
+            assert vert.edge in mesh.edges
+        except:
+            raise ManifoldMeshError("vert points to missing edge")
+        try:
+            _ = vert.valence
+        except:
+            raise ManifoldMeshError("cannot loop vert")
+
     for edge in mesh.edges:
 
         if edge.next.orig is not edge.pair.orig:
@@ -51,8 +61,18 @@ def validate_mesh(mesh: StaticHalfEdges) -> None:
             raise ManifoldMeshError("loop edge")
 
     for face in mesh.faces | mesh.holes:
+        try:
+            _ = mesh.edges
+        except:
+            raise ManifoldMeshError("cannot complete edge lap")
+
         if any(edge.face != face for edge in face.edges):
             raise ManifoldMeshError("edge pointing to wrong face")
+
+        try:
+            assert face.edge in mesh.edges
+        except:
+            raise ManifoldMeshError("face points to missing edge")
 
     if not _does_reach_all(mesh.faces | mesh.holes, _faces_neighboring_face):
         raise ManifoldMeshError("not all faces can be reached by jumping over edges")

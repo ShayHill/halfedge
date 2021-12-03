@@ -384,6 +384,37 @@ class TestFlipEdge:
 class TestCollapseEdge:
     def test_collapse_to_empty(self, he_mesh) -> None:
         """Collapse edge till mesh is empty"""
+        validate_mesh(he_mesh)
+        def is_slit(face):
+            len(face.edges) == 2 and face.edge.next != face.edge.pair
         while he_mesh.edges:
-            he_mesh.collapse_edge(next(iter(he_mesh.edges)))
-            assert all(len(x.edges) > 2 for x in he_mesh.faces)
+            edge = next(iter(he_mesh.edges))
+            he_mesh.collapse_edge(edge)
+            validate_mesh(he_mesh)
+            assert all(not is_slit(x) for x in he_mesh.faces)
+
+    def test_collapse_dart(self) -> None:
+        """Create a double slit face by collapsing on side of a triangle inside a dart
+
+        Function will remove both slits.
+
+        Start with a mesh with two faces, a triange and a "dart" (two adjacent
+        triangles). An example would be:
+
+         * start with an equilateral triangle
+         * place a new point in the center and re-triangulate the triangle into three
+           smaller triangles
+         * remove one interior edge, so two faces remain, a triangle and a dart
+
+        If the exterior edge of the triangle were collapsed, the triangle would
+        become a 2-edge face, which collapse_edge would remove. The dart would still
+        be a 4-edge face, but the 1st and 3rd (or 2nd and 4th) points would be
+        identical so each half of the face would be unambiguously linear.
+        collapse_edge will remove these as well.
+        """
+        mesh = HalfEdges.from_vlvi([0, 1, 2, 3], {(0, 1, 3), (1, 2, 0, 3)})
+        edge = next(
+            x for x in mesh.edges if x.orig.coordinate == 0 and x.dest.coordinate == 1
+        )
+        mesh.collapse_edge(edge)
+        # TODO: complete this test
