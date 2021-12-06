@@ -42,6 +42,10 @@ def validate_mesh(mesh: StaticHalfEdges) -> None:
     if not mesh.edges:
         return
 
+    edge_tuples = {(x.orig, x.dest) for x in mesh.edges}
+    if len(edge_tuples) < len(mesh.edges):
+        raise ManifoldMeshError("overlapping edges")
+
     for vert in mesh.verts:
         try:
             assert vert.edge in mesh.edges
@@ -73,6 +77,10 @@ def validate_mesh(mesh: StaticHalfEdges) -> None:
             assert face.edge in mesh.edges
         except:
             raise ManifoldMeshError("face points to missing edge")
+
+        # TODO: delete commented out line
+        # if len(set(face.verts)) != len(face.verts):
+        #     raise ManifoldMeshError("face crosses same vert more than once")
 
     if not _does_reach_all(mesh.faces | mesh.holes, _faces_neighboring_face):
         raise ManifoldMeshError("not all faces can be reached by jumping over edges")

@@ -3,6 +3,7 @@ from __future__ import annotations
 from contextlib import suppress
 from typing import Any, Optional, Set, TYPE_CHECKING, Tuple, TypeVar, Union
 
+import copy
 from .half_edge_elements import ManifoldMeshError
 from .half_edge_querries import StaticHalfEdges
 from .validations import validate_mesh
@@ -11,8 +12,8 @@ if TYPE_CHECKING:
     from .half_edge_elements import Vert, Edge, Face
 
 # TODO: remove LOG
-
 log = []
+
 
 def _update_face_edges(face: Face, edge: Edge) -> None:
     """
@@ -160,7 +161,7 @@ class HalfEdges(StaticHalfEdges):
         orig: Union[Edge, Vert],
         dest: Union[Edge, Vert],
         face: Optional[Face] = None,
-        **edge_kwargs: Any
+        **edge_kwargs: Any,
     ) -> Edge:
         """
         Insert a new edge between two verts.
@@ -295,8 +296,8 @@ class HalfEdges(StaticHalfEdges):
             * shared face attributes passed to new face
 
         """
-        #TODO: incorporate point_Away_From_edge
-        #TODO: new hole every time
+        # TODO: incorporate point_Away_From_edge
+        # TODO: new hole every time
         if edge not in self.edges:
             raise ManifoldMeshError("edge {} does not exist in mesh".format(id(edge)))
 
@@ -471,12 +472,50 @@ class HalfEdges(StaticHalfEdges):
         new_edge.update(edge, pair)
         return new_edge
 
+    def _is_stitchable(self, edge: Edge) -> bool:
+        """
+        Can two edges be stitched (middle 2-side face removed)?
+
+        :param edge_a:
+        :param edge_b:
+        :return:
+
+        Two edges can be stitched if their outside faces don't share > 1 vert.
+
+        A mesh is not manifold if two adjacent faces point in opposite directions.
+        From a connectivity perspective (this package only deals with connectivity,
+        not geometry), two faces that share more that two vertices are facing in
+        opposite directions--assuming faces are flat and consecutive sides are not
+        linear. Whether or not we accept that, more than two connected vertices
+        breaks the halfedge data structure, if not immediately, then eventually.
+        """
+        # breakpoint()
+        pair = edge.pair
+        tris = sum(len(x.face_edges) == 3 for x in (edge, pair))
+        # breakpoint()
+        orig_verts = set(edge.orig.neighbors)
+        dest_verts = set(edge.dest.neighbors)
+        # breakpoint()
+        if len(orig_verts & dest_verts) == tris:
+            return True
+        return False
+        return
+        if len(edge.face_edges) > 3:
+            return True
+        face_a = edge.pair.face
+        face_b = edge.next.pair.face
+        if face_a == face_b:
+            return True
+        if len(set(face_a.verts) & set(face_b.verts)) < 2:
+            return True
+        return False
+
     def collapse_edge(self, edge: Edge, **vert_kwargs) -> Vert:
         """
         Collapse an Edge into a Vert.
 
         :param edge: Edge instance in self
-        :param vert_kwargs: attributes for the new Vert
+        :param vert_kwargs: attribute/s for the new Vert
         :return: Vert where edge used to be.
 
         Passes attributes:
@@ -487,22 +526,86 @@ class HalfEdges(StaticHalfEdges):
         not geometry, but I've included this operation to experiment with and use
         carefully. Can flip faces and create linear faces.
         """
+        global log
+        # TODO: raise error if collapsing missing edge
+        # breakpoint()
+        pair = edge.pair
+        # breakpoint()
+        safe = self._is_stitchable(edge)
+        log.append(f"{safe=}")
+        # safe = safe and self._is_stitchable(pair.next)
+        if not safe:
+            log.append("not safe")
+            raise ManifoldMeshError("would create non-manifold mesh")
+
+        log.append(f"passed safe test")
+
+        if edge.orig.valence == 1 or edge.dest.valence == 1:
+            log.append("trying to remove edge")
+            try:
+                validate_mesh(self)
+            except:
+                breakpoint()
+            try:
+                self.remove_edge(edge)
+            except:
+                breakpoint()
+            return
+        log.append(f"passed attempted edge removal")
+
+        for edge_ in set(edge.orig.edges + edge.dest.edges):
+            if edge_.dest.valence == 1:
+                try:
+                    log.append(f"multi-edge removal")
+                except:
+                    breakpoint()
+                self.remove_edge(edge_)
+        log.append(f"passed multi-edge removal")
+
+        if len(self.edges) == 2:
+            self.edges -= self.edges
+            breakpoint()
+            return
+        props = [len(x.edges) for x in self.all_faces], len(self.verts), len(self.edges)
+        log.append(props)
         self._point_away_from_edge(edge)
+
+        if any(x.orig is x.dest for x in self.edges):
+            breakpoint()
+
+        mesh_back = copy.deepcopy(self)
 
         new_vert = self.vert_type(edge.orig, edge.dest, **vert_kwargs)
         for edge_ in (set(edge.orig.edges) | set(edge.dest.edges)) - {edge, edge.pair}:
             edge_.orig = new_vert
 
         pair = edge.pair
+        aaa = edge.prev
+        bbb = edge.next
         edge.prev.next = edge.next
+        # if any(x.orig is x.dest for x in self.edges - {edge, pair}):
+        #     breakpoint()
         pair.prev.next = pair.next
+        # if any(x.orig is x.dest for x in self.edges):
+        #     breakpoint()
         adjacent_faces = {edge.face, edge.pair.face}
         self.edges -= {edge, pair}
+        if any(x.orig is x.dest for x in self.edges):
+            breakpoint()
 
         # remove slits
         while adjacent_faces:
+            if any(x.orig is x.dest for x in self.edges):
+                props = (
+                    [len(x.edges) for x in self.all_faces],
+                    len(self.verts),
+                    len(self.edges),
+                )
+                log.append(props)
+                breakpoint()
             face = adjacent_faces.pop()
             if face.edge not in self.edges or len(face.edges) > 2:
+                log.append("len > 2")
                 continue
             if (
                 any(x.valence == 2 for x in face.verts)
@@ -511,9 +614,31 @@ class HalfEdges(StaticHalfEdges):
                 adjacent_faces.add(face.edge.pair.face)
                 self.remove_edge(face.edge.next)
                 self.remove_edge(face.edge)
+                log.append("dart")
                 continue
             face_edges = face.edges
             face_edges[0].pair.pair = face_edges[1].pair
             self._point_away_from_edge(face.edge)
             self.edges -= set(face_edges)
+            log.append("normal")
+        # if any(x.orig is x.dest for x in self.edges):
+        props = (
+            [len(x.edges) for x in self.all_faces],
+            len(self.verts),
+            len(self.edges),
+        )
+        log.append(props)
+        # breakpoint()
+        log.append("-----")
+        # if len(self.edges) > 2 and any(len(x.edges) == 2 for x in self.all_faces):
+        #     breakpoint()
+        try:
+            validate_mesh(self)
+        except:
+            vl_back = [x.sn for x in mesh_back.vl]
+            vi_back = [[x.sn for x in y.verts] for y in mesh_back.all_faces]
+            vl = [x.sn for x in self.vl]
+            vi = [[x.sn for x in y.verts] for y in self.all_faces]
+            breakpoint()
+        # breakpoint()
         return new_vert

@@ -33,6 +33,8 @@ This module is all the base elements (Vert, Edge, Face, Hole).
 from __future__ import annotations
 
 from contextlib import suppress
+from itertools import count
+
 from typing import Any, Callable, Dict, List, TypeVar, Union
 
 
@@ -93,6 +95,8 @@ class MeshElementBase:
     A namespace that == on id, not equivalency.
     """
 
+    _sn_generator = count()
+
     def __init__(self: _TMeshElem, *fill_from: _TMeshElem, **attributes: Any) -> None:
         """
         Create an instance (and copy attrs from fill_from).
@@ -104,6 +108,7 @@ class MeshElementBase:
         high: attributes passed as kwargs to init
         low: attributes inherited from fill_from argument
         """
+        self.sn = next(self._sn_generator)
         self.update(*fill_from, **attributes)
 
     def update(
@@ -117,6 +122,7 @@ class MeshElementBase:
         """
         attrs = get_dict_intersection(*(x.__dict__ for x in fill_from))
         attrs.update(attributes)
+        attrs["sn"] = self.sn
         for key, val in attrs.items():
             setattr(self, key, val)
 
@@ -184,6 +190,13 @@ class Vert(MeshElementBase):
         return []
 
     @property
+    def all_faces(self) -> List[Union[Face, Hole]]:
+        """Faces radiating from vert"""
+        if hasattr(self, "edge"):
+            return self.edge.vert_all_faces
+        return []
+
+    @property
     def faces(self) -> List[Face]:
         """Faces radiating from vert"""
         return [x for x in self.all_faces if not isinstance(x, Hole)]
@@ -192,11 +205,6 @@ class Vert(MeshElementBase):
     def holes(self) -> List[Hole]:
         """Faces radiating from vert"""
         return [x for x in self.all_faces if isinstance(x, Hole)]
-
-    @property
-    def all_faces(self) -> List[Union[Face, Hole]]:
-        """Faces radiating from vert"""
-        return [x.face for x in self.edges]
 
     @property
     def neighbors(self) -> List[Vert]:
@@ -300,6 +308,27 @@ class Edge(MeshElementBase):
         if the faces are defined ccw, the vert_edges will be returned cw.
         """
         return _function_lap(lambda x: x.pair.next, self)
+
+    @property
+    def vert_all_faces(self) -> List[Face]:
+        """
+        All faces and holes around the edge's vert
+        """
+        return [x.face for x in self.vert_edges]
+
+    @property
+    def vert_faces(self) -> List[Face]:
+        """
+        All faces around the edge's vert
+        """
+        return [x for x in self.vert_all_faces if not isinstance(x, Hole)]
+
+    @property
+    def vert_holes(self) -> List[Face]:
+        """
+        All holes around the edge's vert
+        """
+        return [x for x in self.vert_all_faces if isinstance(x, Hole)]
 
     @property
     def vert_neighbors(self) -> List[Vert]:
