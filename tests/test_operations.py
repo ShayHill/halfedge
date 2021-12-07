@@ -388,7 +388,7 @@ import random
 class TestCollapseEdge:
 
     # TODO: have another look at these tests
-    @pytest.mark.parametrize("repeat", range(25))
+    @pytest.mark.parametrize("repeat", range(100))
     def test_collapse_to_empty(self, he_mesh, repeat) -> None:
         """Collapse edge till mesh is empty"""
         validate_mesh(he_mesh)
@@ -403,7 +403,7 @@ class TestCollapseEdge:
             vl, vi = he_mesh.vl, he_mesh.fi
             try:
                 he_mesh.collapse_edge(edge)
-            except:
+            except ManifoldMeshError:
                 vl2, vi2 = he_mesh.vl, he_mesh.fi
                 aaa = get_canonical_mesh([x.sn for x in vl], vi)
                 bbb = get_canonical_mesh([x.sn for x in vl2], vi2)

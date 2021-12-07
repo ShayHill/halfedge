@@ -176,11 +176,17 @@ class Vert(MeshElementBase):
     @property
     def edge(self) -> Edge:
         return self._edge
+        assert self._edge.orig is self
 
     @edge.setter
-    def edge(self, edge: Edge) -> None:
-        self._edge = edge
-        edge._vert = self
+    def edge(self, edge_: Edge) -> None:
+        self._edge = edge_
+        edge_._orig = self
+        assert edge_._orig is self
+        assert self.edge is edge_
+        assert self.edge.orig is self
+        assert self._edge._orig is self.edge.orig
+        assert self is edge_.orig
 
     @property
     def edges(self) -> List[Edge]:
@@ -242,6 +248,9 @@ class Edge(MeshElementBase):
     def orig(self, orig: Vert) -> None:
         self._orig = orig
         orig._edge = self
+        # TODO: remove all teh asserts in this module
+        assert self._orig is orig
+        assert self.orig._edge is self
 
     @property
     def pair(self) -> Edge:
@@ -257,9 +266,9 @@ class Edge(MeshElementBase):
         return self._face
 
     @face.setter
-    def face(self, face: Face) -> None:
-        self._face = face
-        face._edge = self
+    def face(self, face_: Face) -> None:
+        self._face = face_
+        face_._edge = self
 
     @property
     def next(self) -> Edge:

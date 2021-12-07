@@ -156,6 +156,59 @@ class HalfEdges(StaticHalfEdges):
             safe_edges = set(edge_.face.edges) - {edge, pair}
             edge_.face.edge = next(iter(safe_edges), edge_)
 
+    # TODO: replace original with this
+    def _point_away_from_edge2(self, *edges: Edge) -> None:
+        """
+        Prepare edge to be removed. Remove vert and face pointers to edge.
+
+        :param edge: any edge in mesh
+        :effects: points edge.orig and edge.face to another edge
+
+        Each vert and each face point to an adjacent edge. *Which* adjacent edge is
+        incidental. This method tries to point an edge's origin and face to
+        *something else*.
+
+        This method requires an intact mesh and produces an intact mesh. After this
+        method, the mesh will be perfectly equivalent to its previous state. However,
+        this method has to be called *before* we start other preparation to remove
+        the edge, because *those* preparations *will* alter the mesh and prevent
+        *this* method from working.
+
+        The method will fail silently if the edge.orig or edge.face doesn't have
+        another edge to point to. But that won't matter, because that orig or face
+        will go out of scope when the edge is removed.
+        """
+        edge, pair = edges
+        for edge_ in (edge, pair):
+            # safe_face_edges = set(edge_.face_edges) - set(edges)
+            # edge_.face.edge = next(iter(safe_face_edges), edge_)
+            try:
+                for _ in edges:
+                    if edge_.orig.edge in edges:
+                        edge_.orig.edge = edge_.orig.edge.pair.next
+            except:
+                breakpoint()
+            # edge_.orig.edge = next(iter(safe_vert_edges), edge_)
+            # assert edge_.orig._edge is edge_.orig.edge
+            # assert edge_.orig is edge_._orig
+            # aaa = next(iter(safe_vert_edges), edge_)
+            # edge_.orig.edge = edge_.pair.next
+            # breakpoint()
+
+            # safe_edges = set(edge_.face.edges) - {edge, pair}
+            # edge_.face.edge = next(iter(safe_edges), edge_)
+
+            try:
+                safe_face_edges = set(edge_.face_edges) - set(edges)
+                edge_.face.edge = next(iter(safe_face_edges), edge_)
+            except:
+                breakpoint()
+        # for edge_ in edges:
+        #     safe_vert_edges = set(edge_.vert_edges) - set(edges)
+        #     edge_.orig.edge = next(iter(safe_vert_edges), edge_)
+        #     safe_face_edges = set(edge_.face_edges) - set(edges)
+        #     edge_.face.edge = next(iter(safe_face_edges), edge_)
+
     def insert_edge(
         self,
         orig: Union[Edge, Vert],
@@ -531,6 +584,13 @@ class HalfEdges(StaticHalfEdges):
         # breakpoint()
         pair = edge.pair
         # breakpoint()
+
+        pair = edge.pair
+        tris = sum(len(x.face_edges) == 3 for x in (edge, pair))
+        # breakpoint()
+        orig_verts = set(edge.orig.neighbors)
+        dest_verts = set(edge.dest.neighbors)
+        # breakpoint()
         safe = self._is_stitchable(edge)
         log.append(f"{safe=}")
         # safe = safe and self._is_stitchable(pair.next)
@@ -575,35 +635,40 @@ class HalfEdges(StaticHalfEdges):
 
         mesh_back = copy.deepcopy(self)
 
+        log.append("created mesh_back")
+
         new_vert = self.vert_type(edge.orig, edge.dest, **vert_kwargs)
+        # edge.orig = new_vert
+        # edge.pair.orig = new_vert
         for edge_ in (set(edge.orig.edges) | set(edge.dest.edges)) - {edge, edge.pair}:
             edge_.orig = new_vert
 
+        log.append("set edge origins")
+
         pair = edge.pair
-        aaa = edge.prev
-        bbb = edge.next
+        log.append("pair = edge.pair")
         edge.prev.next = edge.next
-        # if any(x.orig is x.dest for x in self.edges - {edge, pair}):
-        #     breakpoint()
+        log.append("edge.prev.next = edge.next")
         pair.prev.next = pair.next
+        log.append("pair.prev.next = pair.next")
+        adjacent_faces = {edge.face, edge.pair.face}
+        log.append("adjacent_faces = {edge.face, edge.pair.face}")
+        self.edges -= {edge, pair}
+
+        # try:
+        #     validate_mesh(self)
+        # except:
+        #     breakpoint()
+
+        log.append("removed first edge")
         # if any(x.orig is x.dest for x in self.edges):
         #     breakpoint()
-        adjacent_faces = {edge.face, edge.pair.face}
-        self.edges -= {edge, pair}
-        if any(x.orig is x.dest for x in self.edges):
-            breakpoint()
 
+        log.append(adjacent_faces)
         # remove slits
         while adjacent_faces:
-            if any(x.orig is x.dest for x in self.edges):
-                props = (
-                    [len(x.edges) for x in self.all_faces],
-                    len(self.verts),
-                    len(self.edges),
-                )
-                log.append(props)
-                breakpoint()
             face = adjacent_faces.pop()
+            log.append("selected face")
             if face.edge not in self.edges or len(face.edges) > 2:
                 log.append("len > 2")
                 continue
@@ -611,15 +676,28 @@ class HalfEdges(StaticHalfEdges):
                 any(x.valence == 2 for x in face.verts)
                 and len(face.edge.pair.face.verts) == 4
             ):
-                adjacent_faces.add(face.edge.pair.face)
-                self.remove_edge(face.edge.next)
-                self.remove_edge(face.edge)
+                try:
+                    adjacent_faces.add(face.edge.pair.face)
+                    self.remove_edge(face.edge.next)
+                    self.remove_edge(face.edge)
+                except:
+                    log.append("failed to remove dart")
                 log.append("dart")
                 continue
+            log.append("standard removal")
             face_edges = face.edges
             face_edges[0].pair.pair = face_edges[1].pair
-            self._point_away_from_edge(face.edge)
+            try:
+                self._point_away_from_edge2(*face_edges)  # face.edge, face.edge.next)
+            except:
+                breakpoint()
+            # assert not any(x.edge in face_edges for x in self.verts)
+            # assert not any(x.edge in face_edges for x in self.faces)
             self.edges -= set(face_edges)
+            # try:
+            #     validate_mesh(self)
+            # except:
+            #     breakpoint()
             log.append("normal")
         # if any(x.orig is x.dest for x in self.edges):
         props = (
@@ -627,6 +705,7 @@ class HalfEdges(StaticHalfEdges):
             len(self.verts),
             len(self.edges),
         )
+        log.append("out props")
         log.append(props)
         # breakpoint()
         log.append("-----")
