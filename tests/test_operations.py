@@ -452,3 +452,9 @@ class TestCollapseEdge:
         edge = random.choice(tuple(mesh.edges))
         mesh.collapse_edge(edge)
         validate_mesh(mesh)
+
+    def test_collapse_adjacent_tris(self) -> None:
+        """"""
+        mesh = HalfEdges.from_vlvi([0, 1, 2, 3], {(0, 1, 3), (1, 2, 3)})
+        edge = next(x for x in mesh.edges if x.orig.coordinate == 2)
+        mesh.collapse_edge(edge)

@@ -42,9 +42,10 @@ def validate_mesh(mesh: StaticHalfEdges) -> None:
     if not mesh.edges:
         return
 
-    edge_tuples = {(x.orig, x.dest) for x in mesh.edges}
-    if len(edge_tuples) < len(mesh.edges):
-        raise ManifoldMeshError("overlapping edges")
+    # TODO: remove this or make it a warning
+    # edge_tuples = {(x.orig, x.dest) for x in mesh.edges}
+    # if len(edge_tuples) < len(mesh.edges):
+    #     raise ManifoldMeshError("overlapping edges")
 
     for vert in mesh.verts:
         try:

@@ -610,19 +610,26 @@ class HalfEdges(StaticHalfEdges):
 
         pair = edge.pair
 
-        for edge_ in (set(edge.orig.edges) | set(edge.dest.edges)) - set(
-            edges_to_remove
-        ):
+        # edge.orig = new_vert
+        # pair.orig = new_vert
+        # edge.next.orig = new_vert
+        # pair.next.orig = new_vert
+        for edge_ in set(edge.orig.edges) | set(edge.dest.edges):
             edge_.orig = new_vert
 
-        try:
-            edge.prev.next = edge.next
-            pair.prev.next = pair.next
-        except:
-            breakpoint()
+        bbb = len(self.verts)
 
         adjacent_faces = {edge.face, edge.pair.face}
+        self._point_away_from_edge2(edge, pair)
+
+        # begin briefly non-manifold
+        edge.prev.next = edge.next
+        pair.prev.next = pair.next
         self.edges -= {edge, pair}
+        # end briefly non-manifold
+
+        aaa = [[getattr(x, "coordinate", -1) for x in y.verts] for y in self.faces]
+
         # for edge_ in (edge, pair):
         #     try:
         #         assert not any(x.edge == edge_ for x in self.verts)
@@ -652,9 +659,13 @@ class HalfEdges(StaticHalfEdges):
             #     continue
             log.append("standard removal")
 
+            self._point_away_from_edge2(*face.edges)
+
+            # begin briefly non-manifold
             face_edges = face.edges
             face_edges[0].pair.pair = face_edges[1].pair
             self.edges -= set(face_edges)
+            # end briefly non-manifold
 
             # for edge_ in face.edges:
             #     try:
