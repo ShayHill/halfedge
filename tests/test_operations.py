@@ -386,50 +386,34 @@ import random
 
 
 class TestCollapseEdge:
-
-    # TODO: have another look at these tests
-    @pytest.mark.parametrize("repeat", range(500))
+    @pytest.mark.parametrize("repeat", range(100))
     def test_collapse_to_empty(self, he_mesh, repeat) -> None:
         """Collapse edge till mesh is empty"""
-        validate_mesh(he_mesh)
-
-        def is_slit(face):
-            return len(face.edges) == 2 and face.edge.next != face.edge.pair
-
-        count = 0
         while he_mesh.edges:
             edges = list(he_mesh.edges)
             random.shuffle(edges)
             for edge in edges:
-                if edge not in he_mesh.edges:
-                    pass
-                with suppress(NotImplementedError):
+                with suppress(ValueError):
                     he_mesh.collapse_edge(edge)
-                validate_mesh(he_mesh)
-            count += 1
-            if count > 1000:
-                aaa = [len(x.edges) for x in he_mesh.faces]
-                breakpoint()
-                return
-            assert all(not is_slit(x) for x in he_mesh.faces)
 
-    @pytest.mark.parametrize("repeat", range(50))
-    # TODO: make this back into test
-    def ttest_collect_pyramid(self, repeat) -> None:
-        """
-        three triangles sharing one point and a bottom (or hole)
-        :return:
-        """
-        mesh = HalfEdges.from_vlvi([0, 1, 2, 3], {(0, 1, 3), (1, 2, 3), (2, 0, 3)})
-        hole = next(iter(mesh.holes))
-        hole_edge = next(iter(hole.edges))
-        edge = random.choice(tuple(mesh.edges))
-        mesh.collapse_edge(edge)
-        validate_mesh(mesh)
+    @pytest.mark.parametrize("repeat", range(100))
+    def test_drum(self, repeat) -> None:
+        """Collapse edge with large faces till mesh is empty"""
+        top = tuple(range(10))
+        bot = tuple(range(10, 20))
+        legs = tuple(zip(top, bot))
+        sides = {x + tuple(reversed(y)) for x, y in zip(legs, (legs * 2)[1:])}
+        vl = list(range(20))
+        fi = {top} | {tuple(reversed(bot))} | sides
+        drum = HalfEdges().from_vlvi(vl, fi)
+        while drum.edges:
+            edges = list(drum.edges)
+            random.shuffle(edges)
+            for edge in edges:
+                with suppress(ValueError):
+                    drum.collapse_edge(edge)
 
-    @pytest.mark.parametrize("repeat", range(50))
-    # TODO: make this back into test
-    def ttest_collapse_dart(self, repeat) -> None:
+    def test_collapse_dart(self) -> None:
         """Create a double slit face by collapsing on side of a triangle inside a dart
 
         Function will remove both slits.
@@ -437,7 +421,7 @@ class TestCollapseEdge:
         Start with a mesh with two faces, a triange and a "dart" (two adjacent
         triangles). An example would be:
 
-         * start with an equilateral triangle
+         * start with a triangle
          * place a new point in the center and re-triangulate the triangle into three
            smaller triangles
          * remove one interior edge, so two faces remain, a triangle and a dart
@@ -449,12 +433,8 @@ class TestCollapseEdge:
         collapse_edge will remove these as well.
         """
         mesh = HalfEdges.from_vlvi([0, 1, 2, 3], {(0, 1, 3), (1, 2, 0, 3)})
-        edge = random.choice(tuple(mesh.edges))
+        edge = next(
+            x for x in mesh.edges if x.orig.coordinate == 0 and x.dest.coordinate == 1
+        )
         mesh.collapse_edge(edge)
-        validate_mesh(mesh)
-
-    def test_collapse_adjacent_tris(self) -> None:
-        """"""
-        mesh = HalfEdges.from_vlvi([0, 1, 2, 3], {(0, 1, 3), (1, 2, 3)})
-        edge = next(x for x in mesh.edges if x.orig.coordinate == 2)
-        mesh.collapse_edge(edge)
+        assert not mesh.verts

@@ -224,6 +224,7 @@ class HalfEdges(StaticHalfEdges):
             * edge_kwargs passed to new edge
             * face attributes passed to new face if face is split
         """
+        # TODO: raise ValueError for overwriting edges, removing bridge edges, etc.
         if face is None:
             face = self._infer_face(orig, dest)
 
@@ -332,7 +333,7 @@ class HalfEdges(StaticHalfEdges):
         pair = edge.pair
 
         if edge.orig.valence > 1 and edge.dest.valence > 1 and edge.face == pair.face:
-            raise ManifoldMeshError("would create non-manifold mesh")
+            raise ValueError("would create non-manifold mesh")
 
         self._point_away_from_edge(edge)
 
@@ -502,6 +503,7 @@ class HalfEdges(StaticHalfEdges):
 
     def _is_stitchable(self, edge: Edge) -> bool:
         """
+        TODO: revisit docstring
         Can two edges be stitched (middle 2-side face removed)?
 
         :param edge_a:
@@ -517,24 +519,11 @@ class HalfEdges(StaticHalfEdges):
         linear. Whether or not we accept that, more than two connected vertices
         breaks the halfedge data structure, if not immediately, then eventually.
         """
-        # breakpoint()
         pair = edge.pair
-        tris = sum(len(x.face_edges) == 3 for x in (edge, pair))
-        # breakpoint()
+        tris = sum(x.face.sides == 3 for x in (edge, pair))
         orig_verts = set(edge.orig.neighbors)
         dest_verts = set(edge.dest.neighbors)
-        # breakpoint()
         if len(orig_verts & dest_verts) <= tris:
-            return True
-        return False
-        return
-        if len(edge.face_edges) > 3:
-            return True
-        face_a = edge.pair.face
-        face_b = edge.next.pair.face
-        if face_a == face_b:
-            return True
-        if len(set(face_a.verts) & set(face_b.verts)) < 2:
             return True
         return False
 
@@ -554,127 +543,40 @@ class HalfEdges(StaticHalfEdges):
         not geometry, but I've included this operation to experiment with and use
         carefully. Can flip faces and create linear faces.
         """
-        global log
-        # TODO: raise error if collapsing missing edge
-        try:
-            validate_mesh(self)
-        except:
-            breakpoint()
-
         if edge not in self.edges:
-            raise NotImplementedError()
+            raise ValueError("edge is not in mesh")
+        if not self._is_stitchable(edge):
+            raise ValueError("edge collapse would create non-manifold mesh")
 
-        try:
-            safe = self._is_stitchable(edge)
-        except:
-            breakpoint()
-        log.append(f"{safe=}")
-        if not safe:
-            log.append("not safe")
-            raise NotImplementedError()
-
-        log.append(f"passed safe test")
-
-        if edge.orig.valence == 1 or edge.dest.valence == 1:
-            self.remove_edge(edge)
-            log.append("trying to remove edge")
-            return
-        log.append(f"passed attempted edge removal")
-
-        for edge_ in set(edge.orig.edges + edge.dest.edges):
-            if edge_.dest.valence == 1 and edge_ in self.edges:
-                self.remove_edge(edge_)
-                return
-
-        edges_to_remove = []
-        for edge_ in (edge, edge.pair):
-            edges_to_remove.append(edge_)
-            if edge_.face.sides == 3:
-                edges_to_remove += edge_.face.edges
-        try:
-            edges_to_remove = self.edges & set(edges_to_remove)
-            self._point_away_from_edge2(*edges_to_remove)
-        except:
-            breakpoint()
-        edge.face.edge = edge.next
-        edge.pair.face.edge = edge.pair.next
-        # ppp = next((x for x in self.faces if x.edge in (edge, edge.pair)), None)
-        # if ppp:
-        #     breakpoint()
         new_vert = self.vert_type(edge.orig, edge.dest, **vert_kwargs)
-        edges_to_compress = set(edge.orig.edges) | set(edge.dest.edges)
-        # for edge_ in (set(edge.orig.edges) | set(edge.dest.edges)) - set(
-        #     edges_to_remove
-        # ):
-        #     edge_.orig = new_vert
-
-        pair = edge.pair
-
-        # edge.orig = new_vert
-        # pair.orig = new_vert
-        # edge.next.orig = new_vert
-        # pair.next.orig = new_vert
         for edge_ in set(edge.orig.edges) | set(edge.dest.edges):
             edge_.orig = new_vert
 
-        bbb = len(self.verts)
-
         adjacent_faces = {edge.face, edge.pair.face}
-        self._point_away_from_edge2(edge, pair)
 
-        # begin briefly non-manifold
+        self._point_away_from_edge2(edge, edge.pair)
         edge.prev.next = edge.next
-        pair.prev.next = pair.next
-        self.edges -= {edge, pair}
-        # end briefly non-manifold
-
-        aaa = [[getattr(x, "coordinate", -1) for x in y.verts] for y in self.faces]
-
-        # for edge_ in (edge, pair):
-        #     try:
-        #         assert not any(x.edge == edge_ for x in self.verts)
-        #         assert not any(x.edge == edge_ for x in self.faces)
-        #     except:
-        #         vvv = next((x for x in self.verts if x.edge in (edge, pair)), None)
-        #         fff = next((x for x in self.faces if x.edge in (edge, pair)), None)
-        #         breakpoint()
-
-        bbb = {x for x in adjacent_faces}
+        edge.pair.prev.next = edge.pair.next
+        self.edges -= {edge, edge.pair}
 
         # remove slits
         while adjacent_faces:
             face = adjacent_faces.pop()
+            # face is normal
             if face.edge not in self.edges or len(face.edges) > 2:
-                log.append("skipping face")
                 continue
-            # if face.edge.pair.face == face.edge.next.pair.face:
-            #     #     any(x.valence == 2 for x in face.verts)
-            #     #     and len(face.edge.pair.face.verts) == 4
-            #     # ):
-            #     #     adjacent_faces.add(face.edge.pair.face)
-            #     adjacent_faces.add(face.edge.pair.face)
-            #     self.remove_edge(face.edge.next)
-            #     self.remove_edge(face.edge)
-            #
-            #     continue
-            log.append("standard removal")
-
+            # face is a slit inside a peninsula
+            adjacent_faces_prime = {x.pair.face for x in face.edges}
+            if len(adjacent_faces_prime) == 1:
+                for face_edge in face.edges:
+                    with suppress(ValueError):
+                        self.remove_edge(face_edge)
+                adjacent_faces |= adjacent_faces_prime
+                continue
+            # face is a slit
             self._point_away_from_edge2(*face.edges)
-
-            # begin briefly non-manifold
             face_edges = face.edges
             face_edges[0].pair.pair = face_edges[1].pair
             self.edges -= set(face_edges)
-            # end briefly non-manifold
-
-            # for edge_ in face.edges:
-            #     try:
-            #         assert not any(x.edge == edge_ for x in self.verts)
-            #         assert not any(x.edge == edge_ for x in self.faces)
-            #     except:
-            #         vvv = next((x for x in self.verts if x.edge in face.verts))
-            #         fff = next((x for x in self.faces if x.edge in face.verts))
-            #         breakpoint()
-            log.append("normal")
 
         return new_vert
