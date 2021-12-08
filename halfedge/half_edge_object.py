@@ -178,36 +178,11 @@ class HalfEdges(StaticHalfEdges):
         another edge to point to. But that won't matter, because that orig or face
         will go out of scope when the edge is removed.
         """
-        edge, pair = edges
-        for edge_ in (edge, pair):
-            # safe_face_edges = set(edge_.face_edges) - set(edges)
-            # edge_.face.edge = next(iter(safe_face_edges), edge_)
-            try:
-                for _ in edges:
-                    if edge_.orig.edge in edges:
-                        edge_.orig.edge = edge_.orig.edge.pair.next
-            except:
-                breakpoint()
-            # edge_.orig.edge = next(iter(safe_vert_edges), edge_)
-            # assert edge_.orig._edge is edge_.orig.edge
-            # assert edge_.orig is edge_._orig
-            # aaa = next(iter(safe_vert_edges), edge_)
-            # edge_.orig.edge = edge_.pair.next
-            # breakpoint()
-
-            # safe_edges = set(edge_.face.edges) - {edge, pair}
-            # edge_.face.edge = next(iter(safe_edges), edge_)
-
-            try:
-                safe_face_edges = set(edge_.face_edges) - set(edges)
-                edge_.face.edge = next(iter(safe_face_edges), edge_)
-            except:
-                breakpoint()
-        # for edge_ in edges:
-        #     safe_vert_edges = set(edge_.vert_edges) - set(edges)
-        #     edge_.orig.edge = next(iter(safe_vert_edges), edge_)
-        #     safe_face_edges = set(edge_.face_edges) - set(edges)
-        #     edge_.face.edge = next(iter(safe_face_edges), edge_)
+        for edge_ in edges:
+            safe_vert_edges = set(edge_.vert_edges) - set(edges)
+            edge_.orig.edge = next(iter(safe_vert_edges), edge_)
+            safe_face_edges = set(edge_.face_edges) - set(edges)
+            edge_.face.edge = next(iter(safe_face_edges), edge_)
 
     def insert_edge(
         self,
@@ -549,7 +524,7 @@ class HalfEdges(StaticHalfEdges):
         orig_verts = set(edge.orig.neighbors)
         dest_verts = set(edge.dest.neighbors)
         # breakpoint()
-        if len(orig_verts & dest_verts) == tris:
+        if len(orig_verts & dest_verts) <= tris:
             return True
         return False
         return
@@ -581,143 +556,114 @@ class HalfEdges(StaticHalfEdges):
         """
         global log
         # TODO: raise error if collapsing missing edge
-        # breakpoint()
-        pair = edge.pair
-        # breakpoint()
+        try:
+            validate_mesh(self)
+        except:
+            breakpoint()
 
-        pair = edge.pair
-        tris = sum(len(x.face_edges) == 3 for x in (edge, pair))
-        # breakpoint()
-        orig_verts = set(edge.orig.neighbors)
-        dest_verts = set(edge.dest.neighbors)
-        # breakpoint()
-        safe = self._is_stitchable(edge)
+        if edge not in self.edges:
+            raise NotImplementedError()
+
+        try:
+            safe = self._is_stitchable(edge)
+        except:
+            breakpoint()
         log.append(f"{safe=}")
-        # safe = safe and self._is_stitchable(pair.next)
         if not safe:
             log.append("not safe")
-            raise ManifoldMeshError("would create non-manifold mesh")
+            raise NotImplementedError()
 
         log.append(f"passed safe test")
 
         if edge.orig.valence == 1 or edge.dest.valence == 1:
+            self.remove_edge(edge)
             log.append("trying to remove edge")
-            try:
-                validate_mesh(self)
-            except:
-                breakpoint()
-            try:
-                self.remove_edge(edge)
-            except:
-                breakpoint()
             return
         log.append(f"passed attempted edge removal")
 
         for edge_ in set(edge.orig.edges + edge.dest.edges):
-            if edge_.dest.valence == 1:
-                try:
-                    log.append(f"multi-edge removal")
-                except:
-                    breakpoint()
+            if edge_.dest.valence == 1 and edge_ in self.edges:
                 self.remove_edge(edge_)
-        log.append(f"passed multi-edge removal")
+                return
 
-        if len(self.edges) == 2:
-            self.edges -= self.edges
+        edges_to_remove = []
+        for edge_ in (edge, edge.pair):
+            edges_to_remove.append(edge_)
+            if edge_.face.sides == 3:
+                edges_to_remove += edge_.face.edges
+        try:
+            edges_to_remove = self.edges & set(edges_to_remove)
+            self._point_away_from_edge2(*edges_to_remove)
+        except:
             breakpoint()
-            return
-        props = [len(x.edges) for x in self.all_faces], len(self.verts), len(self.edges)
-        log.append(props)
-        self._point_away_from_edge(edge)
-
-        if any(x.orig is x.dest for x in self.edges):
-            breakpoint()
-
-        mesh_back = copy.deepcopy(self)
-
-        log.append("created mesh_back")
-
+        edge.face.edge = edge.next
+        edge.pair.face.edge = edge.pair.next
+        # ppp = next((x for x in self.faces if x.edge in (edge, edge.pair)), None)
+        # if ppp:
+        #     breakpoint()
         new_vert = self.vert_type(edge.orig, edge.dest, **vert_kwargs)
-        # edge.orig = new_vert
-        # edge.pair.orig = new_vert
-        for edge_ in (set(edge.orig.edges) | set(edge.dest.edges)) - {edge, edge.pair}:
-            edge_.orig = new_vert
-
-        log.append("set edge origins")
+        edges_to_compress = set(edge.orig.edges) | set(edge.dest.edges)
+        # for edge_ in (set(edge.orig.edges) | set(edge.dest.edges)) - set(
+        #     edges_to_remove
+        # ):
+        #     edge_.orig = new_vert
 
         pair = edge.pair
-        log.append("pair = edge.pair")
-        edge.prev.next = edge.next
-        log.append("edge.prev.next = edge.next")
-        pair.prev.next = pair.next
-        log.append("pair.prev.next = pair.next")
+
+        for edge_ in (set(edge.orig.edges) | set(edge.dest.edges)) - set(
+            edges_to_remove
+        ):
+            edge_.orig = new_vert
+
+        try:
+            edge.prev.next = edge.next
+            pair.prev.next = pair.next
+        except:
+            breakpoint()
+
         adjacent_faces = {edge.face, edge.pair.face}
-        log.append("adjacent_faces = {edge.face, edge.pair.face}")
         self.edges -= {edge, pair}
+        # for edge_ in (edge, pair):
+        #     try:
+        #         assert not any(x.edge == edge_ for x in self.verts)
+        #         assert not any(x.edge == edge_ for x in self.faces)
+        #     except:
+        #         vvv = next((x for x in self.verts if x.edge in (edge, pair)), None)
+        #         fff = next((x for x in self.faces if x.edge in (edge, pair)), None)
+        #         breakpoint()
 
-        # try:
-        #     validate_mesh(self)
-        # except:
-        #     breakpoint()
+        bbb = {x for x in adjacent_faces}
 
-        log.append("removed first edge")
-        # if any(x.orig is x.dest for x in self.edges):
-        #     breakpoint()
-
-        log.append(adjacent_faces)
         # remove slits
         while adjacent_faces:
             face = adjacent_faces.pop()
-            log.append("selected face")
             if face.edge not in self.edges or len(face.edges) > 2:
-                log.append("len > 2")
+                log.append("skipping face")
                 continue
-            if (
-                any(x.valence == 2 for x in face.verts)
-                and len(face.edge.pair.face.verts) == 4
-            ):
-                try:
-                    adjacent_faces.add(face.edge.pair.face)
-                    self.remove_edge(face.edge.next)
-                    self.remove_edge(face.edge)
-                except:
-                    log.append("failed to remove dart")
-                log.append("dart")
-                continue
+            # if face.edge.pair.face == face.edge.next.pair.face:
+            #     #     any(x.valence == 2 for x in face.verts)
+            #     #     and len(face.edge.pair.face.verts) == 4
+            #     # ):
+            #     #     adjacent_faces.add(face.edge.pair.face)
+            #     adjacent_faces.add(face.edge.pair.face)
+            #     self.remove_edge(face.edge.next)
+            #     self.remove_edge(face.edge)
+            #
+            #     continue
             log.append("standard removal")
+
             face_edges = face.edges
             face_edges[0].pair.pair = face_edges[1].pair
-            try:
-                self._point_away_from_edge2(*face_edges)  # face.edge, face.edge.next)
-            except:
-                breakpoint()
-            # assert not any(x.edge in face_edges for x in self.verts)
-            # assert not any(x.edge in face_edges for x in self.faces)
             self.edges -= set(face_edges)
-            # try:
-            #     validate_mesh(self)
-            # except:
-            #     breakpoint()
+
+            # for edge_ in face.edges:
+            #     try:
+            #         assert not any(x.edge == edge_ for x in self.verts)
+            #         assert not any(x.edge == edge_ for x in self.faces)
+            #     except:
+            #         vvv = next((x for x in self.verts if x.edge in face.verts))
+            #         fff = next((x for x in self.faces if x.edge in face.verts))
+            #         breakpoint()
             log.append("normal")
-        # if any(x.orig is x.dest for x in self.edges):
-        props = (
-            [len(x.edges) for x in self.all_faces],
-            len(self.verts),
-            len(self.edges),
-        )
-        log.append("out props")
-        log.append(props)
-        # breakpoint()
-        log.append("-----")
-        # if len(self.edges) > 2 and any(len(x.edges) == 2 for x in self.all_faces):
-        #     breakpoint()
-        try:
-            validate_mesh(self)
-        except:
-            vl_back = [x.sn for x in mesh_back.vl]
-            vi_back = [[x.sn for x in y.verts] for y in mesh_back.all_faces]
-            vl = [x.sn for x in self.vl]
-            vi = [[x.sn for x in y.verts] for y in self.all_faces]
-            breakpoint()
-        # breakpoint()
+
         return new_vert

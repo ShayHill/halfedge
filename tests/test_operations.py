@@ -388,7 +388,7 @@ import random
 class TestCollapseEdge:
 
     # TODO: have another look at these tests
-    @pytest.mark.parametrize("repeat", range(100))
+    @pytest.mark.parametrize("repeat", range(500))
     def test_collapse_to_empty(self, he_mesh, repeat) -> None:
         """Collapse edge till mesh is empty"""
         validate_mesh(he_mesh)
@@ -398,26 +398,18 @@ class TestCollapseEdge:
 
         count = 0
         while he_mesh.edges:
-            validate_mesh(he_mesh)
-            edge = random.choice(tuple(he_mesh.edges))
-            vl, vi = he_mesh.vl, he_mesh.fi
-            try:
-                he_mesh.collapse_edge(edge)
-            except ManifoldMeshError:
-                vl2, vi2 = he_mesh.vl, he_mesh.fi
-                aaa = get_canonical_mesh([x.sn for x in vl], vi)
-                bbb = get_canonical_mesh([x.sn for x in vl2], vi2)
-                if aaa != bbb:
-                    breakpoint()
+            edges = list(he_mesh.edges)
+            random.shuffle(edges)
+            for edge in edges:
+                if edge not in he_mesh.edges:
+                    pass
+                with suppress(NotImplementedError):
+                    he_mesh.collapse_edge(edge)
                 validate_mesh(he_mesh)
-                pass
-                # breakpoint()
-
-            validate_mesh(he_mesh)
             count += 1
             if count > 1000:
                 aaa = [len(x.edges) for x in he_mesh.faces]
-                # breakpoint()
+                breakpoint()
                 return
             assert all(not is_slit(x) for x in he_mesh.faces)
 

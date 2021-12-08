@@ -379,6 +379,11 @@ class Face(MeshElementBase):
             return [x.orig for x in self.edges]
         return []
 
+    @property
+    def sides(self) -> int:
+        """The equivalent of valence for faces. How many sides does the face have?"""
+        return len(self.verts)
+
 
 class Hole(Face):
     """A copy of Face to differentiate b/t interior edges and boundaries."""
