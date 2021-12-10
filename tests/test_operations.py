@@ -13,6 +13,7 @@ from operator import attrgetter
 from typing import Any, Dict
 
 import pytest
+import random
 
 from .conftest import get_canonical_mesh
 from ..halfedge.half_edge_elements import Edge, ManifoldMeshError, Vert
@@ -233,7 +234,7 @@ class TestRemoveEdge:
             if x.orig.valence == 3 and x.dest.valence == 3 and x.pair.face in mesh.holes
         ]
         mesh.remove_edge(outer_center_edges[0])
-        with pytest.raises(ManifoldMeshError) as err:
+        with pytest.raises(ValueError) as err:
             mesh.remove_edge(outer_center_edges[1])
         assert "would create non-manifold" in err.value.args[0]
 
@@ -247,7 +248,7 @@ class TestRemoveEdge:
             edges = list(he_mesh.edges)
             random.shuffle(edges)
             for edge in edges:
-                with suppress(ManifoldMeshError):
+                with suppress(ValueError):
                     he_mesh.remove_edge(edge)
                 validate_mesh(he_mesh)
         assert he_mesh.edges == set()
@@ -382,7 +383,6 @@ class TestFlipEdge:
         validate_mesh(mesh)
 
 
-import random
 
 
 class TestCollapseEdge:
