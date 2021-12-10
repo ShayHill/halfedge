@@ -4,11 +4,11 @@
 """A half-edges data container with view methods.
 
 A simple container for a list of half edges. Provides lookups and a serial
-number for each mesh element (Vert, Edge, Face, or Hole).
+number for each mesh element (Vert, Edge, or Face).
 
 This is a typical halfedges data structure. Exceptions:
 
-    * Faces and Holes are two different (but identical except in name) types. This is
+    * Face() is distinct from Face(__is_hole=True). This is
       to simplify working with 2D meshes. You can
           - define a 2d mesh with triangles
           - explicitly or algorithmically define holes to keep the mesh manifold
@@ -25,7 +25,7 @@ This is a typical halfedges data structure. Exceptions:
       be temporarily broken down to transform the mesh. All I can say is, write a lot
       of tests if you want to extend the insertion / removal methods here.
 
-This module is all the base elements (Vert, Edge, Face, Hole).
+This module is all the base elements (Vert, Edge, and Face).
 
 # 2006 June 05
 # 2012 September 30
@@ -37,9 +37,9 @@ from itertools import count
 
 from typing import Any, Callable, Dict, List, TypeVar, Union, Generic
 
-_V = TypeVar('_V', bound='Vert')
-_E = TypeVar('_E', bound='Edge')
-_F = TypeVar('_F', bound='Face')
+_V = TypeVar("_V", bound="Vert")
+_E = TypeVar("_E", bound="Edge")
+_F = TypeVar("_F", bound="Face")
 
 
 class ManifoldMeshError(ValueError):
@@ -115,9 +115,7 @@ class MeshElementBase(Generic[_V, _E, _F]):
         self.sn = next(self._sn_generator)
         self.update(*fill_from, **attributes)
 
-    def update(
-        self: _TMeshElem, *fill_from: _TMeshElem, **attributes: Any
-    ) -> None:
+    def update(self: _TMeshElem, *fill_from: _TMeshElem, **attributes: Any) -> None:
         """
         Add or replace attributes
 
@@ -130,9 +128,7 @@ class MeshElementBase(Generic[_V, _E, _F]):
         for key, val in attrs.items():
             setattr(self, key, val)
 
-    def extend(
-        self: _TMeshElem, *fill_from: _TMeshElem, **attributes: Any
-    ) -> None:
+    def extend(self: _TMeshElem, *fill_from: _TMeshElem, **attributes: Any) -> None:
         """Add attributes only. Do not replace."""
         attrs = get_dict_intersection(*(x.__dict__ for x in fill_from))
         attrs.update(attributes)
@@ -210,12 +206,12 @@ class Vert(Generic[_V, _E, _F], MeshElementBase[_V, _E, _F]):
     @property
     def faces(self) -> List[_F]:
         """Faces radiating from vert"""
-        return [x for x in self.all_faces if not hasattr(x, 'HOLE')]
+        return [x for x in self.all_faces if not x.is_hole]
 
     @property
     def holes(self) -> List[_F]:
         """Faces radiating from vert"""
-        return [x for x in self.all_faces if hasattr(x, 'HOLE')]
+        return [x for x in self.all_faces if x.is_hole]
 
     @property
     def neighbors(self) -> List[_V]:
@@ -229,7 +225,9 @@ class Vert(Generic[_V, _E, _F], MeshElementBase[_V, _E, _F]):
         """The number of edges incident to vertex."""
         return len(self.edges)
 
-_T = TypeVar('_T')
+
+_T = TypeVar("_T")
+
 
 class Edge(Generic[_V, _E, _F], MeshElementBase[_V, _E, _F]):
     """Half-edge mesh edges.
@@ -352,14 +350,14 @@ class Edge(Generic[_V, _E, _F], MeshElementBase[_V, _E, _F]):
         """
         All faces around the edge's vert
         """
-        return [x for x in self.vert_all_faces if not hasattr(x, 'HOLE')]
+        return [x for x in self.vert_all_faces if not x.is_hole]
 
     @property
     def vert_holes(self) -> List[_F]:
         """
         All holes around the edge's vert
         """
-        return [x for x in self.vert_all_faces if hasattr(x, 'HOLE')]
+        return [x for x in self.vert_all_faces if x.is_hole]
 
     @property
     def vert_neighbors(self) -> List[_V]:
@@ -376,10 +374,23 @@ class Face(Generic[_V, _E, _F], MeshElementBase[_V, _E, _F]):
 
     _edge: _E
 
+    def __init__(self, *args, **kwargs):
+        self.__is_hole = kwargs.pop("__is_hole", False)
+        super().__init__(*args, **kwargs)
+
     @property
     def edge(self) -> Edge:
         """One edge on the face"""
         return self._edge
+
+    @property
+    def is_hole(self) -> bool:
+        """
+        Is this face a hole.
+
+        "hole-ness" is assigned at instance creation
+        """
+        return self.__is_hole
 
     @edge.setter
     def edge(self, edge: _E) -> None:
@@ -405,10 +416,3 @@ class Face(Generic[_V, _E, _F], MeshElementBase[_V, _E, _F]):
     def sides(self) -> int:
         """The equivalent of valence for faces. How many sides does the face have?"""
         return len(self.verts)
-
-
-class Hole(Generic[_V, _E, _F], Face[_V, _E, _F]):
-    """A copy of Face to differentiate b/t interior edges and boundaries."""
-    def __init__(self, *args, **kwargs) -> None:
-        self.HOLE = True
-        super().__init__(*args, **kwargs)

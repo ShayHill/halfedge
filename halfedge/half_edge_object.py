@@ -328,6 +328,7 @@ class HalfEdges(StaticHalfEdges):
         """
         # TODO: incorporate point_Away_From_edge
         # TODO: new hole every time
+        # TODO: make this ManifoldMeshError a ValueError
         if edge not in self.edges:
             raise ManifoldMeshError("edge {} does not exist in mesh".format(id(edge)))
 
@@ -346,7 +347,7 @@ class HalfEdges(StaticHalfEdges):
         # pair.next.orig = pair.next.orig
 
         # set all faces equal to new face
-        if not hasattr(pair.face, "HOLE"):
+        if not pair.face.is_hole:
             new_face = self.face_type(*{edge.face, pair.face}, **face_kwargs)
         else:
             new_face = self.hole_type(*{edge.face, pair.face}, **face_kwargs)
@@ -409,7 +410,7 @@ class HalfEdges(StaticHalfEdges):
         try:
             # remove face edges, not hole edges, so holes will fill faces.
             for edge in vert.edges:
-                if hasattr(edge.face, "HOLE"):
+                if edge.face.is_hole:
                     face = self.remove_edge(edge.pair, **face_kwargs)
                 else:
                     face = self.remove_edge(edge, **face_kwargs)

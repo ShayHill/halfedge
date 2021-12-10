@@ -7,7 +7,7 @@
 """
 from typing import Tuple, Union
 
-from ..halfedge.half_edge_elements import Vert, Edge, Face, Hole
+from ..halfedge.half_edge_elements import Vert, Edge, Face
 
 
 # TODO: delete this module

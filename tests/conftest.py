@@ -20,7 +20,7 @@ def he_triangle() -> Dict[str, List[Any]]:
     """A simple triangle (inside and outside faces) for Mesh Element tests"""
     mesh = HalfEdges()
     verts = [half_edge_elements.Vert(coordinate=x) for x in ((-1, 0), (1, 0), (0, 1))]
-    faces = [half_edge_elements.Face(), half_edge_elements.Hole()]
+    faces = [half_edge_elements.Face(), half_edge_elements.Face(__is_hole=True)]
     inner_edges = [
         half_edge_elements.Edge(orig=verts[x], face=faces[0]) for x in range(3)
     ]

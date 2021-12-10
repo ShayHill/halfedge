@@ -37,7 +37,7 @@ from . import half_edge_elements
 from .half_edge_elements import ManifoldMeshError, Vert, Edge, Face
 
 if TYPE_CHECKING:
-    from .half_edge_elements import Vert, Edge, Face, _V, _E, _F
+    from .half_edge_elements import Vert, Edge, Face
 
 
 _TBlindHalfEdges = TypeVar("_TBlindHalfEdges", bound="BlindHalfEdges")
@@ -49,7 +49,6 @@ _F = TypeVar("_F", bound="Face")
 
 
 class BlindHalfEdges(Generic[_V, _E, _F]):
-    hole_type = half_edge_elements.Hole
 
     def __init__(self, edges: Optional[Set[_E]] = None) -> None:
         if edges is None:
@@ -71,6 +70,9 @@ class BlindHalfEdges(Generic[_V, _E, _F]):
     @property
     def face_type(cls) -> Type[Face[_V, _E, _F]]:
         return Face[_V, _E, _F]
+
+    def hole_type(self, *args, **kwargs) -> Face[_V, _E, _F]:
+        return self.face_type(*args, **{**kwargs, "__is_hole": True})
 
     def _infer_holes(self) -> None:
         """

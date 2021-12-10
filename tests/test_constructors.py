@@ -17,7 +17,6 @@ from .conftest import compare_circular, compare_circular_2, get_canonical_mesh
 from ..halfedge.half_edge_elements import (
     Edge,
     Face,
-    Hole,
     ManifoldMeshError,
     Vert,
     MeshElementBase,
@@ -220,7 +219,7 @@ def test_half_edges_boundary_edges(he_grid) -> None:
     """12 edges on grid. All face holes."""
     edges = he_grid.boundary_edges
     assert len(edges) == 12
-    assert all(isinstance(x.face, Hole) for x in edges)
+    assert all(x.face.is_hole for x in edges)
 
 
 def test_half_edges_boundary_verts(he_grid) -> None:
@@ -234,7 +233,7 @@ def test_half_edges_interior_edges(he_grid) -> None:
     """36 in grid. All face Faces."""
     edges = he_grid.interior_edges
     assert len(edges) == 36
-    assert not any(isinstance(x.face, Hole) for x in edges)
+    assert not any(x.face.is_hole for x in edges)
 
 
 def test_half_edges_interior_verts(he_grid) -> None:

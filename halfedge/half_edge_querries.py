@@ -4,26 +4,7 @@
 """A half-edges data container with view methods.
 
 A simple container for a list of half edges. Provides lookups and a serial
-number for each mesh element (Vert, Edge, Face, or Hole).
-
-This is a typical halfedges data structure. Exceptions:
-
-    * Faces and Holes are two different (but identical except in name) types. This is
-      to simplify working with 2D meshes. You can
-          - define a 2d mesh with triangles
-          - explicitly or algorithmically define holes to keep the mesh manifold
-          - ignore the holes after that. They won't be returned when, for instance,
-            iterating over mesh faces.
-      Boundary verts, and boundary edges are identified by these holes, but that all
-      happens internally, so the holes can again be ignored for most things.
-
-    * Orig, pair, face, and next assignments are mirrored, so a.pair = b will set
-    a.pair = b and b.pair = a. This makes edge insertion, etc. cleaner, but the whole
-    thing is still easy to break. Hopefully, I've provided enough insertion / removal
-    code to get you over the pitfalls. The halfedge data structure (always, not just
-    this implementation) is clever when it's all built, but a lot has to be
-    temporarily broken down to transform the mesh. All I can say is, write a lot of
-    tests if you want to extend the insertion / removal methods here.
+number for each mesh element (Vert, Edge, or Face).
 
 This module is all the lookups. Transformations elsewhere.
 
@@ -37,7 +18,7 @@ from typing import Dict, List, Optional, Set, TYPE_CHECKING, Tuple, Union
 from .constructors import BlindHalfEdges
 
 if TYPE_CHECKING:
-    from .half_edge_elements import Vert, Edge, Face, Hole
+    from .half_edge_elements import Vert, Edge, Face
 
 
 class StaticHalfEdges(BlindHalfEdges):
@@ -45,8 +26,9 @@ class StaticHalfEdges(BlindHalfEdges):
     Basic half edge lookups.
 
     Some properties require a manifold mesh, but the Edge type does support
-    explicitly defined holes. Holes provide enough information to pair and link all
-    half edges, but will be ignored in any "for face in" constructs.
+    explicitly defined holes. These hole (Face(__is_hole=True) provide enough
+    information to pair and link all half edges, but will be ignored in any "for face
+    in" constructs.
     """
 
     def __init__(self, edges: Optional[Set[Edge]] = None) -> None:
@@ -60,27 +42,27 @@ class StaticHalfEdges(BlindHalfEdges):
     @property
     def faces(self) -> Set[Face]:
         """Look up all faces in mesh."""
-        return self.all_faces - self.holes
+        return {x for x in self.all_faces if not x.is_hole}
 
     @property
-    def holes(self) -> Set[Hole]:
+    def holes(self):  # -> Set[hole]: # TODO: update hole return type
         """Look up all holes in mesh."""
-        return {x for x in self.all_faces if isinstance(x, self.hole_type)}
+        return {x for x in self.all_faces if x.is_hole}
 
     @property
-    def all_faces(self) -> Set[Hole]:
+    def all_faces(self):  # -> Set[hole]: # TODO: update hole return type
         """Look up all faces and holes in mesh"""
         return {x.face for x in self.edges}
 
     @property
-    def elements(self) -> Set[Union[Vert, Edge, Face, Hole]]:
+    def elements(self) -> Set[Union[Vert, Edge, Face]]:
         """All elements in mesh"""
         return self.verts | self.edges | self.faces | self.holes
 
     @property
     def boundary_edges(self) -> Set[Edge]:
         """Look up edges on holes."""
-        return {x for x in self.edges if isinstance(x.face, self.hole_type)}
+        return {x for x in self.edges if x.face.is_hole}
 
     @property
     def boundary_verts(self) -> Set[Vert]:
@@ -130,7 +112,7 @@ class StaticHalfEdges(BlindHalfEdges):
     @property
     def hi(self) -> Set[Tuple[int, ...]]:
         """
-        "hole indices" - Holes as a set of tuples of vl indices.
+        "hole indices" - holes as a set of tuples of vl indices.
 
         :returns: {(0, 1, 2, 3), (1, 0, 4, 5) ...}
         """
