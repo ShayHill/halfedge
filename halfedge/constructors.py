@@ -49,6 +49,9 @@ _F = TypeVar("_F", bound="Face")
 
 
 class BlindHalfEdges(Generic[_V, _E, _F]):
+    vert = Vert
+    edge = Edge
+    face = Face
 
     def __init__(self, edges: Optional[Set[_E]] = None) -> None:
         if edges is None:
@@ -59,17 +62,17 @@ class BlindHalfEdges(Generic[_V, _E, _F]):
     @classmethod
     @property
     def vert_type(cls) -> Type[Vert[_V, _E, _F]]:
-        return Vert[_V, _E, _F]
+        return cls.vert[_V, _E, _F]
 
     @classmethod
     @property
     def edge_type(cls) -> Type[Edge[_V, _E, _F]]:
-        return Edge[_V, _E, _F]
+        return cls.edge[_V, _E, _F]
 
     @classmethod
     @property
     def face_type(cls) -> Type[Face[_V, _E, _F]]:
-        return Face[_V, _E, _F]
+        return cls.face[_V, _E, _F]
 
     def hole_type(self, *args, **kwargs) -> Face[_V, _E, _F]:
         return self.face_type(*args, **{**kwargs, "__is_hole": True})

@@ -13,15 +13,29 @@ This module is all the lookups. Transformations elsewhere.
 """
 from __future__ import annotations
 
-from typing import Dict, List, Optional, Set, TYPE_CHECKING, Tuple, Union
+from typing import (
+    TYPE_CHECKING,
+    Dict,
+    Generic,
+    List,
+    Optional,
+    Set,
+    Tuple,
+    TypeVar,
+    Union,
+)
 
 from .constructors import BlindHalfEdges
 
 if TYPE_CHECKING:
-    from .half_edge_elements import Vert, Edge, Face
+    from .half_edge_elements import Edge, Face, Vert
+
+_V = TypeVar("_V", bound="Vert")
+_E = TypeVar("_E", bound="Edge")
+_F = TypeVar("_F", bound="Face")
 
 
-class StaticHalfEdges(BlindHalfEdges):
+class StaticHalfEdges(Generic[_V, _E, _F], BlindHalfEdges[_V, _E, _F]):
     """
     Basic half edge lookups.
 
@@ -69,6 +83,7 @@ class StaticHalfEdges(BlindHalfEdges):
         """Look up all verts on hole boundaries."""
         return {x.orig for x in self.boundary_edges}
 
+    # TODO: make these filter back through self.edges
     @property
     def interior_edges(self):
         """Look up edges on faces."""

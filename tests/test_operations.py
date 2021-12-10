@@ -16,7 +16,7 @@ import pytest
 import random
 
 from .conftest import get_canonical_mesh
-from ..halfedge.half_edge_elements import Edge, ManifoldMeshError, Vert
+from ..halfedge.half_edge_elements import Edge, ManifoldMeshError, Vert, Face
 from ..halfedge.half_edge_object import HalfEdges, log
 from ..halfedge.validations import validate_mesh
 
@@ -372,17 +372,34 @@ class TestSplitEdge:
 class TestFlipEdge:
     def test_flip(self) -> None:
         """Flip edge in adjacent triangles"""
+        # class MyVert(Vert["MyVert", "MyEdge", "MyFace"]):
+        # nnum: int
+
+        # class MyEdge(Edge["MyVert", "MyEdge", "MyFace"]):
+        # pass
+
+        # class MyFace(Face["MyVert", "MyEdge", "MyFace"]):
+        # pass
+
+        # class MyHalfEdges(HalfEdges["MyVert", "MyEdge", "MyFace"]):
+        # vert = MyVert
+        # edge = MyEdge
+        # face = MyFace
+
         vl = [x for x in range(4)]
         vi = {(0, 1, 2), (0, 2, 3)}
-        mesh = HalfEdges.from_vlvi(vl, vi, attr_name="num")
+        vvert = Vert["vvert", "eedge", "fface"]
+        eedge = Edge["vvert", "eedge", "fface"]
+        fface = Face["vvert", "eedge", "fface"]
+        mesh = HalfEdges[vvert, eedge, fface].from_vlvi(vl, vi, attr_name="num")
         split = next(x for x in mesh.edges if x.orig.num == 0 and x.pair.orig.num == 2)
         new_edge = mesh.flip_edge(split)
+        reveal_type(mesh)
+        reveal_type(mesh.edges)
         assert split not in mesh.edges
         assert new_edge.orig.num == 3
         assert new_edge.dest.num == 1
         validate_mesh(mesh)
-
-
 
 
 class TestCollapseEdge:

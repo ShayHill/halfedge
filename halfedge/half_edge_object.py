@@ -56,8 +56,12 @@ class UnrecoverableManifoldMeshError(ValueError):
 
 _TMeshElem = TypeVar("_TMeshElem", bound="MeshElementBase")
 
+_V = TypeVar("_V", bound="Vert")
+_E = TypeVar("_E", bound="Edge")
+_F = TypeVar("_F", bound="Face")
 
-class HalfEdges(StaticHalfEdges):
+
+class HalfEdges(Generic[_V, _E, _F], StaticHalfEdges[_V, _E, _F]):
     def _get_edge_or_vert_faces(self, elem: Union[Edge, Vert]) -> Set[Face]:
         """
         Get faces (unordered) adjacent to a vert or edge
