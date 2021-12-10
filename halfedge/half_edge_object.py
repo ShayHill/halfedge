@@ -7,9 +7,10 @@ import copy
 from .half_edge_elements import ManifoldMeshError
 from .half_edge_querries import StaticHalfEdges
 from .validations import validate_mesh
+from .half_edge_elements import Vert, Edge, Face
 
 if TYPE_CHECKING:
-    from .half_edge_elements import Vert, Edge, Face
+    from .half_edge_elements import MeshElementBase
 
 # TODO: remove LOG
 log = []
@@ -66,7 +67,7 @@ class HalfEdges(StaticHalfEdges):
 
         This is a subroutine for insert_edge.
         """
-        if isinstance(elem, self.edge_type):
+        if isinstance(elem, Edge):
             return {elem.face}
         return set(elem.faces)
 
@@ -120,7 +121,7 @@ class HalfEdges(StaticHalfEdges):
             vert not on face? (presume floating) the prev edge is default
                 (new_edge.pair from outer scope)
         """
-        if isinstance(elem, self.edge_type):
+        if isinstance(elem, Edge):
             return elem.dest, elem
         if elem not in face.verts:
             return elem, default
@@ -345,7 +346,7 @@ class HalfEdges(StaticHalfEdges):
         # pair.next.orig = pair.next.orig
 
         # set all faces equal to new face
-        if not hasattr(pair.face, 'HOLE'):
+        if not hasattr(pair.face, "HOLE"):
             new_face = self.face_type(*{edge.face, pair.face}, **face_kwargs)
         else:
             new_face = self.hole_type(*{edge.face, pair.face}, **face_kwargs)
@@ -408,7 +409,7 @@ class HalfEdges(StaticHalfEdges):
         try:
             # remove face edges, not hole edges, so holes will fill faces.
             for edge in vert.edges:
-                if hasattr(edge.face, 'HOLE'):
+                if hasattr(edge.face, "HOLE"):
                     face = self.remove_edge(edge.pair, **face_kwargs)
                 else:
                     face = self.remove_edge(edge, **face_kwargs)

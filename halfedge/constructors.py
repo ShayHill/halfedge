@@ -30,30 +30,47 @@ from typing import (
     Tuple,
     TypeVar,
     Type,
+    Generic,
 )
 
 from . import half_edge_elements
-from .half_edge_elements import ManifoldMeshError
+from .half_edge_elements import ManifoldMeshError, Vert, Edge, Face
 
 if TYPE_CHECKING:
-    from .half_edge_elements import Vert, Edge, Face
+    from .half_edge_elements import Vert, Edge, Face, _V, _E, _F
 
 
 _TBlindHalfEdges = TypeVar("_TBlindHalfEdges", bound="BlindHalfEdges")
 _TVert = TypeVar("_TVert", bound="Vert")
 
+_V = TypeVar("_V", bound="Vert")
+_E = TypeVar("_E", bound="Edge")
+_F = TypeVar("_F", bound="Face")
 
-class BlindHalfEdges:
-    vert_type = half_edge_elements.Vert
-    edge_type = half_edge_elements.Edge
-    face_type = half_edge_elements.Face
+
+class BlindHalfEdges(Generic[_V, _E, _F]):
     hole_type = half_edge_elements.Hole
 
-    def __init__(self, edges: Optional[Set[Edge]] = None) -> None:
+    def __init__(self, edges: Optional[Set[_E]] = None) -> None:
         if edges is None:
             self.edges = set()
         else:
             self.edges = edges
+
+    @classmethod
+    @property
+    def vert_type(cls) -> Type[Vert[_V, _E, _F]]:
+        return Vert[_V, _E, _F]
+
+    @classmethod
+    @property
+    def edge_type(cls) -> Type[Edge[_V, _E, _F]]:
+        return Edge[_V, _E, _F]
+
+    @classmethod
+    @property
+    def face_type(cls) -> Type[Face[_V, _E, _F]]:
+        return Face[_V, _E, _F]
 
     def _infer_holes(self) -> None:
         """

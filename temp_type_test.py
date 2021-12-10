@@ -21,6 +21,8 @@ MyChild = GrandChild[int, int]
 
 aaa = MyChild(3)
 
+breakpoint()
+
 bbb = MyChild('2')
 
 

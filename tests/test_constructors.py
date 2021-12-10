@@ -24,6 +24,7 @@ from ..halfedge.half_edge_elements import (
     _function_lap,
 )
 from ..halfedge.half_edge_querries import StaticHalfEdges
+from ..halfedge.constructors import BlindHalfEdges
 
 
 alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
