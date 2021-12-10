@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from contextlib import suppress
-from typing import Any, Optional, Set, TYPE_CHECKING, Tuple, TypeVar, Union
+from typing import Any, Optional, Set, TYPE_CHECKING, Tuple, TypeVar, Union, Generic
 
 import copy
 from .half_edge_elements import ManifoldMeshError
@@ -345,7 +345,7 @@ class HalfEdges(StaticHalfEdges):
         # pair.next.orig = pair.next.orig
 
         # set all faces equal to new face
-        if not isinstance(pair.face, self.hole_type):
+        if not hasattr(pair.face, 'HOLE'):
             new_face = self.face_type(*{edge.face, pair.face}, **face_kwargs)
         else:
             new_face = self.hole_type(*{edge.face, pair.face}, **face_kwargs)
@@ -408,7 +408,7 @@ class HalfEdges(StaticHalfEdges):
         try:
             # remove face edges, not hole edges, so holes will fill faces.
             for edge in vert.edges:
-                if isinstance(edge.face, self.hole_type):
+                if hasattr(edge.face, 'HOLE'):
                     face = self.remove_edge(edge.pair, **face_kwargs)
                 else:
                     face = self.remove_edge(edge, **face_kwargs)

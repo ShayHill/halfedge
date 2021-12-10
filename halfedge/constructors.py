@@ -20,13 +20,27 @@ then passing that raw data to mesh_from_vr would create a mesh with 6 faces and
 
 from __future__ import annotations
 
-from typing import Any, Iterable, List, Optional, Set, TYPE_CHECKING, Tuple
+from typing import (
+    Any,
+    Iterable,
+    List,
+    Optional,
+    Set,
+    TYPE_CHECKING,
+    Tuple,
+    TypeVar,
+    Type,
+)
 
 from . import half_edge_elements
 from .half_edge_elements import ManifoldMeshError
 
 if TYPE_CHECKING:
     from .half_edge_elements import Vert, Edge, Face
+
+
+_TBlindHalfEdges = TypeVar("_TBlindHalfEdges", bound="BlindHalfEdges")
+_TVert = TypeVar("_TVert", bound="Vert")
 
 
 class BlindHalfEdges:
@@ -100,12 +114,12 @@ class BlindHalfEdges:
 
     @classmethod
     def from_vlvi(
-        cls,
+        cls: Type[_TBlindHalfEdges],
         vl: List[Any],
         fi: Set[Tuple[int, ...]],
-        hi: Optional[Set[Tuple[int, ...]]] = (),
+        hi: Optional[Set[Tuple[int, ...]]] = None,
         attr_name: str = "coordinate",
-    ) -> BlindHalfEdges:
+    ) -> _TBlindHalfEdges:
         """A set of half edges from a vertex list and vertex index.
 
         :param vl: (vertex list) a seq of vertices
@@ -137,6 +151,7 @@ class BlindHalfEdges:
 
         Will silently remove unused verts
         """
+        hi = hi or set()
         vl = [cls.vert_type(**{attr_name: x}) for x in vl]
         vr = [tuple(vl[x] for x in y) for y in fi]
         hr = [tuple(vl[x] for x in y) for y in hi]
