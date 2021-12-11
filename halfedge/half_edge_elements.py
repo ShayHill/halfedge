@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # _*_ coding: utf-8 _*_
-# Last modified: 181204 13:07:13
+# Last modified: 211211 06:51:26
 """A half-edges data container with view methods.
 
 A simple container for a list of half edges. Provides lookups and a serial
@@ -35,11 +35,7 @@ from __future__ import annotations
 from contextlib import suppress
 from itertools import count
 
-from typing import Any, Callable, Dict, List, TypeVar, Union, Generic
-
-_V = TypeVar("_V", bound="Vert")
-_E = TypeVar("_E", bound="Edge")
-_F = TypeVar("_F", bound="Face")
+from typing import Any, Callable, Dict, List, TypeVar
 
 
 class ManifoldMeshError(ValueError):
@@ -71,7 +67,7 @@ def all_equal(*args: Any):
 KeyT = TypeVar("KeyT")
 
 
-def get_dict_intersection(*dicts: Dict[KeyT, Any]) -> Dict[KeyT, Any]:
+def get_dict_intersection(*dicts: Dict) -> Dict:
     """
     Identical key: value items from multiple dictionaries.
 
@@ -94,7 +90,7 @@ def get_dict_intersection(*dicts: Dict[KeyT, Any]) -> Dict[KeyT, Any]:
 _TMeshElem = TypeVar("_TMeshElem", bound="MeshElementBase")
 
 
-class MeshElementBase(Generic[_V, _E, _F]):
+class MeshElementBase:
     """
     A namespace that == on id, not equivalency.
     """
@@ -165,56 +161,50 @@ def _function_lap(
             raise ManifoldMeshError(f"infinite function lap {[id(x) for x in lap]}")
 
 
-class Vert(Generic[_V, _E, _F], MeshElementBase[_V, _E, _F]):
+class Vert(MeshElementBase):
     """Half-edge mesh vertices.
 
     required attributes
     :edge: pointer to one edge originating at vert
     """
 
-    _edge: _E
+    _edge: Edge
 
     @property
-    def edge(self) -> _E:
+    def edge(self) -> Edge:
         return self._edge
-        assert self._edge.orig is self
 
     @edge.setter
-    def edge(self, edge_: _E) -> None:
+    def edge(self, edge_: Edge) -> None:
         self._edge = edge_
         edge_._orig = self
-        assert edge_._orig is self
-        assert self.edge is edge_
-        assert self.edge.orig is self
-        assert self._edge._orig is self.edge.orig
-        assert self is edge_.orig
 
     @property
-    def edges(self) -> List[_E]:
+    def edges(self) -> List[Edge]:
         """Half edges radiating from vert."""
         if hasattr(self, "edge"):
             return self.edge.vert_edges
         return []
 
     @property
-    def all_faces(self) -> List[_F]:
+    def all_faces(self) -> List[Face]:
         """Faces radiating from vert"""
         if hasattr(self, "edge"):
             return self.edge.vert_all_faces
         return []
 
     @property
-    def faces(self) -> List[_F]:
+    def faces(self) -> List[Face]:
         """Faces radiating from vert"""
         return [x for x in self.all_faces if not x.is_hole]
 
     @property
-    def holes(self) -> List[_F]:
+    def holes(self) -> List[Face]:
         """Faces radiating from vert"""
         return [x for x in self.all_faces if x.is_hole]
 
     @property
-    def neighbors(self) -> List[_V]:
+    def neighbors(self) -> List[Vert]:
         """Evert vert connected to vert by one edge."""
         if hasattr(self, "edge"):
             return self.edge.vert_neighbors
@@ -226,10 +216,7 @@ class Vert(Generic[_V, _E, _F], MeshElementBase[_V, _E, _F]):
         return len(self.edges)
 
 
-_T = TypeVar("_T")
-
-
-class Edge(Generic[_V, _E, _F], MeshElementBase[_V, _E, _F]):
+class Edge(MeshElementBase):
     """Half-edge mesh edges.
 
     required attributes
@@ -239,51 +226,48 @@ class Edge(Generic[_V, _E, _F], MeshElementBase[_V, _E, _F]):
     :next: pointer to next edge along face
     """
 
-    _orig: _V
-    _pair: _E
-    _face: _F
-    _next: _E
+    _orig: Vert
+    _pair: Edge
+    _face: Face
+    _next: Edge
 
     @property
-    def orig(self) -> _V:
+    def orig(self) -> Vert:
         return self._orig
 
     @orig.setter
-    def orig(self, orig: _V) -> None:
+    def orig(self, orig: Vert) -> None:
         self._orig = orig
         orig._edge = self
-        # TODO: remove all teh asserts in this module
-        assert self._orig is orig
-        assert self.orig._edge is self
 
     @property
-    def pair(self) -> _E:
+    def pair(self) -> Edge:
         return self._pair
 
     @pair.setter
-    def pair(self, pair: _E) -> None:
+    def pair(self, pair: Edge) -> None:
         self._pair = pair
         pair._pair = self
 
     @property
-    def face(self) -> _F:
+    def face(self) -> Face:
         return self._face
 
     @face.setter
-    def face(self, face_: _F) -> None:
+    def face(self, face_: Face) -> None:
         self._face = face_
         face_._edge = self
 
     @property
-    def next(self) -> _E:
+    def next(self) -> Edge:
         return self._next
 
     @next.setter
-    def next(self, next_: _E) -> None:
+    def next(self, next_: Edge) -> None:
         self._next = next_
 
     @property
-    def prev(self) -> _E:
+    def prev(self) -> Edge:
         """Look up the edge before self."""
         try:
             return self.face_edges[-1]
@@ -295,84 +279,68 @@ class Edge(Generic[_V, _E, _F], MeshElementBase[_V, _E, _F]):
         super(Edge, prev).__setattr__("next", self)
 
     @property
-    def dest(self) -> _V:
+    def dest(self) -> Vert:
         """Vert at the end of the edge (opposite of orig)."""
         try:
             return self.next.orig
         except AttributeError:
             return self.pair.orig
 
-    def _edge_lap(self, func: Callable[[_E], _E], first_arg: _E) -> List[_E]:
-        """
-        Repeatedly apply func till first_arg is reached again.
-
-        :param func: function takes one argument and returns a value of the same type
-        :returns: [first_arg, func(first_arg), func(func(first_arg)) ... first_arg]
-        :raises: ManifoldMeshError if any result except the first repeats
-        """
-        lap = [first_arg]
-        while True:
-            lap.append(func(lap[-1]))
-            if lap[-1] == lap[0]:
-                return lap[:-1]
-            if lap[-1] in lap[1:-1]:
-                raise ManifoldMeshError(f"infinite function lap {[id(x) for x in lap]}")
-
     @property
-    def face_edges(self: _E) -> List[_E]:
+    def face_edges(self: Edge) -> List[Edge]:
         """All edges around an edge.face."""
-        return self._edge_lap(lambda x: x.next, self)
+        return _function_lap(lambda x: x.next, self)
 
     @property
-    def face_verts(self) -> List[_V]:
+    def face_verts(self) -> List[Vert]:
         """All verts around an edge.vert."""
         return [edge.orig for edge in self.face_edges]
 
     @property
-    def vert_edges(self: _E) -> List[_E]:
+    def vert_edges(self: Edge) -> List[Edge]:
         """
         All half edges radiating from edge.orig.
 
         These will be returned in the opposite "handedness" of the faces. IOW,
         if the faces are defined ccw, the vert_edges will be returned cw.
         """
-        return self._edge_lap(lambda x: x.pair.next, self)
+        return _function_lap(lambda x: x.pair.next, self)
 
     @property
-    def vert_all_faces(self) -> List[_F]:
+    def vert_all_faces(self) -> List[Face]:
         """
         All faces and holes around the edge's vert
         """
         return [x.face for x in self.vert_edges]
 
     @property
-    def vert_faces(self) -> List[_F]:
+    def vert_faces(self) -> List[Face]:
         """
         All faces around the edge's vert
         """
         return [x for x in self.vert_all_faces if not x.is_hole]
 
     @property
-    def vert_holes(self) -> List[_F]:
+    def vert_holes(self) -> List[Face]:
         """
         All holes around the edge's vert
         """
         return [x for x in self.vert_all_faces if x.is_hole]
 
     @property
-    def vert_neighbors(self) -> List[_V]:
+    def vert_neighbors(self) -> List[Vert]:
         """All verts connected to vert by one edge."""
         return [edge.dest for edge in self.vert_edges]
 
 
-class Face(Generic[_V, _E, _F], MeshElementBase[_V, _E, _F]):
+class Face(MeshElementBase):
     """Half-edge mesh faces.
 
     required attribute
     :edge: pointer to one edge on the face
     """
 
-    _edge: _E
+    _edge: Edge
 
     def __init__(self, *args, **kwargs):
         self.__is_hole = kwargs.pop("__is_hole", False)
@@ -383,30 +351,31 @@ class Face(Generic[_V, _E, _F], MeshElementBase[_V, _E, _F]):
         """One edge on the face"""
         return self._edge
 
-    @property
-    def is_hole(self) -> bool:
-        """
-        Is this face a hole.
-
-        "hole-ness" is assigned at instance creation
-        """
-        return self.__is_hole
-
     @edge.setter
-    def edge(self, edge: _E) -> None:
+    def edge(self, edge: Edge) -> None:
         """Point face.edge back to face."""
         self._edge = edge
         edge._face = self
 
     @property
-    def edges(self) -> List[_E]:
+    def is_hole(self) -> bool:
+        """
+        Is this face a hole?
+
+        "hole-ness" is assigned at instance creation by passing ``__is_hole=True`` to
+        ``__init__``
+        """
+        return self.__is_hole
+
+    @property
+    def edges(self) -> List[Edge]:
         """Look up all edges around face."""
         if hasattr(self, "edge"):
             return self.edge.face_edges
         return []
 
     @property
-    def verts(self) -> List[_V]:
+    def verts(self) -> List[Vert]:
         """Look up all verts around face."""
         if hasattr(self, "edge"):
             return [x.orig for x in self.edges]

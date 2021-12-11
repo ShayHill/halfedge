@@ -1,19 +1,14 @@
 from __future__ import annotations
 
 from contextlib import suppress
-from typing import Any, Optional, Set, TYPE_CHECKING, Tuple, TypeVar, Union, Generic
+from typing import Any, Optional, Set, TYPE_CHECKING, Tuple, Union
 
-import copy
 from .half_edge_elements import ManifoldMeshError
 from .half_edge_querries import StaticHalfEdges
-from .validations import validate_mesh
-from .half_edge_elements import Vert, Edge, Face
+from .half_edge_elements import Edge
 
 if TYPE_CHECKING:
-    from .half_edge_elements import MeshElementBase
-
-# TODO: remove LOG
-log = []
+    from .half_edge_elements import Vert, Face
 
 
 def _update_face_edges(face: Face, edge: Edge) -> None:
@@ -54,14 +49,7 @@ class UnrecoverableManifoldMeshError(ValueError):
         super().__init__(self, message)
 
 
-_TMeshElem = TypeVar("_TMeshElem", bound="MeshElementBase")
-
-_V = TypeVar("_V", bound="Vert")
-_E = TypeVar("_E", bound="Edge")
-_F = TypeVar("_F", bound="Face")
-
-
-class HalfEdges(Generic[_V, _E, _F], StaticHalfEdges[_V, _E, _F]):
+class HalfEdges(StaticHalfEdges):
     def _get_edge_or_vert_faces(self, elem: Union[Edge, Vert]) -> Set[Face]:
         """
         Get faces (unordered) adjacent to a vert or edge
@@ -76,7 +64,7 @@ class HalfEdges(Generic[_V, _E, _F], StaticHalfEdges[_V, _E, _F]):
         return set(elem.faces)
 
     def _infer_face(
-        self: _TMeshElem,
+        self,
         orig: Union[Edge, Vert],
         dest: Union[Edge, Vert],
     ) -> Face:
@@ -365,6 +353,15 @@ class HalfEdges(Generic[_V, _E, _F], StaticHalfEdges[_V, _E, _F]):
 
         return new_face
 
+    def _recursively_remove_vert_peninsulas(self, vert: Vert) -> Vert:
+        """
+        Remove (chains of) peninsula edges from around a vert.
+
+        If peninsulas (edge and pair share the same face
+        """
+        # TODO move function_lap into a public place to identify these
+        return vert
+
     def remove_vert(self, vert: Vert, **face_kwargs: Any) -> Face:
         """
         Remove all edges around a vert.
@@ -401,19 +398,23 @@ class HalfEdges(Generic[_V, _E, _F], StaticHalfEdges[_V, _E, _F]):
         Passes attributes:
             * shared face attributes passed to new face
         """
+        if vert.edge not in self.edges or vert.edge.orig != vert:
+            raise ValueError("vert is not in mesh. cannot remove")
+
         # TODO: review why peninsulas need to be removed.
         peninsulas = {x for x in vert.edges if x.dest.valence == 1}
         true_edges = set(vert.edges) - peninsulas
         vert_faces = {x.face for x in true_edges}
         if len(true_edges) != len(vert_faces):
+            # TODO: make this into a ValueError
             raise ManifoldMeshError("removing vert would create non-manifold mesh")
 
-        # remove peninsula edges then others.
+        # TODO: this needs a better test to ensure mixed with peninsulas works
         for edge in peninsulas:
             face = self.remove_edge(edge, **face_kwargs)
         try:
             # remove face edges, not hole edges, so holes will fill faces.
-            for edge in vert.edges:
+            for edge in true_edges:  # vert.edges:
                 if edge.face.is_hole:
                     face = self.remove_edge(edge.pair, **face_kwargs)
                 else:

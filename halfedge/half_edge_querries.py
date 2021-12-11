@@ -1,6 +1,6 @@
 # !/usr/bin/env python3
 # _*_ coding: utf-8 _*_
-# Last modified: 181204 13:07:13
+# Last modified: 211211 07:20:49
 """A half-edges data container with view methods.
 
 A simple container for a list of half edges. Provides lookups and a serial
@@ -16,12 +16,10 @@ from __future__ import annotations
 from typing import (
     TYPE_CHECKING,
     Dict,
-    Generic,
     List,
     Optional,
     Set,
     Tuple,
-    TypeVar,
     Union,
 )
 
@@ -30,12 +28,8 @@ from .constructors import BlindHalfEdges
 if TYPE_CHECKING:
     from .half_edge_elements import Edge, Face, Vert
 
-_V = TypeVar("_V", bound="Vert")
-_E = TypeVar("_E", bound="Edge")
-_F = TypeVar("_F", bound="Face")
 
-
-class StaticHalfEdges(Generic[_V, _E, _F], BlindHalfEdges[_V, _E, _F]):
+class StaticHalfEdges(BlindHalfEdges):
     """
     Basic half edge lookups.
 
@@ -59,19 +53,21 @@ class StaticHalfEdges(Generic[_V, _E, _F], BlindHalfEdges[_V, _E, _F]):
         return {x for x in self.all_faces if not x.is_hole}
 
     @property
-    def holes(self):  # -> Set[hole]: # TODO: update hole return type
+    def holes(self) -> Set[Face]:
         """Look up all holes in mesh."""
         return {x for x in self.all_faces if x.is_hole}
 
     @property
-    def all_faces(self):  # -> Set[hole]: # TODO: update hole return type
+    def all_faces(self) -> Set[Face]:
         """Look up all faces and holes in mesh"""
         return {x.face for x in self.edges}
 
     @property
     def elements(self) -> Set[Union[Vert, Edge, Face]]:
-        """All elements in mesh"""
-        return self.verts | self.edges | self.faces | self.holes
+        """All elements in mesh
+
+        The redundant set comprehension is to satisfy the linter"""
+        return {x for x in self.verts | self.edges | self.faces}
 
     @property
     def boundary_edges(self) -> Set[Edge]:
@@ -83,11 +79,10 @@ class StaticHalfEdges(Generic[_V, _E, _F], BlindHalfEdges[_V, _E, _F]):
         """Look up all verts on hole boundaries."""
         return {x.orig for x in self.boundary_edges}
 
-    # TODO: make these filter back through self.edges
     @property
-    def interior_edges(self):
+    def interior_edges(self) -> Set[Edge]:
         """Look up edges on faces."""
-        return self.edges - self.boundary_edges
+        return {x for x in self.edges if not x.face.is_hole}
 
     @property
     def interior_verts(self) -> Set[Vert]:

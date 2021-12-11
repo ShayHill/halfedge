@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Last modified: 181125 10:23:30
+# Last modified: 211211 08:16:15
 """ test halfedge.operations
 
 created: 181121 13:38:46
@@ -17,7 +17,7 @@ import random
 
 from .conftest import get_canonical_mesh
 from ..halfedge.half_edge_elements import Edge, ManifoldMeshError, Vert, Face
-from ..halfedge.half_edge_object import HalfEdges, log
+from ..halfedge.half_edge_object import HalfEdges
 from ..halfedge.validations import validate_mesh
 
 
@@ -298,6 +298,14 @@ class TestRemoveVert:
         assert sorted(len(x.edges) for x in he_grid.faces) == [12]
         assert sorted(len(x.edges) for x in he_grid.holes) == [12]
 
+    @pytest.mark.parametrize("_", range(10))
+    def test_remove_missing_edge(self, he_grid, _) -> None:
+        """Raise ValueError if vert is not in mesh"""
+        vert = random.choice(tuple(he_grid.verts))
+        _ = he_grid.remove_vert(vert)
+        with pytest.raises(ValueError, match="vert is not in mesh"):
+            _ = he_grid.remove_vert(vert)
+
     @pytest.mark.parametrize(
         "i, j", chain(*(permutations(x) for x in combinations(range(4), 2)))
     )
@@ -315,10 +323,22 @@ class TestRemoveVert:
             he_grid.remove_vert(vl[j])
         assert "removing vert would create non-manifold mesh" in err.value.args[0]
 
+    def test_peninsulas(self) -> None:
+        """Remove a vert with peninsulas and regular edges"""
+        mesh = HalfEdges.from_vlvi(
+            [x for x in range(8)],
+            fi={(5, 6, 2, 1)},
+            hi={(6, 5, 4, 7, 4, 3, 4, 0, 4, 5, 1, 2)},
+        )
+        vert = next(x for x in mesh.verts if x.valence == 4)
+        mesh.remove_vert(vert)
+        assert [x.sides for x in mesh.faces] == [4]
+        assert [x.sides for x in mesh.holes] == [4]
 
-class TestRemoveThenInsertVert:
-    def test_remove_then_insert(self, he_cube) -> None:
+    @pytest.mark.parametrize("_", range(10))
+    def test_remove_then_insert(self, he_cube, _) -> None:
         """Remove then replace any vert (not against a hole) and keep mesh intact"""
+        vert = random.choice(tuple(he_cube.verts))
         for vert in tuple(he_cube.verts):
             new_face = he_cube.remove_vert(vert)
             he_cube.insert_vert(new_face)
@@ -388,14 +408,9 @@ class TestFlipEdge:
 
         vl = [x for x in range(4)]
         vi = {(0, 1, 2), (0, 2, 3)}
-        vvert = Vert["vvert", "eedge", "fface"]
-        eedge = Edge["vvert", "eedge", "fface"]
-        fface = Face["vvert", "eedge", "fface"]
-        mesh = HalfEdges[vvert, eedge, fface].from_vlvi(vl, vi, attr_name="num")
+        mesh = HalfEdges.from_vlvi(vl, vi, attr_name="num")
         split = next(x for x in mesh.edges if x.orig.num == 0 and x.pair.orig.num == 2)
         new_edge = mesh.flip_edge(split)
-        reveal_type(mesh)
-        reveal_type(mesh.edges)
         assert split not in mesh.edges
         assert new_edge.orig.num == 3
         assert new_edge.dest.num == 1

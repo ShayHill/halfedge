@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # _*_ coding: utf-8 _*_
+# last modified: 211211 06:33:58
 """Create HalfEdges instances.
 
 Nothing in this module will ever try to "match" Verts by their coordinate values. The
@@ -16,65 +17,37 @@ then passing that raw data to mesh_from_vr would create a mesh with 6 faces and
 24 (not 8!) Vert instances.
 """
 
-# TODO: test element-switching from Base object (e.g., a different Edge class)
 
 from __future__ import annotations
-
 from typing import (
     Any,
     Iterable,
     List,
     Optional,
     Set,
-    TYPE_CHECKING,
     Tuple,
-    TypeVar,
     Type,
-    Generic,
+    TypeVar,
 )
 
-from . import half_edge_elements
-from .half_edge_elements import ManifoldMeshError, Vert, Edge, Face
-
-if TYPE_CHECKING:
-    from .half_edge_elements import Vert, Edge, Face
-
+from .half_edge_elements import Edge, Face, ManifoldMeshError, Vert
 
 _TBlindHalfEdges = TypeVar("_TBlindHalfEdges", bound="BlindHalfEdges")
-_TVert = TypeVar("_TVert", bound="Vert")
-
-_V = TypeVar("_V", bound="Vert")
-_E = TypeVar("_E", bound="Edge")
-_F = TypeVar("_F", bound="Face")
 
 
-class BlindHalfEdges(Generic[_V, _E, _F]):
-    vert = Vert
-    edge = Edge
-    face = Face
+class BlindHalfEdges:
+    # TODO: refactor these all to new_vert, new_edge, etc.
+    vert_type = Vert
+    edge_type = Edge
+    face_type = Face
 
-    def __init__(self, edges: Optional[Set[_E]] = None) -> None:
+    def __init__(self, edges: Optional[Set[Edge]] = None) -> None:
         if edges is None:
             self.edges = set()
         else:
             self.edges = edges
 
-    @classmethod
-    @property
-    def vert_type(cls) -> Type[Vert[_V, _E, _F]]:
-        return cls.vert[_V, _E, _F]
-
-    @classmethod
-    @property
-    def edge_type(cls) -> Type[Edge[_V, _E, _F]]:
-        return cls.edge[_V, _E, _F]
-
-    @classmethod
-    @property
-    def face_type(cls) -> Type[Face[_V, _E, _F]]:
-        return cls.face[_V, _E, _F]
-
-    def hole_type(self, *args, **kwargs) -> Face[_V, _E, _F]:
+    def hole_type(self, *args, **kwargs) -> Face:
         return self.face_type(*args, **{**kwargs, "__is_hole": True})
 
     def _infer_holes(self) -> None:
@@ -110,7 +83,7 @@ class BlindHalfEdges(Generic[_V, _E, _F]):
             )
 
         while orig2hole_edge:
-            orig, edge = next(iter(orig2hole_edge.items()))
+            _, edge = next(iter(orig2hole_edge.items()))
             edge.face = self.hole_type()
             while edge.dest in orig2hole_edge:
                 edge.next = orig2hole_edge.pop(edge.dest)
