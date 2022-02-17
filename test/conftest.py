@@ -17,7 +17,7 @@ from ..halfedge.half_edge_object import HalfEdges
 
 @pytest.fixture
 def he_triangle() -> Dict[str, List[Any]]:
-    """A simple triangle (inside and outside faces) for Mesh Element tests"""
+    """A simple triangle (inside and outside faces) for Mesh Element test"""
     mesh = HalfEdges()
     verts = [half_edge_elements.Vert(coordinate=x) for x in ((-1, 0), (1, 0), (0, 1))]
     faces = [half_edge_elements.Face(), half_edge_elements.Face(__is_hole=True)]
@@ -37,7 +37,7 @@ def he_triangle() -> Dict[str, List[Any]]:
         # verts[i].edge = inner_edges[i]
     # faces[0].edge = inner_edges[0]
     # faces[1].edge = outer_edges[0]
-    # TODO: remove commented lines above once all tests pass
+    # TODO: remove commented lines above once all test pass
 
     return {
         "verts": verts,

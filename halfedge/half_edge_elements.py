@@ -23,7 +23,7 @@ This is a typical halfedges data structure. Exceptions:
       removal code to get you over the pitfalls. Halfedges (as a data structure,
       not just this implementation) is clever when it's all built, but a lot has to
       be temporarily broken down to transform the mesh. All I can say is, write a lot
-      of tests if you want to extend the insertion / removal methods here.
+      of test if you want to extend the insertion / removal methods here.
 
 This module is all the base elements (Vert, Edge, and Face).
 
