@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # _*_ coding: utf-8 _*_
-# Last modified: 211211 06:51:26
+# Last modified: 220611 12:39:51
 """A half-edges data container with view methods.
 
 A simple container for a list of half edges. Provides lookups and a serial
@@ -30,12 +30,13 @@ This module is all the base elements (Vert, Edge, and Face).
 # 2006 June 05
 # 2012 September 30
 """
+
 from __future__ import annotations
 
 from contextlib import suppress
 from itertools import count
 
-from typing import Any, Callable, Dict, List, TypeVar
+from typing import Any, Callable, Dict, List, TypeVar, Generic, Type
 
 
 class ManifoldMeshError(ValueError):
@@ -87,15 +88,23 @@ def get_dict_intersection(*dicts: Dict) -> Dict:
     return intersection
 
 
+TVert = TypeVar("TVert", bound="Vert")
+TEdge = TypeVar("TEdge", bound="Edge")
+TFace = TypeVar("TFace", bound="Face")
+
 _TMeshElem = TypeVar("_TMeshElem", bound="MeshElementBase")
 
 
-class MeshElementBase:
+class MeshElementBase(Generic[TVert, TEdge, TFace]):
     """
     A namespace that == on id, not equivalency.
     """
 
     _sn_generator = count()
+
+    @classmethod
+    def factory(cls: Type[_TMeshElem]) -> _TMeshElem:
+        return cls()
 
     def __init__(self: _TMeshElem, *fill_from: _TMeshElem, **attributes: Any) -> None:
         """
@@ -137,8 +146,7 @@ class MeshElementBase:
         return id(self) < id(other)
 
 
-# TODO: delete funciton_lap
-# argument to a function that returns an instance of the input argument
+# argument to a function that returns same type as the input argument
 _TFLapArg = TypeVar("_TFLapArg")
 
 
@@ -161,50 +169,54 @@ def _function_lap(
             raise ManifoldMeshError(f"infinite function lap {[id(x) for x in lap]}")
 
 
-class Vert(MeshElementBase):
+class Vert(MeshElementBase[TVert, TEdge, TFace]):
     """Half-edge mesh vertices.
 
     required attributes
     :edge: pointer to one edge originating at vert
     """
 
-    _edge: Edge
+    _edge: TEdge
+
+    @classmethod
+    def factory(cls: Type[TVert]) -> TVert:
+        return cls()
 
     @property
-    def edge(self) -> Edge:
+    def edge(self) -> TEdge:
         return self._edge
 
     @edge.setter
-    def edge(self, edge_: Edge) -> None:
+    def edge(self, edge_: TEdge) -> None:
         self._edge = edge_
         edge_._orig = self
 
     @property
-    def edges(self) -> List[Edge]:
+    def edges(self) -> List[TEdge]:
         """Half edges radiating from vert."""
         if hasattr(self, "edge"):
             return self.edge.vert_edges
         return []
 
     @property
-    def all_faces(self) -> List[Face]:
+    def all_faces(self) -> List[TFace]:
         """Faces radiating from vert"""
         if hasattr(self, "edge"):
             return self.edge.vert_all_faces
         return []
 
     @property
-    def faces(self) -> List[Face]:
+    def faces(self) -> List[TFace]:
         """Faces radiating from vert"""
         return [x for x in self.all_faces if not x.is_hole]
 
     @property
-    def holes(self) -> List[Face]:
+    def holes(self) -> List[TFace]:
         """Faces radiating from vert"""
         return [x for x in self.all_faces if x.is_hole]
 
     @property
-    def neighbors(self) -> List[Vert]:
+    def neighbors(self) -> List[TVert]:
         """Evert vert connected to vert by one edge."""
         if hasattr(self, "edge"):
             return self.edge.vert_neighbors
@@ -216,7 +228,7 @@ class Vert(MeshElementBase):
         return len(self.edges)
 
 
-class Edge(MeshElementBase):
+class Edge(MeshElementBase[TVert, TEdge, TFace]):
     """Half-edge mesh edges.
 
     required attributes
@@ -226,48 +238,48 @@ class Edge(MeshElementBase):
     :next: pointer to next edge along face
     """
 
-    _orig: Vert
-    _pair: Edge
-    _face: Face
-    _next: Edge
+    _orig: TVert
+    _pair: TEdge
+    _face: TFace
+    _next: TEdge
 
     @property
-    def orig(self) -> Vert:
+    def orig(self) -> TVert:
         return self._orig
 
     @orig.setter
-    def orig(self, orig: Vert) -> None:
+    def orig(self, orig: TVert) -> None:
         self._orig = orig
         orig._edge = self
 
     @property
-    def pair(self) -> Edge:
+    def pair(self) -> TEdge:
         return self._pair
 
     @pair.setter
-    def pair(self, pair: Edge) -> None:
+    def pair(self, pair: TEdge) -> None:
         self._pair = pair
         pair._pair = self
 
     @property
-    def face(self) -> Face:
+    def face(self) -> TFace:
         return self._face
 
     @face.setter
-    def face(self, face_: Face) -> None:
+    def face(self, face_: TFace) -> None:
         self._face = face_
         face_._edge = self
 
     @property
-    def next(self) -> Edge:
+    def next(self: TEdge) -> TEdge:
         return self._next
 
     @next.setter
-    def next(self, next_: Edge) -> None:
+    def next(self: TEdge, next_: TEdge) -> None:
         self._next = next_
 
     @property
-    def prev(self) -> Edge:
+    def prev(self) -> TEdge:
         """Look up the edge before self."""
         try:
             return self.face_edges[-1]
@@ -279,7 +291,7 @@ class Edge(MeshElementBase):
         super(Edge, prev).__setattr__("next", self)
 
     @property
-    def dest(self) -> Vert:
+    def dest(self) -> TVert:
         """Vert at the end of the edge (opposite of orig)."""
         try:
             return self.next.orig
@@ -287,17 +299,21 @@ class Edge(MeshElementBase):
             return self.pair.orig
 
     @property
-    def face_edges(self: Edge) -> List[Edge]:
+    def face_edges(self: TEdge) -> List[TEdge]:
         """All edges around an edge.face."""
-        return _function_lap(lambda x: x.next, self)
+
+        def _get_next(edge: TEdge) -> TEdge:
+            return edge.next
+
+        return _function_lap(_get_next, self)
 
     @property
-    def face_verts(self) -> List[Vert]:
+    def face_verts(self) -> List[TVert]:
         """All verts around an edge.vert."""
         return [edge.orig for edge in self.face_edges]
 
     @property
-    def vert_edges(self: Edge) -> List[Edge]:
+    def vert_edges(self: TEdge) -> List[TEdge]:
         """
         All half edges radiating from edge.orig.
 
@@ -307,52 +323,54 @@ class Edge(MeshElementBase):
         return _function_lap(lambda x: x.pair.next, self)
 
     @property
-    def vert_all_faces(self) -> List[Face]:
+    def vert_all_faces(self) -> List[TFace]:
         """
         All faces and holes around the edge's vert
         """
         return [x.face for x in self.vert_edges]
 
     @property
-    def vert_faces(self) -> List[Face]:
+    def vert_faces(self) -> List[TFace]:
         """
         All faces around the edge's vert
         """
         return [x for x in self.vert_all_faces if not x.is_hole]
 
     @property
-    def vert_holes(self) -> List[Face]:
+    def vert_holes(self) -> List[TFace]:
         """
         All holes around the edge's vert
         """
         return [x for x in self.vert_all_faces if x.is_hole]
 
     @property
-    def vert_neighbors(self) -> List[Vert]:
+    def vert_neighbors(self) -> List[TVert]:
         """All verts connected to vert by one edge."""
         return [edge.dest for edge in self.vert_edges]
 
 
-class Face(MeshElementBase):
+class Face(MeshElementBase[TVert, TEdge, TFace]):
     """Half-edge mesh faces.
 
     required attribute
     :edge: pointer to one edge on the face
     """
 
-    _edge: Edge
+    @classmethod
+    def factory(cls: Type[TFace]) -> TFace:
+        return cls()
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         self.__is_hole = kwargs.pop("__is_hole", False)
         super().__init__(*args, **kwargs)
 
     @property
-    def edge(self) -> Edge:
+    def edge(self) -> TEdge:
         """One edge on the face"""
         return self._edge
 
     @edge.setter
-    def edge(self, edge: Edge) -> None:
+    def edge(self, edge: TEdge) -> None:
         """Point face.edge back to face."""
         self._edge = edge
         edge._face = self
@@ -368,14 +386,14 @@ class Face(MeshElementBase):
         return self.__is_hole
 
     @property
-    def edges(self) -> List[Edge]:
+    def edges(self) -> List[TEdge]:
         """Look up all edges around face."""
         if hasattr(self, "edge"):
             return self.edge.face_edges
         return []
 
     @property
-    def verts(self) -> List[Vert]:
+    def verts(self) -> List[TVert]:
         """Look up all verts around face."""
         if hasattr(self, "edge"):
             return [x.orig for x in self.edges]

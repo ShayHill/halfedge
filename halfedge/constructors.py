@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # _*_ coding: utf-8 _*_
-# last modified: 211211 06:33:58
+# last modified: 220611 13:12:11
 """Create HalfEdges instances.
 
 Nothing in this module will ever try to "match" Verts by their coordinate values. The
@@ -19,36 +19,54 @@ then passing that raw data to mesh_from_vr would create a mesh with 6 faces and
 
 
 from __future__ import annotations
-from typing import (
-    Any,
-    Iterable,
-    List,
-    Optional,
-    Set,
-    Tuple,
-    Type,
-    TypeVar,
-)
 
-from .half_edge_elements import Edge, Face, ManifoldMeshError, Vert
+from typing import Any, Generic, Iterable, List, Optional, Set, Tuple, Type, TypeVar
+
+from .half_edge_elements import ManifoldMeshError, TEdge, TFace, TVert, Vert, Edge, Face
 
 _TBlindHalfEdges = TypeVar("_TBlindHalfEdges", bound="BlindHalfEdges")
 
 
-class BlindHalfEdges:
-    # TODO: refactor these all to new_vert, new_edge, etc.
-    vert_type = Vert
-    edge_type = Edge
-    face_type = Face
+class BlindHalfEdges(Generic[TVert, TEdge, TFace]):
+    Vert: Type[TVert]
+    Edge: Type[TEdge]
+    Face: Type[TFace]
 
-    def __init__(self, edges: Optional[Set[Edge]] = None) -> None:
+    def __init__(self, edges: Optional[Set[TEdge]] = None) -> None:
         if edges is None:
-            self.edges = set()
+            self.edges: Set[TEdge] = set()
         else:
             self.edges = edges
 
-    def hole_type(self, *args, **kwargs) -> Face:
-        return self.face_type(*args, **{**kwargs, "__is_hole": True})
+    def vert(self, *args, **kwargs) -> TVert:
+        return self.Vert.factory(*args, **kwargs)
+
+    def edge(self, *args, **kwargs) -> TEdge:
+        return self.Edge.factory(*args, **kwargs)
+
+    def face(self, *args, **kwargs) -> TFace:
+        return self.Face.factory(*args, **kwargs)
+
+    def hole(self, *args, **kwargs) -> TFace:
+        return self.Face.factory(*args, **{**kwargs, "__is_hole": True})
+
+    def _create_face_edges(
+        self, face_verts: Iterable[TVert], face: TFace
+    ) -> List[TEdge]:
+        """Create edges around a face defined by vert indices."""
+        new_edges = [self.edge(orig=vert, face=face) for vert in face_verts]
+        for idx, edge in enumerate(new_edges):
+            new_edges[idx - 1].next = edge
+        return new_edges
+
+    def _find_pairs(self) -> None:
+        """Match edge pairs, where possible."""
+        endpoints2edge = {(edge.orig, edge.dest): edge for edge in self.edges}
+        for edge in self.edges:
+            try:
+                edge.pair = endpoints2edge[(edge.dest, edge.orig)]
+            except KeyError:
+                continue
 
     def _infer_holes(self) -> None:
         """
@@ -70,9 +88,7 @@ class BlindHalfEdges:
         This function can also fill in holes inside the mesh.
         """
         hole_edges = {
-            self.edge_type(orig=x.dest, pair=x)
-            for x in self.edges
-            if not hasattr(x, "pair")
+            self.edge(orig=x.dest, pair=x) for x in self.edges if not hasattr(x, "pair")
         }
         orig2hole_edge = {x.orig: x for x in hole_edges}
 
@@ -84,28 +100,12 @@ class BlindHalfEdges:
 
         while orig2hole_edge:
             _, edge = next(iter(orig2hole_edge.items()))
-            edge.face = self.hole_type()
+            edge.face = self.hole()
             while edge.dest in orig2hole_edge:
                 edge.next = orig2hole_edge.pop(edge.dest)
                 edge.next.face = edge.face
                 edge = edge.next
         self.edges.update(hole_edges)
-
-    def _create_face_edges(self, face_verts: Iterable[Vert], face: Face) -> List[Edge]:
-        """Create edges around a face defined by vert indices."""
-        new_edges = [self.edge_type(orig=vert, face=face) for vert in face_verts]
-        for idx, edge in enumerate(new_edges):
-            new_edges[idx - 1].next = edge
-        return new_edges
-
-    def _find_pairs(self) -> None:
-        """Match edge pairs, where possible."""
-        endpoints2edge = {(edge.orig, edge.dest): edge for edge in self.edges}
-        for edge in self.edges:
-            try:
-                edge.pair = endpoints2edge[(edge.dest, edge.orig)]
-            except KeyError:
-                continue
 
     @classmethod
     def from_vlvi(
@@ -147,15 +147,41 @@ class BlindHalfEdges:
         Will silently remove unused verts
         """
         hi = hi or set()
-        vl = [cls.vert_type(**{attr_name: x}) for x in vl]
+        vl = [cls.vert(**{attr_name: x}) for x in vl]
         vr = [tuple(vl[x] for x in y) for y in fi]
         hr = [tuple(vl[x] for x in y) for y in hi]
 
         mesh = cls()
         for face_verts in vr:
-            mesh.edges.update(mesh._create_face_edges(face_verts, mesh.face_type()))
+            mesh.edges.update(mesh._create_face_edges(face_verts, mesh.face()))
         for face_verts in hr:
-            mesh.edges.update(mesh._create_face_edges(face_verts, mesh.hole_type()))
+            mesh.edges.update(mesh._create_face_edges(face_verts, mesh.hole()))
         mesh._find_pairs()
         mesh._infer_holes()
         return mesh
+
+
+# TODO: remove below inheritance type exploration
+
+TV2 = TypeVar("TV2", bound="V2")
+TE2 = TypeVar("TE2", bound="E2")
+TF2 = TypeVar("TF2", bound="F2")
+
+
+class V2(Vert[TV2, TE2, TF2]):
+    def new_method(self):
+        return self
+
+
+class E2(Edge[TV2, TE2, TF2]):
+    def new_method(self):
+        return self
+
+
+class F2(Face[TV2, TE2, TF2]):
+    pass
+
+
+class BE2(BlindHalfEdges[TV2, TE2, TF2]):
+    def new_method(self) -> TE2:
+        return next(iter(self.edges)).new_method()

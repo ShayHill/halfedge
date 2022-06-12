@@ -79,7 +79,7 @@ class HalfEdges(StaticHalfEdges):
             * empty mesh: a new Hole
         """
         if not self.edges:
-            return self.hole_type()
+            return self.hole()
         orig_faces = self._get_edge_or_vert_faces(orig)
         dest_faces = self._get_edge_or_vert_faces(dest)
         with suppress(ValueError):
@@ -223,8 +223,8 @@ class HalfEdges(StaticHalfEdges):
 
         face_edges = face.edges
 
-        edge = self.edge_type(next=self.edge_type())
-        edge.pair = self.edge_type(pair=edge, next=edge, prev=edge)
+        edge = self.Edge(next=self.Edge())
+        edge.pair = self.Edge(pair=edge, next=edge, prev=edge)
 
         edge_orig, edge_prev = self._infer_wing(orig, face, edge.pair)
         edge_dest, pair_prev = self._infer_wing(dest, face, edge)
@@ -253,7 +253,7 @@ class HalfEdges(StaticHalfEdges):
         )
 
         # if face is not split, new face will be created then immediately written over
-        _update_face_edges(self.face_type(face), edge)
+        _update_face_edges(self.Face(face), edge)
         _update_face_edges(face, edge.pair)
 
         self.edges.update({edge, edge.pair})
@@ -280,7 +280,7 @@ class HalfEdges(StaticHalfEdges):
             * shared face.edges attributes passed to new edges
             * shared face.verts attributes passed to new vert
         """
-        new_vert = self.vert_type(*face.verts, **vert_kwargs)
+        new_vert = self.Vert(*face.verts, **vert_kwargs)
         try:
             for vert in face.verts:
                 self.insert_edge(vert, new_vert, face)
@@ -340,9 +340,9 @@ class HalfEdges(StaticHalfEdges):
 
         # set all faces equal to new face
         if not pair.face.is_hole:
-            new_face = self.face_type(*{edge.face, pair.face}, **face_kwargs)
+            new_face = self.face(*{edge.face, pair.face}, **face_kwargs)
         else:
-            new_face = self.hole_type(*{edge.face, pair.face}, **face_kwargs)
+            new_face = self.hole(*{edge.face, pair.face}, **face_kwargs)
         for edge_ in (edge_face_edges | pair_face_edges) - {edge, pair}:
             edge_.face = new_face
 
@@ -471,7 +471,7 @@ class HalfEdges(StaticHalfEdges):
         remove_edge will replace the original faces, so these are restored at the end
         of the method.
         """
-        new_vert = self.vert_type(*{edge.orig, edge.dest}, **vert_kwargs)
+        new_vert = self.Vert(*{edge.orig, edge.dest}, **vert_kwargs)
         edge_face = edge.face
         pair_face = edge.pair.face
         for orig, dest in ((edge.dest, new_vert), (new_vert, edge.orig)):
@@ -555,7 +555,7 @@ class HalfEdges(StaticHalfEdges):
         if not self._is_stitchable(edge):
             raise ValueError("edge collapse would create non-manifold mesh")
 
-        new_vert = self.vert_type(edge.orig, edge.dest, **vert_kwargs)
+        new_vert = self.Vert(edge.orig, edge.dest, **vert_kwargs)
         for edge_ in set(edge.orig.edges) | set(edge.dest.edges):
             edge_.orig = new_vert
 
