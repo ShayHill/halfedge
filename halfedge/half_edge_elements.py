@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # _*_ coding: utf-8 _*_
-# Last modified: 220611 12:39:51
+# Last modified: 220628 12:15:40
 """A half-edges data container with view methods.
 
 A simple container for a list of half edges. Provides lookups and a serial
@@ -33,10 +33,26 @@ This module is all the base elements (Vert, Edge, and Face).
 
 from __future__ import annotations
 
+from inspect import get_annotations
 from contextlib import suppress
+from functools import reduce
 from itertools import count
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Generic,
+    List,
+    Type,
+    TypeVar,
+    Hashable,
+    Iterable,
+    Set,
+    Optional,
+    Tuple
+)
 
-from typing import Any, Callable, Dict, List, TypeVar, Generic, Type
+from .element_attributes import ElemAttribBase, find_optional_arg_type
 
 
 class ManifoldMeshError(ValueError):
@@ -66,6 +82,7 @@ def all_equal(*args: Any):
 
 
 KeyT = TypeVar("KeyT")
+_TMeshElem = TypeVar("_TMeshElem", bound="MeshElementBase")
 
 
 def get_dict_intersection(*dicts: Dict) -> Dict:
@@ -88,61 +105,122 @@ def get_dict_intersection(*dicts: Dict) -> Dict:
     return intersection
 
 
+def merge_attribs_dicts(
+    element: MeshElementBase, *attribs_dicts: Dict[str, ElemAttribBase]
+) -> Dict[str, ElemAttribBase]:
+    keys = set.union(*(set(x) for x in attribs_dicts))
+    for key in keys:
+        attrib_per_dict = [x.get(key) for x in attribs_dicts]
+        type_ = find_optional_arg_type(attrib_per_dict)
+        with suppress(TypeError):
+            attrib = type_(None, element, *attrib_per_dict)
+            merged[type(attrib).__name__] = attrib
+    return merged
+
+
+_T = TypeVar("_T")
 TVert = TypeVar("TVert", bound="Vert")
 TEdge = TypeVar("TEdge", bound="Edge")
 TFace = TypeVar("TFace", bound="Face")
 
-_TMeshElem = TypeVar("_TMeshElem", bound="MeshElementBase")
+
+# TODO: refactor this with slots instead of gaming annotations
+# TODO: replace 'attributes' with pointers
+
+def all_is(*args: Any) -> bool:
+    """True if all arguments a is b"""
+    return args and all(args[0] is x for x in args[1:])
 
 
 class MeshElementBase(Generic[TVert, TEdge, TFace]):
-    """
-    A namespace that == on id, not equivalency.
-    """
-
     _sn_generator = count()
 
-    @classmethod
-    def factory(cls: Type[_TMeshElem]) -> _TMeshElem:
-        return cls()
-
-    def __init__(self: _TMeshElem, *fill_from: _TMeshElem, **attributes: Any) -> None:
+    def __init__(
+        self,
+        *attributes: ElemAttribBase,
+        **pointers: MeshElementBase,
+    ) -> None:
         """
         Create an instance (and copy attrs from fill_from).
 
-        :param fill_from: instances of the same class
-        :param attributes: attributes for new instance
+        :param attributes: ElemAttribBase instances
+        :param pointers: pointers to other mesh elements
+            (per typical HalfEdge structure)
 
-        Priority for attributes
-        high: attributes passed as kwargs to init
-        low: attributes inherited from fill_from argument
+        This class does will not have pointers. Descendent classes will, and it is
+        critical that each have a setter and each setter cache a value as _pointer
+        (e.g., _vert, _pair, _face, _next).
         """
         self.sn = next(self._sn_generator)
-        self.update(*fill_from, **attributes)
+        for attribute in attributes:
+            self.set_attrib(attribute)
+        for k, v in pointers.items():
+            if k in pointers:
+                setattr(self, k, v)
+                continue
+            raise AttributeError(f"'{type(self).__name__}' has no attribute '{k}'")
 
-    def update(self: _TMeshElem, *fill_from: _TMeshElem, **attributes: Any) -> None:
+
+    def __setattr__(self, key: str, value: ElemAttribBase | MeshElementBase) -> None:
+        """To prevent any mistyped attributes, which would clobber fill_from
         """
-        Add or replace attributes
+        allow = key == 'sn'
+        allow = allow or key.startswith('_')
+        allow = allow or key in self.__dict__
+        allow = allow or key in dir(self)
+        allow = allow or isinstance(value, ElemAttribBase)
+        if allow:
+            super().__setattr__(key, value)
+            return
+        raise AttributeError(f"'{type(self).__name__}' has no attribute '{key}'")
 
-        :param fill_from: instances of the same type
-        :param attributes: new attribute values (supersede fill_from attributes)
+    def fill_from(self: _TMeshElem, *elements: _TMeshElem) -> None:
         """
-        attrs = get_dict_intersection(*(x.__dict__ for x in fill_from))
-        attrs.update(attributes)
-        attrs["sn"] = self.sn
-        for key, val in attrs.items():
-            setattr(self, key, val)
+        Fill in missing references from other elements.
+        """
+        keys_seen = {k for k, v in self.__dict__.items() if v is not None}
+        for element in elements:
+            for key in (x for x in element.__dict__.keys() if x not in keys_seen):
+                keys_seen.add(key)
+                vals = [getattr(x, key) for x in elements]
+                if isinstance(getattr(element, key), ElemAttribBase):
+                    self.maybe_set_attrib(type(getattr(element, key)).merged(*vals))
+                elif all_is(vals):  # will have to be '_something'
+                    setattr(self, key[1:], vals[0])
 
-    def extend(self: _TMeshElem, *fill_from: _TMeshElem, **attributes: Any) -> None:
-        """Add attributes only. Do not replace."""
-        attrs = get_dict_intersection(*(x.__dict__ for x in fill_from))
-        attrs.update(attributes)
-        attrs.update(self.__dict__)
-        for key, val in attrs.items():
-            setattr(self, key, val)
+    def set_attrib(self, *attribs: ElemAttribBase) -> None:
+        """Set attribute with an ElemAttribBase instance.
+
+        type(attrib).__name__ : attrib
+
+        :param attrib: an ElemAttribBase instance, presumable with a None element
+        attribute.
+        """
+        for attrib in attribs:
+            attrib.element = self
+            setattr(self, type(attrib).__name__, attrib)
+
+    def maybe_set_attrib(self, *attribs: Optional[ElemAttribBase]) -> None:
+        """Set attribute if attrib is an ElemAttribBase. Pass silently if None
+        """
+        self.set_attrib(*[x for x in attribs if isinstance(x, ElemAttribBase)])
+
+    def get_attrib(self, type_: Type[ElemAttribBase]) -> Optional[Any]:
+        """Try to get an attribute value, None if attrib is not set.
+
+        :param type_: type of ElemAttribBase to seek in the attrib dictionary. This
+            takes a type instead of a string to eliminate any possibility of getting
+            a None value just because an attrib dictionary key was mistyped.
+        """
+        if hasattr(self, type_.__name__):
+            return getattr(self, type_.__name__).value
 
     def __lt__(self: _TMeshElem, other: _TMeshElem) -> bool:
-        """Sort by id"""
+        """Sort by id
+
+        You'll want to be able to sort Verts at least to make a vlvi (vertex list,
+        vertex index) format.
+        """
         return id(self) < id(other)
 
 
@@ -175,12 +253,6 @@ class Vert(MeshElementBase[TVert, TEdge, TFace]):
     required attributes
     :edge: pointer to one edge originating at vert
     """
-
-    _edge: TEdge
-
-    @classmethod
-    def factory(cls: Type[TVert]) -> TVert:
-        return cls()
 
     @property
     def edge(self) -> TEdge:
@@ -238,10 +310,7 @@ class Edge(MeshElementBase[TVert, TEdge, TFace]):
     :next: pointer to next edge along face
     """
 
-    _orig: TVert
-    _pair: TEdge
-    _face: TFace
-    _next: TEdge
+    _pointers: Set[str] = {'_orig', '_pair', '_face', '_next', 'prev'}
 
     @property
     def orig(self) -> TVert:
@@ -355,6 +424,7 @@ class Face(MeshElementBase[TVert, TEdge, TFace]):
     required attribute
     :edge: pointer to one edge on the face
     """
+    _pointers: Set[str] = {'_edge', '_Face__is_hole'}
 
     @classmethod
     def factory(cls: Type[TFace]) -> TFace:

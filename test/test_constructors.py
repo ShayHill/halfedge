@@ -22,6 +22,7 @@ from ..halfedge.half_edge_elements import (
     MeshElementBase,
     _function_lap,
 )
+from ..halfedge.element_attributes import IncompatibleAttributeBase, NumericAttributeBase
 from ..halfedge.half_edge_querries import StaticHalfEdges
 from ..halfedge.constructors import BlindHalfEdges
 
@@ -43,24 +44,17 @@ def valid_identifier():
 
 
 class TestMeshElementBase:
-    @pytest.mark.parametrize("name,value", [(valid_identifier(), random.randint(1, 5))])
-    def test_kwargs(self, name, value) -> None:
-        """Sets kwargs."""
-        a = MeshElementBase(**{name: value})
-        assert getattr(a, name) == value
-
-    def test_fill_from_preserves_attrs(self) -> None:
-        """Does not overwrite attrs."""
-        a_is_1 = MeshElementBase(a=1)
-        a_is_2 = MeshElementBase(a_is_1, a=2)
-        assert getattr(a_is_2, "a") == 2
 
     def test_fill_attrs_from_fills_missing(self) -> None:
         """Fills attrs if not present."""
-        b_is_3 = MeshElementBase(a=1, b=3)
-        a_is_2 = MeshElementBase(b_is_3, a=2)
-        assert getattr(a_is_2, "a") == 2
-        assert getattr(a_is_2, "b") == 3
+        class Flag1(NumericAttributeBase):pass
+        class Flag2(NumericAttributeBase):pass
+        flag1_defined = MeshElementBase(Flag1(2))
+        flag2_defined_a = MeshElementBase(Flag2(3))
+        flag2_defined_b = MeshElementBase(Flag2(5))
+        flag1_defined.fill_from(flag2_defined_a, flag2_defined_b)
+        assert flag1_defined.get_attrib(Flag1) == 2
+        assert flag1_defined.get_attrib(Flag2) == 4
 
 
 def test_edge_lap_succeeds(he_triangle: Dict[str, Any]) -> None:
@@ -83,55 +77,6 @@ def test_edge_lap_fails(he_triangle: Dict[str, Any]) -> None:
 
 class TestElementSubclasses:
     """Test all three _MeshElementBase children."""
-
-    @staticmethod
-    def check_init(class_: Callable, potential_kwargs: Dict[str, Any]) -> None:
-        """Check values against args dict.
-
-        Pass partial arg sets, each missing one arg. Then pass all args.
-
-        """
-
-        def check_kwarg_subset(kwargs: Dict[str, Any]) -> Any:
-            """Run one combination of kwargs."""
-            inst = class_(**kwargs)
-
-            for arg in kwargs.keys():
-                assert getattr(inst, arg) == kwargs[arg]
-
-            return inst
-
-        for skip in potential_kwargs.keys():
-            inst_wo_skip = check_kwarg_subset(
-                {k: v for k, v in potential_kwargs.items() if k != skip}
-            )
-
-            with pytest.raises(AttributeError):
-                getattr(inst_wo_skip, skip)
-
-        # check full init
-        check_kwarg_subset(potential_kwargs)
-
-    def test_init_vert(self) -> None:
-        """Will not set missing attrs. sets others."""
-        self.check_init(Vert, {"coordinate": (0, 0, 0), "some_kwarg": 20})
-
-    def test_init_edge(self) -> None:
-        """Will not set missing attrs. sets others."""
-        self.check_init(
-            Edge,
-            {
-                "orig": Vert(),
-                "pair": Edge(),
-                "face": Face(),
-                "next": Edge(),
-                "some_kwarg": 20,
-            },
-        )
-
-    def test_init_face(self) -> None:
-        """Will not set missing attrs. sets others."""
-        self.check_init(Face, {"some_kwarg": 20})
 
     def test_edge_face_edges(self, he_triangle: Dict[str, Any]) -> None:
         """Edge next around face."""
@@ -204,14 +149,14 @@ class TestHalfEdges:
         for mesh, key in ((he_grid, "grid"), (he_cube, "cube")):
             input_vl, input_vi = meshes_vlvi[key + "_vl"], meshes_vlvi[key + "_vi"]
             expect = get_canonical_mesh(input_vl, input_vi)
-            result = get_canonical_mesh([x.coordinate for x in mesh.vl], mesh.fi)
+            result = get_canonical_mesh([x.get_attrib(IncompatibleAttributeBase) for x in mesh.vl], mesh.fi)
             assert expect == result
 
     def test_hi(self, meshes_vlvi: Dict[str, Any], he_grid) -> None:
         """Convert unaltered mesh holes back to input holes."""
         input_vl, input_hi = meshes_vlvi["grid_vl"], meshes_vlvi["grid_hi"]
         expect = get_canonical_mesh(input_vl, input_hi)
-        result = get_canonical_mesh([x.coordinate for x in he_grid.vl], he_grid.hi)
+        result = get_canonical_mesh([x.get_attrib(IncompatibleAttributeBase) for x in he_grid.vl], he_grid.hi)
         assert expect == result
 
 

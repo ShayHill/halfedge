@@ -1,4 +1,4 @@
-# Last modified: 181126 16:46:28
+# Last modified: 220626 22:40:26
 # _*_ coding: utf-8 _*_
 """Test functions in classes.py.
 
@@ -7,7 +7,7 @@ created: 170204 14:22:23
 import itertools
 import random
 from keyword import iskeyword
-from typing import Any, Callable, Dict
+from typing import Any, Callable, Dict, Tuple
 from .conftest import get_canonical_mesh
 
 import pytest
@@ -15,6 +15,11 @@ import pytest
 from .conftest import compare_circular_2
 
 # noinspection PyProtectedMember,PyProtectedMember
+from ..halfedge.element_attributes import (
+    IncompatibleAttributeBase,
+    NumericAttributeBase,
+    ElemAttribBase
+)
 from ..halfedge.half_edge_elements import (
     Edge,
     Face,
@@ -32,13 +37,46 @@ identifiers = (
 
 
 def valid_identifier():
-    """Return a strategy which generates a valid Python Identifier"""
+    """Return a valid Python Identifier"""
     return next(
         filter(
             lambda x: x[0].isalpha() and x.isidentifier() and not (iskeyword(x)),
             identifiers,
         )
     )
+
+
+class TestElemAttribs:
+    def test_incompatible_merge_match(self) -> None:
+        """Return a new attribute with same value if all values are equal"""
+        attribs = [IncompatibleAttributeBase(7, None) for _ in range(3)]
+        new_attrib = IncompatibleAttributeBase().merged(*attribs)
+        assert new_attrib.value == 7
+
+    def test_incompatible_merge_mismatch(self) -> None:
+        """Return None if all values are not equal"""
+        attribs = [IncompatibleAttributeBase(7, None) for _ in range(3)]
+        attribs.append(IncompatibleAttributeBase(3))
+        new_attrib = IncompatibleAttributeBase().merged(*attribs)
+        assert new_attrib is None
+
+    def test_numeric_all_nos(self) -> None:
+        """Return a new attribute with same value if all values are equal"""
+        attribs = [NumericAttributeBase(x) for x in range(1, 6)]
+        new_attrib = NumericAttributeBase().merged(*attribs)
+        assert new_attrib.value == 3
+
+    def test_lazy(self) -> None:
+        """Given no value, LazyAttrib will try to infer a value from self.element"""
+        class LazyAttrib(ElemAttribBase):
+            @classmethod
+            def merged(cls, *merge_from):
+                raise NotImplementedError()
+            def _infer_value(self):
+                return self.element.sn
+        elem = MeshElementBase()
+        elem.set_attrib(LazyAttrib())
+        assert elem.get_attrib(LazyAttrib) == elem.sn
 
 
 class TestMeshElementBase:
@@ -49,24 +87,34 @@ class TestMeshElementBase:
         assert (elem1 < elem2) == (id(elem1) < id(elem2))
         assert (elem2 > elem1) == (id(elem2) > id(elem1))
 
-    @pytest.mark.parametrize("name,value", [(valid_identifier(), random.randint(1, 5))])
-    def test_kwargs(self, name, value) -> None:
-        """Sets kwargs."""
-        a = MeshElementBase(**{name: value})
-        assert getattr(a, name) == value
+    def test_set_attrib(self) -> None:
+        """Set an attrib by passing a MeshElementBase instance"""
+        elem = MeshElementBase()
+        elem_attrib = IncompatibleAttributeBase(8)
+        elem.set_attrib(elem_attrib)
+        assert getattr(elem, type(elem_attrib).__name__) is elem_attrib
 
-    def test_fill_from_preserves_attrs(self) -> None:
-        """Does not overwrite attrs."""
-        a_is_1 = MeshElementBase(a=1)
-        a_is_2 = MeshElementBase(a_is_1, a=2)
-        assert getattr(a_is_2, "a") == 2
+    def test_attribs_through_init(self) -> None:
+        """MeshElement attributes are captured when passed to init"""
+        base_with_attrib = MeshElementBase(
+            IncompatibleAttributeBase(7), NumericAttributeBase(8)
+        )
+        assert base_with_attrib.get_attrib(IncompatibleAttributeBase) == 7
+        assert base_with_attrib.get_attrib(NumericAttributeBase) == 8
 
-    def test_fill_attrs_from_fills_missing(self) -> None:
-        """Fills attrs if not present."""
-        b_is_3 = MeshElementBase(HalfEda=1, b=3)
-        a_is_2 = MeshElementBase(b_is_3, a=2)
-        assert getattr(a_is_2, "a") == 2
-        assert getattr(a_is_2, "b") == 3
+    def test_pointers_through_init(self) -> None:
+        """Key, val pairs passed as kwargs fail if key does not have a setter"""
+        with pytest.raises(AttributeError):
+            MeshElementBase(edge=MeshElementBase())
+
+    def test_fill_attrib(self) -> None:
+        """Fill missing attrib values from fill_from"""
+        elem1 = MeshElementBase(NumericAttributeBase(8), IncompatibleAttributeBase(3))
+        elem2 = MeshElementBase(NumericAttributeBase(6), IncompatibleAttributeBase(3))
+        elem3 = MeshElementBase(IncompatibleAttributeBase(1))
+        elem3.fill_from(elem1, elem2)
+        assert elem3.get_attrib(IncompatibleAttributeBase) == 1  # unchanged
+        assert elem3.get_attrib(NumericAttributeBase) == 7  # filled
 
 
 def test_edge_lap_succeeds(he_triangle: Dict[str, Any]) -> None:
@@ -87,57 +135,115 @@ def test_edge_lap_fails(he_triangle: Dict[str, Any]) -> None:
     assert "infinite" in err.value.args[0]
 
 
+class Coordinate(IncompatibleAttributeBase[Tuple[int, int, int]]):
+    pass
+
+
+class TestInitVert:
+    def setup_method(self):
+        self.coordinate = Coordinate((1, 2, 3))
+        self.edge = Edge()
+        self.vert = Vert(self.coordinate, edge=self.edge)
+
+    def test_coordinate_is_attribute(self):
+        """Coordinate has been captured as an attribute"""
+        assert self.vert.Coordinate is self.coordinate
+
+    def test_coordinate_element_is_vert(self):
+        """Coordinate.element is set during init/"""
+        assert self.vert.Coordinate.element is self.vert
+
+    def test_coordinate_value_has_not_changes(self):
+        """Coordinate value is still (1, 2, 3)"""
+        assert self.vert.get_attrib(Coordinate) == (1, 2, 3)
+
+    def test_points_to_edge(self):
+        """vert.edge points to input edge"""
+        assert self.vert.edge is self.edge
+
+    def test_mirrored_assignment(self):
+        """vert.edge assignment mirrored in edge.orig"""
+        assert self.vert.edge.orig is self.vert
+
+class TestInitEdge:
+    def setup_method(self):
+        self.coordinate = Coordinate((1, 2, 3))
+        self.edge = Edge()
+        self.orig = Vert()
+        self.pair = Edge()
+        self.face = Face()
+        self.next = Edge()
+        self.edge = Edge(self.coordinate, orig=self.orig, pair=self.pair, face=self.face, next=self.next)
+
+    def test_coordinate_is_attribute(self):
+        """Coordinate has been captured as an attribute"""
+        assert self.edge.Coordinate is self.coordinate
+
+    def test_coordinate_element_is_vert(self):
+        """Coordinate.element is set during init/"""
+        assert self.edge.Coordinate.element is self.edge
+
+    def test_coordinate_value_has_not_changes(self):
+        """Coordinate value is still (1, 2, 3)"""
+        assert self.edge.get_attrib(Coordinate) == (1, 2, 3)
+
+    def test_points_to_orig(self):
+        """vert.edge points to input edge"""
+        assert self.edge.orig is self.orig
+
+    def test_mirrored_orig(self):
+        """edge.orig assignment mirrored in edge.orig"""
+        assert self.edge.orig.edge is self.edge
+
+    def test_points_to_pair(self):
+        """vert.pair points to input edge"""
+        assert self.edge.pair is self.pair
+
+    def test_mirrored_pair(self):
+        """edge.pair assignment mirrored in edge.pair"""
+        assert self.edge.pair.pair is self.edge
+
+    def test_points_to_face(self):
+        """edge.face points to input face"""
+        assert self.edge.face is self.face
+
+    def test_mirrored_face(self):
+        """edge.face assignment mirrored in edge.face"""
+        assert self.edge.face.edge is self.edge
+
+    def test_points_to_next(self):
+        """edge.next points to input edge"""
+        assert self.edge.next is self.next
+
+class TestInitFace:
+    def setup_method(self):
+        self.coordinate = Coordinate((1, 2, 3))
+        self.edge = Edge()
+        self.face = Face(self.coordinate, edge=self.edge)
+
+    def test_coordinate_is_attribute(self):
+        """Coordinate has been captured as an attribute"""
+        assert self.face.Coordinate is self.coordinate
+
+    def test_coordinate_element_is_vert(self):
+        """Coordinate.element is set during init/"""
+        assert self.face.Coordinate.element is self.face
+
+    def test_coordinate_value_has_not_changes(self):
+        """Coordinate value is still (1, 2, 3)"""
+        assert self.face.get_attrib(Coordinate) == (1, 2, 3)
+
+    def test_points_to_edge(self):
+        """face.edge points to input edge"""
+        assert self.face.edge is self.edge
+
+    def test_mirrored_orig(self):
+        """face.edge assignment mirrored in face.edge"""
+        assert self.face.edge.face is self.face
+
+
 class TestElementSubclasses:
     """Test all three _MeshElementBase children."""
-
-    @staticmethod
-    def check_init(class_: Callable, potential_kwargs: Dict[str, Any]) -> None:
-        """Check values against args dict.
-
-        Pass partial arg sets, each missing one arg. Then pass all args.
-
-        """
-
-        def check_kwarg_subset(kwargs: Dict[str, Any]) -> Any:
-            """Run one combination of kwargs."""
-            inst = class_(**kwargs)
-
-            for arg in kwargs.keys():
-                assert getattr(inst, arg) == kwargs[arg]
-
-            return inst
-
-        for skip in potential_kwargs.keys():
-            inst_wo_skip = check_kwarg_subset(
-                {k: v for k, v in potential_kwargs.items() if k != skip}
-            )
-
-            with pytest.raises(AttributeError):
-                getattr(inst_wo_skip, skip)
-
-        # check full init
-        check_kwarg_subset(potential_kwargs)
-
-    def test_init_vert(self) -> None:
-        """Will not set missing attrs. sets others."""
-        self.check_init(Vert, {"coordinate": (0, 0, 0), "some_kwarg": 20})
-
-    def test_init_edge(self) -> None:
-        """Will not set missing attrs. sets others."""
-        self.check_init(
-            Edge,
-            {
-                "orig": Vert(),
-                "pair": Edge(),
-                "face": Face(),
-                "next": Edge(),
-                "some_kwarg": 20,
-            },
-        )
-
-    def test_init_face(self) -> None:
-        """Will not set missing attrs. sets others."""
-        self.check_init(Face, {"some_kwarg": 20})
 
     def test_edge_face_edges(self, he_triangle: Dict[str, Any]) -> None:
         """Edge next around face."""
@@ -159,7 +265,6 @@ class TestElementSubclasses:
         vert = Vert()
         edge = Edge(orig=vert)
         mesh = StaticHalfEdges({edge})
-        vert.mesh = mesh
         assert vert.edge == edge
 
     def test_vert_edges(self, he_triangle: Dict[str, Any]) -> None:
@@ -222,8 +327,8 @@ class TestHalfEdges:
 
     def test_vl(self, meshes_vlvi: Dict[str, Any], he_cube, he_grid) -> None:
         """Converts unaltered mesh verts back to input vl."""
-        assert {x.coordinate for x in he_cube.vl} == set(meshes_vlvi["cube_vl"])
-        assert {x.coordinate for x in he_grid.vl} == set(meshes_vlvi["grid_vl"])
+        assert {x.get_attrib(IncompatibleAttributeBase) for x in he_cube.vl} == set(meshes_vlvi["cube_vl"])
+        assert {x.get_attrib(IncompatibleAttributeBase) for x in he_grid.vl} == set(meshes_vlvi["grid_vl"])
 
     def test_vi(self, meshes_vlvi: Dict[str, Any], he_cube, he_grid) -> None:
         """Convert unaltered mesh faces back to input vi.
@@ -235,7 +340,7 @@ class TestHalfEdges:
     def test_hi(self, meshes_vlvi: Dict[str, Any], he_grid) -> None:
         """Convert unaltered mesh holes back to input holes."""
         expect = get_canonical_mesh(meshes_vlvi["grid_vl"], meshes_vlvi["grid_hi"])
-        result = get_canonical_mesh([x.coordinate for x in he_grid.vl], he_grid.hi)
+        result = get_canonical_mesh([x.get_attrib(IncompatibleAttributeBase) for x in he_grid.vl], he_grid.hi)
         assert expect == result
 
 

@@ -31,7 +31,7 @@ def _does_reach_all(set_: Set[Any], f_next: Callable[[T], Iterator[T]]) -> bool:
 
         while new:
             found.update(new)
-            new.update(chain(*(f_next(x) for x in new)))
+            new.set_references(chain(*(f_next(x) for x in new)))
             new -= found
 
     return not bool(found ^ set_)

@@ -13,13 +13,18 @@ from pytest_lazyfixture import lazy_fixture
 from ..halfedge import half_edge_elements
 from ..halfedge.half_edge_elements import Edge, Face
 from ..halfedge.half_edge_object import HalfEdges
+from ..halfedge.element_attributes import NumericAttributeBase, IncompatibleAttributeBase
+
+
+class Coordinate(IncompatibleAttributeBase):
+    pass
 
 
 @pytest.fixture
 def he_triangle() -> Dict[str, List[Any]]:
     """A simple triangle (inside and outside faces) for Mesh Element test"""
     mesh = HalfEdges()
-    verts = [half_edge_elements.Vert(coordinate=x) for x in ((-1, 0), (1, 0), (0, 1))]
+    verts = [half_edge_elements.Vert(Coordinate(x)) for x in ((-1, 0), (1, 0), (0, 1))]
     faces = [half_edge_elements.Face(), half_edge_elements.Face(__is_hole=True)]
     inner_edges = [
         half_edge_elements.Edge(orig=verts[x], face=faces[0]) for x in range(3)
@@ -34,10 +39,6 @@ def he_triangle() -> Dict[str, List[Any]]:
         outer_edges[-i].pair = inner_edges[i]
         inner_edges[i - 1].next = inner_edges[i]
         outer_edges[i - 1].next = outer_edges[i]
-        # verts[i].edge = inner_edges[i]
-    # faces[0].edge = inner_edges[0]
-    # faces[1].edge = outer_edges[0]
-    # TODO: remove commented lines above once all test pass
 
     return {
         "verts": verts,
@@ -76,14 +77,14 @@ def meshes_vlvi() -> Dict[str, Any]:
 @pytest.fixture(scope="function")
 def he_cube(meshes_vlvi: Dict[str, Any]) -> HalfEdges:
     return HalfEdges.from_vlvi(
-        meshes_vlvi["cube_vl"], meshes_vlvi["cube_vi"], attr_name="coordinate"
+        meshes_vlvi["cube_vl"], meshes_vlvi["cube_vi"], attrib_type=IncompatibleAttributeBase
     )
 
 
 @pytest.fixture(scope="function")
 def he_grid(meshes_vlvi: Dict[str, Any]) -> HalfEdges:
     return HalfEdges.from_vlvi(
-        meshes_vlvi["grid_vl"], meshes_vlvi["grid_vi"], attr_name="coordinate"
+        meshes_vlvi["grid_vl"], meshes_vlvi["grid_vi"], attrib_type=IncompatibleAttributeBase
     )
 
 

@@ -32,7 +32,7 @@ class TestInsertEdge:
     def test_insert_into_empty_mesh(self) -> None:
         """First edge into empty mesh creates Hole"""
         mesh = HalfEdges()
-        mesh.insert_edge(mesh.Vert(), mesh.Vert())
+        mesh.insert_edge(Vert(), Vert())
         assert len(tuple(mesh.verts)) == 2
         assert len(tuple(mesh.edges)) == 2
         assert len(tuple(mesh.holes)) == 1

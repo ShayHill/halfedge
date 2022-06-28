@@ -5,7 +5,7 @@ from typing import Any, Optional, Set, TYPE_CHECKING, Tuple, Union
 
 from .half_edge_elements import ManifoldMeshError
 from .half_edge_querries import StaticHalfEdges
-from .half_edge_elements import Edge
+from .half_edge_elements import Edge, Face
 
 if TYPE_CHECKING:
     from .half_edge_elements import Vert, Face
@@ -79,7 +79,7 @@ class HalfEdges(StaticHalfEdges):
             * empty mesh: a new Hole
         """
         if not self.edges:
-            return self.hole()
+            return Face(__is_hole=True)
         orig_faces = self._get_edge_or_vert_faces(orig)
         dest_faces = self._get_edge_or_vert_faces(dest)
         with suppress(ValueError):
@@ -223,8 +223,8 @@ class HalfEdges(StaticHalfEdges):
 
         face_edges = face.edges
 
-        edge = self.Edge(next=self.Edge())
-        edge.pair = self.Edge(pair=edge, next=edge, prev=edge)
+        edge = Edge(next=Edge())
+        edge.pair = Edge(pair=edge, next=edge, prev=edge)
 
         edge_orig, edge_prev = self._infer_wing(orig, face, edge.pair)
         edge_dest, pair_prev = self._infer_wing(dest, face, edge)
@@ -245,10 +245,10 @@ class HalfEdges(StaticHalfEdges):
         if not set(face.verts) & {edge_orig, edge_dest} and face in self.faces:
             raise ManifoldMeshError("adding floating edge to existing face")
 
-        edge.update(
+        edge.update_references(
             *face_edges, orig=edge_orig, prev=edge_prev, next=pair_next, **edge_kwargs
         )
-        edge.pair.update(
+        edge.pair.update_references(
             *face_edges, orig=edge_dest, prev=pair_prev, next=edge_next, **edge_kwargs
         )
 
@@ -505,7 +505,7 @@ class HalfEdges(StaticHalfEdges):
         new_dest = pair.next.dest
         face = self.remove_edge(edge)
         new_edge = self.insert_edge(new_orig, new_dest, face)
-        new_edge.update(edge, pair)
+        new_edge.update_references(edge, pair)
         return new_edge
 
     def _is_stitchable(self, edge: Edge) -> bool:
@@ -555,7 +555,7 @@ class HalfEdges(StaticHalfEdges):
         if not self._is_stitchable(edge):
             raise ValueError("edge collapse would create non-manifold mesh")
 
-        new_vert = self.Vert(edge.orig, edge.dest, **vert_kwargs)
+        new_vert = Vert(edge.orig, edge.dest, **vert_kwargs)
         for edge_ in set(edge.orig.edges) | set(edge.dest.edges):
             edge_.orig = new_vert
 

@@ -20,9 +20,10 @@ then passing that raw data to mesh_from_vr would create a mesh with 6 faces and
 
 from __future__ import annotations
 
-from typing import Any, Generic, Iterable, List, Optional, Set, Tuple, Type, TypeVar
+from typing import Any, Generic, Iterable, List, Optional, Set, Tuple, Type, TypeVar, Sequence
 
 from .half_edge_elements import ManifoldMeshError, TEdge, TFace, TVert, Vert, Edge, Face
+from .element_attributes import ElemAttribBase, IncompatibleAttributeBase
 
 _TBlindHalfEdges = TypeVar("_TBlindHalfEdges", bound="BlindHalfEdges")
 
@@ -41,20 +42,12 @@ class BlindHalfEdges(Generic[TVert, TEdge, TFace]):
     def vert(self, *args, **kwargs) -> TVert:
         return self.Vert.factory(*args, **kwargs)
 
-    def edge(self, *args, **kwargs) -> TEdge:
-        return self.Edge.factory(*args, **kwargs)
-
-    def face(self, *args, **kwargs) -> TFace:
-        return self.Face.factory(*args, **kwargs)
-
-    def hole(self, *args, **kwargs) -> TFace:
-        return self.Face.factory(*args, **{**kwargs, "__is_hole": True})
 
     def _create_face_edges(
         self, face_verts: Iterable[TVert], face: TFace
     ) -> List[TEdge]:
         """Create edges around a face defined by vert indices."""
-        new_edges = [self.edge(orig=vert, face=face) for vert in face_verts]
+        new_edges = [Edge(orig=vert, face=face) for vert in face_verts]
         for idx, edge in enumerate(new_edges):
             new_edges[idx - 1].next = edge
         return new_edges
@@ -88,7 +81,7 @@ class BlindHalfEdges(Generic[TVert, TEdge, TFace]):
         This function can also fill in holes inside the mesh.
         """
         hole_edges = {
-            self.edge(orig=x.dest, pair=x) for x in self.edges if not hasattr(x, "pair")
+            Edge(orig=x.dest, pair=x) for x in self.edges if not hasattr(x, "pair")
         }
         orig2hole_edge = {x.orig: x for x in hole_edges}
 
@@ -100,7 +93,7 @@ class BlindHalfEdges(Generic[TVert, TEdge, TFace]):
 
         while orig2hole_edge:
             _, edge = next(iter(orig2hole_edge.items()))
-            edge.face = self.hole()
+            edge.face = Face(__is_hole=True)
             while edge.dest in orig2hole_edge:
                 edge.next = orig2hole_edge.pop(edge.dest)
                 edge.next.face = edge.face
@@ -113,7 +106,7 @@ class BlindHalfEdges(Generic[TVert, TEdge, TFace]):
         vl: List[Any],
         fi: Set[Tuple[int, ...]],
         hi: Optional[Set[Tuple[int, ...]]] = None,
-        attr_name: str = "coordinate",
+        attrib_type: Optional[ElemAttribBase] = IncompatibleAttributeBase
     ) -> _TBlindHalfEdges:
         """A set of half edges from a vertex list and vertex index.
 
@@ -126,6 +119,7 @@ class BlindHalfEdges(Generic[TVert, TEdge, TFace]):
         :param hi: (hole index) optionally provide empty faces (same format as fi)
         that will be used to pair all edges
 
+        # TODO: update docstring
         :param attr_name: optionally override the default attribute name: "coordinate"
 
         Presumably, the vl is a list of coordinate values. These will be assigned,
@@ -147,13 +141,13 @@ class BlindHalfEdges(Generic[TVert, TEdge, TFace]):
         Will silently remove unused verts
         """
         hi = hi or set()
-        vl = [cls.vert(**{attr_name: x}) for x in vl]
+        vl = [Vert(attrib_type(x)) for x in vl]
         vr = [tuple(vl[x] for x in y) for y in fi]
         hr = [tuple(vl[x] for x in y) for y in hi]
 
         mesh = cls()
         for face_verts in vr:
-            mesh.edges.update(mesh._create_face_edges(face_verts, mesh.face()))
+            mesh.edges.update(mesh._create_face_edges(face_verts, Face()))
         for face_verts in hr:
             mesh.edges.update(mesh._create_face_edges(face_verts, mesh.hole()))
         mesh._find_pairs()
