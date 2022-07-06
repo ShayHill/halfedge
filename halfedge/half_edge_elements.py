@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # _*_ coding: utf-8 _*_
-# Last modified: 211211 06:51:26
+# Last modified: 220607 21:10:43
 """A half-edges data container with view methods.
 
 A simple container for a list of half edges. Provides lookups and a serial
