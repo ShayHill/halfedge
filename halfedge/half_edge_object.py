@@ -1,3 +1,4 @@
+
 from __future__ import annotations
 
 from contextlib import suppress
@@ -182,7 +183,6 @@ class HalfEdges(StaticHalfEdges):
         orig: Union[Edge, Vert],
         dest: Union[Edge, Vert],
         face: Optional[Face] = None,
-        **edge_kwargs: Any,
     ) -> Edge:
         """
         Insert a new edge between two verts.
@@ -221,9 +221,8 @@ class HalfEdges(StaticHalfEdges):
         if face is None:
             face = self._infer_face(orig, dest)
 
-        face_edges = face.edges
-
-        edge = Edge(next=Edge())
+        # create a floating edge
+        edge = Edge()
         edge.pair = Edge(pair=edge, next=edge, prev=edge)
 
         edge_orig, edge_prev = self._infer_wing(orig, face, edge.pair)
@@ -245,16 +244,28 @@ class HalfEdges(StaticHalfEdges):
         if not set(face.verts) & {edge_orig, edge_dest} and face in self.faces:
             raise ManifoldMeshError("adding floating edge to existing face")
 
-        edge.update_references(
-            *face_edges, orig=edge_orig, prev=edge_prev, next=pair_next, **edge_kwargs
-        )
-        edge.pair.update_references(
-            *face_edges, orig=edge_dest, prev=pair_prev, next=edge_next, **edge_kwargs
-        )
+        # edge.update_references(
+        #     *face_edges, orig=edge_orig, prev=edge_prev, next=pair_next, **edge_kwargs
+        # )
+        edge.orig = edge_orig
+        edge.prev = edge_prev
+        edge.next = pair_next
+
+        # edge.pair.update_references(
+        #     *face_edges, orig=edge_dest, prev=pair_prev, next=edge_next, **edge_kwargs
+        # )
+        edge.pair.orig = edge_dest
+        edge.pair.prev = pair_prev
+        edge.pair.next = edge_next
 
         # if face is not split, new face will be created then immediately written over
-        _update_face_edges(self.Face(face), edge)
+        _update_face_edges(Face().fill_from(face), edge)
         _update_face_edges(face, edge.pair)
+
+        edge.fill_from(*[x for x in edge.face_edges if x not in {edge, edge.pair}])
+        edge.pair.fill_from(*[x for x in edge.pair.face_edges if x not in {edge, edge.pair}])
+
+
 
         self.edges.update({edge, edge.pair})
 

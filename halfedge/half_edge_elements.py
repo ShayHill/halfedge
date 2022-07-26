@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # _*_ coding: utf-8 _*_
-# Last modified: 220628 12:15:40
+# Last modified: 220628 12:38:51
 """A half-edges data container with view methods.
 
 A simple container for a list of half edges. Provides lookups and a serial
@@ -139,6 +139,7 @@ class MeshElementBase(Generic[TVert, TEdge, TFace]):
         self,
         *attributes: ElemAttribBase,
         **pointers: MeshElementBase,
+
     ) -> None:
         """
         Create an instance (and copy attrs from fill_from).
@@ -155,14 +156,15 @@ class MeshElementBase(Generic[TVert, TEdge, TFace]):
         for attribute in attributes:
             self.set_attrib(attribute)
         for k, v in pointers.items():
-            if k in pointers:
-                setattr(self, k, v)
-                continue
-            raise AttributeError(f"'{type(self).__name__}' has no attribute '{k}'")
+            setattr(self, k, v)
 
 
-    def __setattr__(self, key: str, value: ElemAttribBase | MeshElementBase) -> None:
+    def __setattr__(self, key: str, value: Any) -> None:
         """To prevent any mistyped attributes, which would clobber fill_from
+
+        This is here to help refactoring, but isn't necessary or necessarily
+        Pythonic. Basically, you can only set public attributes which are defined in
+        init or have setters.
         """
         allow = key == 'sn'
         allow = allow or key.startswith('_')
@@ -174,7 +176,7 @@ class MeshElementBase(Generic[TVert, TEdge, TFace]):
             return
         raise AttributeError(f"'{type(self).__name__}' has no attribute '{key}'")
 
-    def fill_from(self: _TMeshElem, *elements: _TMeshElem) -> None:
+    def fill_from(self: _TMeshElem, *elements: _TMeshElem) -> _TMeshElem:
         """
         Fill in missing references from other elements.
         """
@@ -187,6 +189,10 @@ class MeshElementBase(Generic[TVert, TEdge, TFace]):
                     self.maybe_set_attrib(type(getattr(element, key)).merged(*vals))
                 elif all_is(vals):  # will have to be '_something'
                     setattr(self, key[1:], vals[0])
+        return self
+
+
+
 
     def set_attrib(self, *attribs: ElemAttribBase) -> None:
         """Set attribute with an ElemAttribBase instance.
