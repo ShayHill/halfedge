@@ -80,7 +80,7 @@ class HalfEdges(StaticHalfEdges):
             * empty mesh: a new Hole
         """
         if not self.edges:
-            return Face(__is_hole=True)
+            return Face(is_hole=True)
         orig_faces = self._get_edge_or_vert_faces(orig)
         dest_faces = self._get_edge_or_vert_faces(dest)
         with suppress(ValueError):

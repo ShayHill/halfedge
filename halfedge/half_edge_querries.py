@@ -34,7 +34,7 @@ class StaticHalfEdges(BlindHalfEdges):
     Basic half edge lookups.
 
     Some properties require a manifold mesh, but the Edge type does support
-    explicitly defined holes. These hole (Face(__is_hole=True) provide enough
+    explicitly defined holes. These hole (Face(is_hole=True) provide enough
     information to pair and link all half edges, but will be ignored in any "for face
     in" constructs.
     """

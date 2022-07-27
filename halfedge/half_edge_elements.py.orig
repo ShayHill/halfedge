@@ -12,7 +12,7 @@ number for each mesh element (Vert, Edge, or Face).
 
 This is a typical halfedges data structure. Exceptions:
 
-    * Face() is distinct from Face(__is_hole=True). This is
+    * Face() is distinct from Face(is_hole=True). This is
       to simplify working with 2D meshes. You can
           - define a 2d mesh with triangles
           - explicitly or algorithmically define holes to keep the mesh manifold
@@ -421,14 +421,14 @@ class Face(MeshElementBase[TVert, TEdge, TFace]):
     :edge: pointer to one edge on the face
     """
 
-    _pointers: Set[str] = {"_edge", "_Face__is_hole"}
+    _pointers: Set[str] = {"_edge", "_Faceis_hole"}
 
     @classmethod
     def factory(cls: Type[TFace]) -> TFace:
         return cls()
 
     def __init__(self, *args, **kwargs) -> None:
-        self.__is_hole = kwargs.pop("__is_hole", False)
+        self.is_hole = kwargs.pop("is_hole", False)
         super().__init__(*args, **kwargs)
 
     @property
@@ -447,10 +447,10 @@ class Face(MeshElementBase[TVert, TEdge, TFace]):
         """
         Is this face a hole?
 
-        "hole-ness" is assigned at instance creation by passing ``__is_hole=True`` to
+        "hole-ness" is assigned at instance creation by passing ``is_hole=True`` to
         ``__init__``
         """
-        return self.__is_hole
+        return self.is_hole
 
     @property
     def edges(self) -> List[TEdge]:

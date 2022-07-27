@@ -2,9 +2,9 @@
 
 ## Holes
 
-A "triangle" mesh in 2D will never be entirely triangular (and also manifold). There will be a boundary around the triangles. This library treats the outside of that boundary as a face (with an `__is_hole == True` attribute). This way, every edge has a pair and a face, and the `__is_hole` flags can be used to keep these hole faces out of your way.
+A "triangle" mesh in 2D will never be entirely triangular (and also manifold). There will be a boundary around the triangles. This library treats the outside of that boundary as a face (with an `is_hole == True` attribute). This way, every edge has a pair and a face, and the `is_hole` flags can be used to keep these hole faces out of your way.
 
-Holes are useful for more than just 2D mesh boundaries, you can explicitly create holes (`Face` instances with an as `__is_hole == True` property to maintain manifold mesh conditions in many circumstances. The constructor `HalfEdges.from_vlvi()` will try to insert hole faces to maintain manifold conditions.)
+Holes are useful for more than just 2D mesh boundaries, you can explicitly create holes (`Face` instances with an as `is_hole == True` property to maintain manifold mesh conditions in many circumstances. The constructor `HalfEdges.from_vlvi()` will try to insert hole faces to maintain manifold conditions.)
 
 Four main types: Vert, Edge, Face, and HalfEdges. Vert and Face instances have `*.faces` properties which will return all adjacent faces. These properties will *not* return faces flagged as holes.
 

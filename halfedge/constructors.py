@@ -93,7 +93,7 @@ class BlindHalfEdges(Generic[TVert, TEdge, TFace]):
 
         while orig2hole_edge:
             _, edge = next(iter(orig2hole_edge.items()))
-            edge.face = Face(__is_hole=True)
+            edge.face = Face(is_hole=True)
             while edge.dest in orig2hole_edge:
                 edge.next = orig2hole_edge.pop(edge.dest)
                 edge.next.face = edge.face
@@ -148,7 +148,7 @@ class BlindHalfEdges(Generic[TVert, TEdge, TFace]):
         for face_verts in vr:
             mesh.edges.update(mesh._create_face_edges(face_verts, Face()))
         for face_verts in hr:
-            mesh.edges.update(mesh._create_face_edges(face_verts, Face(__is_hole=True)))
+            mesh.edges.update(mesh._create_face_edges(face_verts, Face(is_hole=True)))
         mesh._find_pairs()
         mesh._infer_holes()
         return mesh

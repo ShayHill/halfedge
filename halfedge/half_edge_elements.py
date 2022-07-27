@@ -8,7 +8,7 @@ number for each mesh element (Vert, Edge, or Face).
 
 This is a typical halfedges data structure. Exceptions:
 
-    * Face() is distinct from Face(__is_hole=True). This is
+    * Face() is distinct from Face(is_hole=True). This is
       to simplify working with 2D meshes. You can
           - define a 2d mesh with triangles
           - explicitly or algorithmically define holes to keep the mesh manifold
@@ -47,7 +47,6 @@ from .element_attributes import (
 class IsHole(ContagionAttributeBase):
     """Flag a Face instance as a hole"""
 
-    pass
 
 
 class ManifoldMeshError(ValueError):
@@ -427,18 +426,21 @@ class Face(MeshElementBase[TVert, TEdge, TFace]):
     :edge: pointer to one edge on the face
     """
 
-    _pointers: Set[str] = {"_edge", "_Face__is_hole"}
+    _pointers: Set[str] = {"_edge", "_Faceis_hole"}
 
     # TODO: remove this factory stuff and see if everything still works
     @classmethod
     def factory(cls: Type[TFace]) -> TFace:
         return cls()
 
-    def __init__(self, *args, **kwargs) -> None:
-        if kwargs.pop("__is_hole", False):
+    def __init__(self, *args, edge: Optional[Edge] = None, is_hole: bool = False) -> None:
+        if is_hole:
             args += (IsHole(),)
+        if isinstance(edge, Edge):
+            kwargs = {'edge': edge}
+        else:
+            kwargs = {}
         super().__init__(*args, **kwargs)
-        breakpoint()
 
     @property
     def edge(self) -> TEdge:
@@ -456,7 +458,7 @@ class Face(MeshElementBase[TVert, TEdge, TFace]):
         """
         Is this face a hole?
 
-        "hole-ness" is assigned at instance creation by passing ``__is_hole=True`` to
+        "hole-ness" is assigned at instance creation by passing ``is_hole=True`` to
         ``__init__``
         """
         return hasattr(self, 'IsHole')
