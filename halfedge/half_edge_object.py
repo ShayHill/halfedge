@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 from contextlib import suppress
@@ -6,7 +5,8 @@ from typing import Any, Optional, Set, TYPE_CHECKING, Tuple, Union
 
 from .half_edge_elements import ManifoldMeshError
 from .half_edge_querries import StaticHalfEdges
-from .half_edge_elements import Edge, Face
+from .half_edge_elements import Edge, Face, Vert
+from .element_attributes import ElemAttribBase
 
 if TYPE_CHECKING:
     from .half_edge_elements import Vert, Face
@@ -189,8 +189,7 @@ class HalfEdges(StaticHalfEdges):
 
         :param orig: origin of new edge (vert or edge such that edge.dest == vert)
         :param dest: destination of new edge (vert or edge as above)
-        :param face: edge will lie on or split face (will infer in unambiguous)
-        :param edge_kwargs: set attributes for new edge
+        :param face: edge will lie on or split face (will infer if unambiguous)
         :returns: newly inserted edge
 
         :raises: ValueError if no face is given and face is ambiguous
@@ -263,20 +262,19 @@ class HalfEdges(StaticHalfEdges):
         _update_face_edges(face, edge.pair)
 
         edge.fill_from(*[x for x in edge.face_edges if x not in {edge, edge.pair}])
-        edge.pair.fill_from(*[x for x in edge.pair.face_edges if x not in {edge, edge.pair}])
-
-
+        edge.pair.fill_from(
+            *[x for x in edge.pair.face_edges if x not in {edge, edge.pair}]
+        )
 
         self.edges.update({edge, edge.pair})
 
         return edge
 
-    def insert_vert(self, face: Face, **vert_kwargs: Any) -> Vert:
+    def insert_vert(self, face: Face) -> Vert:
         """
         Insert a new vert into face then triangulate face.
 
         :param face: face to triangulate
-        :param edge_kwargs: set attributes for new vert
         :returns: newly inserted vert
         :raises: UnrecoverableManifoldMeshError if an unanticipated
             ManifoldMeshError occurs
@@ -291,7 +289,8 @@ class HalfEdges(StaticHalfEdges):
             * shared face.edges attributes passed to new edges
             * shared face.verts attributes passed to new vert
         """
-        new_vert = self.Vert(*face.verts, **vert_kwargs)
+
+        new_vert = Vert().fill_from(*face.verts)
         try:
             for vert in face.verts:
                 self.insert_edge(vert, new_vert, face)
@@ -299,12 +298,11 @@ class HalfEdges(StaticHalfEdges):
             raise UnrecoverableManifoldMeshError(str(exc))
         return new_vert
 
-    def remove_edge(self, edge: Edge, **face_kwargs: Any) -> Face:
+    def remove_edge(self, edge: Edge) -> Face:
         """
         Cut an edge out of the mesh.
 
         :param edge: edge to remove
-        :param face_kwargs: optional attributes for new face
         :returns: Newly joined (if edge split face) face, else new face that replaces
             previously shared face.
         :raises: ManifoldMeshError if
@@ -351,9 +349,9 @@ class HalfEdges(StaticHalfEdges):
 
         # set all faces equal to new face
         if not pair.face.is_hole:
-            new_face = self.face(*{edge.face, pair.face}, **face_kwargs)
+            new_face = Face().fill_from(*{edge.face, pair.face})
         else:
-            new_face = self.hole(*{edge.face, pair.face}, **face_kwargs)
+            new_face = Face(__is_hole=True).fill_from(*{edge.face, pair.face})
         for edge_ in (edge_face_edges | pair_face_edges) - {edge, pair}:
             edge_.face = new_face
 
@@ -466,7 +464,7 @@ class HalfEdges(StaticHalfEdges):
             raise UnrecoverableManifoldMeshError(str(exc))
         return face
 
-    def split_edge(self, edge: Edge, **vert_kwargs) -> Vert:
+    def split_edge(self, edge: Edge) -> Vert:
         """
         Add a vert to the middle of an edge.
 
@@ -482,13 +480,13 @@ class HalfEdges(StaticHalfEdges):
         remove_edge will replace the original faces, so these are restored at the end
         of the method.
         """
-        new_vert = self.Vert(*{edge.orig, edge.dest}, **vert_kwargs)
+        new_vert = Vert().fill_from(*{edge.orig, edge.dest})
         edge_face = edge.face
         pair_face = edge.pair.face
         for orig, dest in ((edge.dest, new_vert), (new_vert, edge.orig)):
             new_edge = self.insert_edge(orig, dest, edge.face)
-            new_edge.extend(edge.pair)
-            new_edge.pair.extend(edge)
+            new_edge.fill_from(edge.pair)
+            new_edge.pair.fill_from(edge)
         self.remove_edge(edge)
         _update_face_edges(edge_face, new_edge.pair)
         _update_face_edges(pair_face, new_edge)
@@ -516,7 +514,6 @@ class HalfEdges(StaticHalfEdges):
         new_dest = pair.next.dest
         face = self.remove_edge(edge)
         new_edge = self.insert_edge(new_orig, new_dest, face)
-        new_edge.update_references(edge, pair)
         return new_edge
 
     def _is_stitchable(self, edge: Edge) -> bool:
@@ -545,7 +542,7 @@ class HalfEdges(StaticHalfEdges):
             return True
         return False
 
-    def collapse_edge(self, edge: Edge, **vert_kwargs) -> Vert:
+    def collapse_edge(self, edge: Edge) -> Vert:
         """
         Collapse an Edge into a Vert.
 
@@ -566,7 +563,7 @@ class HalfEdges(StaticHalfEdges):
         if not self._is_stitchable(edge):
             raise ValueError("edge collapse would create non-manifold mesh")
 
-        new_vert = Vert(edge.orig, edge.dest, **vert_kwargs)
+        new_vert = Vert().fill_from(*{edge.orig, edge.dest})
         for edge_ in set(edge.orig.edges) | set(edge.dest.edges):
             edge_.orig = new_vert
 

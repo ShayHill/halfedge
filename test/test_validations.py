@@ -4,13 +4,17 @@
 
 created: 170204 14:22:23
 """
-from typing import Any, Dict
 
 import pytest
 
+from ..halfedge.element_attributes import IncompatibleAttributeBase
 from ..halfedge.half_edge_elements import ManifoldMeshError, Vert
 from ..halfedge.half_edge_querries import StaticHalfEdges
 from ..halfedge.validations import validate_mesh
+
+
+class Coordinate(IncompatibleAttributeBase):
+    pass
 
 
 def test_validate_mesh_empty() -> None:
@@ -57,7 +61,7 @@ def test_validate_mesh_edge_face(he_mesh) -> None:
 
 def test_disjoint_face() -> None:
     """Fails for disconnected faces."""
-    vl = [(0, 0, 0)] * 6
+    vl = [Vert(Coordinate((0, 0, 0))) for _ in range(6)]
     mesh = StaticHalfEdges.from_vlvi(vl, {(0, 1, 2), (3, 4, 5)})
     with pytest.raises(ManifoldMeshError) as err:
         validate_mesh(mesh)

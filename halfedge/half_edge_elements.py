@@ -33,24 +33,9 @@ This module is all the base elements (Vert, Edge, and Face).
 
 from __future__ import annotations
 
-from inspect import get_annotations
 from contextlib import suppress
-from functools import reduce
 from itertools import count
-from typing import (
-    Any,
-    Callable,
-    Dict,
-    Generic,
-    List,
-    Type,
-    TypeVar,
-    Hashable,
-    Iterable,
-    Set,
-    Optional,
-    Tuple
-)
+from typing import Any, Callable, Dict, Generic, List, Optional, Set, Type, TypeVar
 
 from .element_attributes import ElemAttribBase, find_optional_arg_type
 
@@ -127,6 +112,7 @@ TFace = TypeVar("TFace", bound="Face")
 # TODO: refactor this with slots instead of gaming annotations
 # TODO: replace 'attributes' with pointers
 
+
 def all_is(*args: Any) -> bool:
     """True if all arguments a is b"""
     return args and all(args[0] is x for x in args[1:])
@@ -139,7 +125,6 @@ class MeshElementBase(Generic[TVert, TEdge, TFace]):
         self,
         *attributes: ElemAttribBase,
         **pointers: MeshElementBase,
-
     ) -> None:
         """
         Create an instance (and copy attrs from fill_from).
@@ -156,8 +141,8 @@ class MeshElementBase(Generic[TVert, TEdge, TFace]):
         for attribute in attributes:
             self.set_attrib(attribute)
         for k, v in pointers.items():
-            setattr(self, k, v)
-
+            if v is not None:
+                setattr(self, k, v)
 
     def __setattr__(self, key: str, value: Any) -> None:
         """To prevent any mistyped attributes, which would clobber fill_from
@@ -166,8 +151,8 @@ class MeshElementBase(Generic[TVert, TEdge, TFace]):
         Pythonic. Basically, you can only set public attributes which are defined in
         init or have setters.
         """
-        allow = key == 'sn'
-        allow = allow or key.startswith('_')
+        allow = key == "sn"
+        allow = allow or key.startswith("_")
         allow = allow or key in self.__dict__
         allow = allow or key in dir(self)
         allow = allow or isinstance(value, ElemAttribBase)
@@ -184,15 +169,13 @@ class MeshElementBase(Generic[TVert, TEdge, TFace]):
         for element in elements:
             for key in (x for x in element.__dict__.keys() if x not in keys_seen):
                 keys_seen.add(key)
-                vals = [getattr(x, key) for x in elements]
+                vals = [getattr(x, key, None) for x in elements]
                 if isinstance(getattr(element, key), ElemAttribBase):
                     self.maybe_set_attrib(type(getattr(element, key)).merged(*vals))
-                elif all_is(vals):  # will have to be '_something'
+                    continue
+                if all_is(*vals):  # will have to be '_something'
                     setattr(self, key[1:], vals[0])
         return self
-
-
-
 
     def set_attrib(self, *attribs: ElemAttribBase) -> None:
         """Set attribute with an ElemAttribBase instance.
@@ -205,10 +188,10 @@ class MeshElementBase(Generic[TVert, TEdge, TFace]):
         for attrib in attribs:
             attrib.element = self
             setattr(self, type(attrib).__name__, attrib)
+        return self
 
     def maybe_set_attrib(self, *attribs: Optional[ElemAttribBase]) -> None:
-        """Set attribute if attrib is an ElemAttribBase. Pass silently if None
-        """
+        """Set attribute if attrib is an ElemAttribBase. Pass silently if None"""
         self.set_attrib(*[x for x in attribs if isinstance(x, ElemAttribBase)])
 
     def get_attrib(self, type_: Type[ElemAttribBase]) -> Optional[Any]:
@@ -259,6 +242,9 @@ class Vert(MeshElementBase[TVert, TEdge, TFace]):
     required attributes
     :edge: pointer to one edge originating at vert
     """
+
+    def __init__(self, *attributes: ElemAttribBase, edge: Optional[Edge] = None):
+        super().__init__(*attributes, edge=edge)
 
     @property
     def edge(self) -> TEdge:
@@ -316,7 +302,7 @@ class Edge(MeshElementBase[TVert, TEdge, TFace]):
     :next: pointer to next edge along face
     """
 
-    _pointers: Set[str] = {'_orig', '_pair', '_face', '_next', 'prev'}
+    _pointers: Set[str] = {"_orig", "_pair", "_face", "_next", "prev"}
 
     @property
     def orig(self) -> TVert:
@@ -430,7 +416,8 @@ class Face(MeshElementBase[TVert, TEdge, TFace]):
     required attribute
     :edge: pointer to one edge on the face
     """
-    _pointers: Set[str] = {'_edge', '_Face__is_hole'}
+
+    _pointers: Set[str] = {"_edge", "_Face__is_hole"}
 
     @classmethod
     def factory(cls: Type[TFace]) -> TFace:

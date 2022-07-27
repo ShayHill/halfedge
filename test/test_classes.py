@@ -145,6 +145,15 @@ class TestInitVert:
         self.edge = Edge()
         self.vert = Vert(self.coordinate, edge=self.edge)
 
+    def test_fill_from_preserves_pointers(self):
+        """fill_from() will not overwrite pointers"""
+        edge = Edge()
+        vert = Vert(edge=edge)
+        filler = Vert(edge=Edge())
+        vert.fill_from(filler)
+        assert vert.edge is edge
+
+
     def test_coordinate_is_attribute(self):
         """Coordinate has been captured as an attribute"""
         assert self.vert.Coordinate is self.coordinate
@@ -327,12 +336,11 @@ class TestHalfEdges:
 
     def test_vl(self, meshes_vlvi: Dict[str, Any], he_cube, he_grid) -> None:
         """Converts unaltered mesh verts back to input vl."""
-        assert {x.get_attrib(IncompatibleAttributeBase) for x in he_cube.vl} == set(meshes_vlvi["cube_vl"])
-        assert {x.get_attrib(IncompatibleAttributeBase) for x in he_grid.vl} == set(meshes_vlvi["grid_vl"])
+        assert {x.get_attrib(Coordinate) for x in he_cube.vl} == set(meshes_vlvi["cube_vl"])
+        assert {x.get_attrib(Coordinate) for x in he_grid.vl} == set(meshes_vlvi["grid_vl"])
 
     def test_vi(self, meshes_vlvi: Dict[str, Any], he_cube, he_grid) -> None:
         """Convert unaltered mesh faces back to input vi.
-
         Demonstrates preservation of face edge beginning point."""
         compare_circular_2(he_cube.fi, meshes_vlvi["cube_vi"])
         compare_circular_2(he_grid.fi, meshes_vlvi["grid_vi"])
@@ -340,7 +348,7 @@ class TestHalfEdges:
     def test_hi(self, meshes_vlvi: Dict[str, Any], he_grid) -> None:
         """Convert unaltered mesh holes back to input holes."""
         expect = get_canonical_mesh(meshes_vlvi["grid_vl"], meshes_vlvi["grid_hi"])
-        result = get_canonical_mesh([x.get_attrib(IncompatibleAttributeBase) for x in he_grid.vl], he_grid.hi)
+        result = get_canonical_mesh([x.get_attrib(Coordinate) for x in he_grid.vl], he_grid.hi)
         assert expect == result
 
 

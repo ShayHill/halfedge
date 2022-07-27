@@ -11,9 +11,10 @@ import pytest
 from pytest_lazyfixture import lazy_fixture
 
 from ..halfedge import half_edge_elements
-from ..halfedge.half_edge_elements import Edge, Face
+from ..halfedge.half_edge_elements import Edge, Face, Vert
 from ..halfedge.half_edge_object import HalfEdges
 from ..halfedge.element_attributes import NumericAttributeBase, IncompatibleAttributeBase
+
 
 
 class Coordinate(IncompatibleAttributeBase):
@@ -76,16 +77,14 @@ def meshes_vlvi() -> Dict[str, Any]:
 
 @pytest.fixture(scope="function")
 def he_cube(meshes_vlvi: Dict[str, Any]) -> HalfEdges:
-    return HalfEdges.from_vlvi(
-        meshes_vlvi["cube_vl"], meshes_vlvi["cube_vi"], attrib_type=IncompatibleAttributeBase
-    )
+    vl = [Vert(Coordinate(x)) for x in meshes_vlvi['cube_vl']]
+    return HalfEdges.from_vlvi(vl, meshes_vlvi["cube_vi"])
 
 
 @pytest.fixture(scope="function")
 def he_grid(meshes_vlvi: Dict[str, Any]) -> HalfEdges:
-    return HalfEdges.from_vlvi(
-        meshes_vlvi["grid_vl"], meshes_vlvi["grid_vi"], attrib_type=IncompatibleAttributeBase
-    )
+    vl = [Vert(Coordinate(x)) for x in meshes_vlvi['grid_vl']]
+    return HalfEdges.from_vlvi(vl, meshes_vlvi["grid_vi"])
 
 
 @pytest.fixture(params=[lazy_fixture("he_grid"), lazy_fixture("he_cube")])

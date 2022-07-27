@@ -103,10 +103,9 @@ class BlindHalfEdges(Generic[TVert, TEdge, TFace]):
     @classmethod
     def from_vlvi(
         cls: Type[_TBlindHalfEdges],
-        vl: List[Any],
+        vl: List[Vert],
         fi: Set[Tuple[int, ...]],
         hi: Optional[Set[Tuple[int, ...]]] = None,
-        attrib_type: Optional[ElemAttribBase] = IncompatibleAttributeBase
     ) -> _TBlindHalfEdges:
         """A set of half edges from a vertex list and vertex index.
 
@@ -141,7 +140,7 @@ class BlindHalfEdges(Generic[TVert, TEdge, TFace]):
         Will silently remove unused verts
         """
         hi = hi or set()
-        vl = [Vert(attrib_type(x)) for x in vl]
+        # vl = [Vert(attrib_type(x)) for x in vl]
         vr = [tuple(vl[x] for x in y) for y in fi]
         hr = [tuple(vl[x] for x in y) for y in hi]
 
@@ -149,7 +148,7 @@ class BlindHalfEdges(Generic[TVert, TEdge, TFace]):
         for face_verts in vr:
             mesh.edges.update(mesh._create_face_edges(face_verts, Face()))
         for face_verts in hr:
-            mesh.edges.update(mesh._create_face_edges(face_verts, mesh.hole()))
+            mesh.edges.update(mesh._create_face_edges(face_verts, Face(__is_hole=True)))
         mesh._find_pairs()
         mesh._infer_holes()
         return mesh

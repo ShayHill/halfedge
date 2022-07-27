@@ -7,30 +7,28 @@ created: 170204 14:22:23
 import itertools
 import random
 from keyword import iskeyword
-from operator import attrgetter
-from typing import Any, Callable, Dict
+from typing import Any, Dict
 
 import pytest
 
 # noinspection PyProtectedMember,PyProtectedMember
-from .conftest import compare_circular, compare_circular_2, get_canonical_mesh
+from .conftest import get_canonical_mesh
+from ..halfedge.element_attributes import IncompatibleAttributeBase, \
+    NumericAttributeBase
 from ..halfedge.half_edge_elements import (
-    Edge,
-    Face,
     ManifoldMeshError,
-    Vert,
     MeshElementBase,
     _function_lap,
 )
-from ..halfedge.element_attributes import IncompatibleAttributeBase, NumericAttributeBase
 from ..halfedge.half_edge_querries import StaticHalfEdges
-from ..halfedge.constructors import BlindHalfEdges
-
 
 alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 identifiers = (
     "".join(random.choice(alphabet) for _ in range(10)) for _ in itertools.count()
 )
+
+class Coordinate(IncompatibleAttributeBase):
+    pass
 
 
 def valid_identifier():
@@ -149,14 +147,14 @@ class TestHalfEdges:
         for mesh, key in ((he_grid, "grid"), (he_cube, "cube")):
             input_vl, input_vi = meshes_vlvi[key + "_vl"], meshes_vlvi[key + "_vi"]
             expect = get_canonical_mesh(input_vl, input_vi)
-            result = get_canonical_mesh([x.get_attrib(IncompatibleAttributeBase) for x in mesh.vl], mesh.fi)
+            result = get_canonical_mesh([x.get_attrib(Coordinate) for x in mesh.vl], mesh.fi)
             assert expect == result
 
     def test_hi(self, meshes_vlvi: Dict[str, Any], he_grid) -> None:
         """Convert unaltered mesh holes back to input holes."""
         input_vl, input_hi = meshes_vlvi["grid_vl"], meshes_vlvi["grid_hi"]
         expect = get_canonical_mesh(input_vl, input_hi)
-        result = get_canonical_mesh([x.get_attrib(IncompatibleAttributeBase) for x in he_grid.vl], he_grid.hi)
+        result = get_canonical_mesh([x.get_attrib(Coordinate) for x in he_grid.vl], he_grid.hi)
         assert expect == result
 
 
