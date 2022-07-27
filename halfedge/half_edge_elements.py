@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # _*_ coding: utf-8 _*_
-# Last modified: 220727 06:19:07
+# Last modified: 220727 11:43:41
 """A half-edges data container with view methods.
 
 A simple container for a list of half edges. Provides lookups and a serial
@@ -37,7 +37,17 @@ from contextlib import suppress
 from itertools import count
 from typing import Any, Callable, Dict, Generic, List, Optional, Set, Type, TypeVar
 
-from .element_attributes import ElemAttribBase, find_optional_arg_type
+from .element_attributes import (
+    ElemAttribBase,
+    find_optional_arg_type,
+    ContagionAttributeBase,
+)
+
+
+class IsHole(ContagionAttributeBase):
+    """Flag a Face instance as a hole"""
+
+    pass
 
 
 class ManifoldMeshError(ValueError):
@@ -419,13 +429,16 @@ class Face(MeshElementBase[TVert, TEdge, TFace]):
 
     _pointers: Set[str] = {"_edge", "_Face__is_hole"}
 
+    # TODO: remove this factory stuff and see if everything still works
     @classmethod
     def factory(cls: Type[TFace]) -> TFace:
         return cls()
 
     def __init__(self, *args, **kwargs) -> None:
-        self.__is_hole = kwargs.pop("__is_hole", False)
+        if kwargs.pop("__is_hole", False):
+            args += (IsHole(),)
         super().__init__(*args, **kwargs)
+        breakpoint()
 
     @property
     def edge(self) -> TEdge:
@@ -446,7 +459,7 @@ class Face(MeshElementBase[TVert, TEdge, TFace]):
         "hole-ness" is assigned at instance creation by passing ``__is_hole=True`` to
         ``__init__``
         """
-        return self.__is_hole
+        return hasattr(self, 'IsHole')
 
     @property
     def edges(self) -> List[TEdge]:

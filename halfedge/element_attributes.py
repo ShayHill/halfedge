@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# last modified: 220624 11:01:55
+# last modified: 220727 11:16:56
 """Attribute values that know how to merge with each other.
 
 As a mesh is transformed, Verts, Edges, and Faces will be split or combined with each
@@ -29,9 +29,10 @@ element property, even if the behavior is the same.
 """
 
 from __future__ import annotations
-from abc import abstractmethod, ABC, abstractclassmethod
+
+from abc import ABC, abstractmethod
 from contextlib import suppress
-from typing import Generic, Iterable, Optional, Protocol, TypeVar, TYPE_CHECKING, Type
+from typing import TYPE_CHECKING, Generic, Optional, Protocol, Type, TypeVar, cast
 
 if TYPE_CHECKING:
     from .half_edge_elements import MeshElementBase
@@ -86,7 +87,7 @@ class ElemAttribBase(ABC, Generic[_TAttribValue]):
     def __init__(
         self,
         value: Optional[_TAttribValue] = None,
-        element: Optional[MeshElementBase] = None
+        element: Optional[MeshElementBase] = None,
     ) -> None:
         self._value = value
         self.element = element
@@ -99,7 +100,8 @@ class ElemAttribBase(ABC, Generic[_TAttribValue]):
                 raise TypeError(f"no value set and failed to infer from {self.element}")
         return self._value
 
-    @abstractclassmethod
+    @classmethod
+    @abstractmethod
     def merged(
         cls: Type[_TElemAttrib], *merge_from: Optional[_TElemAttrib]
     ) -> Optional[_TElemAttrib]:
@@ -122,6 +124,35 @@ class ElemAttribBase(ABC, Generic[_TAttribValue]):
         area of a triangle, but would fail if two triangles were merged into a
         square.
         """
+
+
+class ContagionAttributeBase(ElemAttribBase[_TSupportsEqual]):
+    """Spread value when combining with anything.
+
+    This is for element properties like 'IsHole' that are always passed when combining
+    elements. The value of the attribute is always True. If any element in a group of
+    to-be-merged elements has a ContagionAttributeBase attribute, then the merged
+    element will have that attribute.
+    """
+
+    def __init__(self, value=None, element=None) -> None:
+        super().__init__(cast("_TSupportsEqual", True), element)
+
+    @classmethod
+    def merged(cls, *merge_from):
+        """If any element has a ContagionAttributeBase attribute, return a new
+        instance with that attribute. Otherwise None.
+        """
+        with suppress(AttributeError):
+            if any(getattr(x, "value", None) for x in merge_from):
+                return cls()
+        return None
+
+    def _infer_value(self):
+        raise RuntimeError(
+            "This will only be called if self._value is None, "
+            "which should not happen."
+        )
 
 
 class IncompatibleAttributeBase(ElemAttribBase[_TSupportsEqual]):

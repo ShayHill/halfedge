@@ -343,15 +343,8 @@ class HalfEdges(StaticHalfEdges):
         edge_face_edges = set(edge.face_edges)
         pair_face_edges = set(pair.face_edges)
 
-        # # make sure orig and dest do not point to this edge (if there's another option)
-        # edge.next.orig = edge.next.orig
-        # pair.next.orig = pair.next.orig
-
-        # set all faces equal to new face
-        if not pair.face.is_hole:
-            new_face = Face().fill_from(*{edge.face, pair.face})
-        else:
-            new_face = Face(__is_hole=True).fill_from(*{edge.face, pair.face})
+        # point all edges to new face
+        new_face: Face = Face().fill_from(*{edge.face, pair.face})
         for edge_ in (edge_face_edges | pair_face_edges) - {edge, pair}:
             edge_.face = new_face
 
@@ -422,12 +415,8 @@ class HalfEdges(StaticHalfEdges):
         for edge in peninsulas:
             face = self.remove_edge(edge, **face_kwargs)
         try:
-            # remove face edges, not hole edges, so holes will fill faces.
             for edge in true_edges:  # vert.edges:
-                if edge.face.is_hole:
-                    face = self.remove_edge(edge.pair, **face_kwargs)
-                else:
-                    face = self.remove_edge(edge, **face_kwargs)
+                face = self.remove_edge(edge)
         except ManifoldMeshError as exc:
             raise UnrecoverableManifoldMeshError(str(exc))
         return face
