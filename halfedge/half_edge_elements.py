@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # _*_ coding: utf-8 _*_
-# Last modified: 220727 11:43:41
+# Last modified: 220727 12:40:10
 """A half-edges data container with view methods.
 
 A simple container for a list of half edges. Provides lookups and a serial
@@ -46,7 +46,6 @@ from .element_attributes import (
 
 class IsHole(ContagionAttributeBase):
     """Flag a Face instance as a hole"""
-
 
 
 class ManifoldMeshError(ValueError):
@@ -98,20 +97,6 @@ def get_dict_intersection(*dicts: Dict) -> Dict:
                 intersection[key] = dicts[0][key]
     return intersection
 
-
-def merge_attribs_dicts(
-    element: MeshElementBase, *attribs_dicts: Dict[str, ElemAttribBase]
-) -> Dict[str, ElemAttribBase]:
-    keys = set.union(*(set(x) for x in attribs_dicts))
-    for key in keys:
-        attrib_per_dict = [x.get(key) for x in attribs_dicts]
-        type_ = find_optional_arg_type(attrib_per_dict)
-        with suppress(TypeError):
-            attrib = type_(None, element, *attrib_per_dict)
-            merged[type(attrib).__name__] = attrib
-    return merged
-
-
 _T = TypeVar("_T")
 TVert = TypeVar("TVert", bound="Vert")
 TEdge = TypeVar("TEdge", bound="Edge")
@@ -129,6 +114,7 @@ def all_is(*args: Any) -> bool:
 
 class MeshElementBase(Generic[TVert, TEdge, TFace]):
     _sn_generator = count()
+    _pointers: set[str] = set()
 
     def __init__(
         self,
@@ -142,7 +128,7 @@ class MeshElementBase(Generic[TVert, TEdge, TFace]):
         :param pointers: pointers to other mesh elements
             (per typical HalfEdge structure)
 
-        This class does will not have pointers. Descendent classes will, and it is
+        This class does not have pointers. Descendent classes will, and it is
         critical that each have a setter and each setter cache a value as _pointer
         (e.g., _vert, _pair, _face, _next).
         """
@@ -159,11 +145,17 @@ class MeshElementBase(Generic[TVert, TEdge, TFace]):
         This is here to help refactoring, but isn't necessary or necessarily
         Pythonic. Basically, you can only set public attributes which are defined in
         init or have setters.
+
+        I started off allowing element attributes as simple properties, so I had a
+        lot of tests with code like `edge_instance.color = "purple"`. Overloading
+        setattr this way allowed me to find those quickly. I'm going to leave this in
+        for now because it prevents typos and it will help me remember later on that
+        I cannot set ElemAttribBase properties with `edge_instance.something =
+        ElemAttribBase_instance`.
         """
         allow = key == "sn"
-        allow = allow or key.startswith("_")
-        allow = allow or key in self.__dict__
-        allow = allow or key in dir(self)
+        allow = allow or key in self._pointers
+        allow = allow or key.lstrip("_") in self._pointers
         allow = allow or isinstance(value, ElemAttribBase)
         if allow:
             super().__setattr__(key, value)
@@ -182,11 +174,11 @@ class MeshElementBase(Generic[TVert, TEdge, TFace]):
                 if isinstance(getattr(element, key), ElemAttribBase):
                     self.maybe_set_attrib(type(getattr(element, key)).merged(*vals))
                     continue
-                if all_is(*vals):  # will have to be '_something'
+                if all_is(*vals):  # will have be something in _pointers
                     setattr(self, key[1:], vals[0])
         return self
 
-    def set_attrib(self, *attribs: ElemAttribBase) -> None:
+    def set_attrib(self: _TMeshElem, *attribs: ElemAttribBase) -> _TMeshElem:
         """Set attribute with an ElemAttribBase instance.
 
         type(attrib).__name__ : attrib
@@ -196,7 +188,7 @@ class MeshElementBase(Generic[TVert, TEdge, TFace]):
         """
         for attrib in attribs:
             attrib.element = self
-            setattr(self, type(attrib).__name__, attrib)
+            self.__dict__[type(attrib).__name__] = attrib
         return self
 
     def maybe_set_attrib(self, *attribs: Optional[ElemAttribBase]) -> None:
@@ -251,6 +243,8 @@ class Vert(MeshElementBase[TVert, TEdge, TFace]):
     required attributes
     :edge: pointer to one edge originating at vert
     """
+
+    _pointers = {"sn", "edge", "_edge"}
 
     def __init__(self, *attributes: ElemAttribBase, edge: Optional[Edge] = None):
         super().__init__(*attributes, edge=edge)
@@ -311,7 +305,7 @@ class Edge(MeshElementBase[TVert, TEdge, TFace]):
     :next: pointer to next edge along face
     """
 
-    _pointers: Set[str] = {"_orig", "_pair", "_face", "_next", "prev"}
+    _pointers = {"sn", "orig", "pair", "face", "next", "prev"}
 
     @property
     def orig(self) -> TVert:
@@ -426,18 +420,15 @@ class Face(MeshElementBase[TVert, TEdge, TFace]):
     :edge: pointer to one edge on the face
     """
 
-    _pointers: Set[str] = {"_edge", "_Faceis_hole"}
+    _pointers = {"sn", "edge"}
 
-    # TODO: remove this factory stuff and see if everything still works
-    @classmethod
-    def factory(cls: Type[TFace]) -> TFace:
-        return cls()
-
-    def __init__(self, *args, edge: Optional[Edge] = None, is_hole: bool = False) -> None:
+    def __init__(
+        self, *args, edge: Optional[Edge] = None, is_hole: bool = False
+    ) -> None:
         if is_hole:
             args += (IsHole(),)
         if isinstance(edge, Edge):
-            kwargs = {'edge': edge}
+            kwargs = {"edge": edge}
         else:
             kwargs = {}
         super().__init__(*args, **kwargs)
@@ -461,7 +452,7 @@ class Face(MeshElementBase[TVert, TEdge, TFace]):
         "hole-ness" is assigned at instance creation by passing ``is_hole=True`` to
         ``__init__``
         """
-        return hasattr(self, 'IsHole')
+        return hasattr(self, "IsHole")
 
     @property
     def edges(self) -> List[TEdge]:

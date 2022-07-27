@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # _*_ coding: utf-8 _*_
-# last modified: 220611 13:12:11
+# last modified: 220727 12:33:38
 """Create HalfEdges instances.
 
 Nothing in this module will ever try to "match" Verts by their coordinate values. The
