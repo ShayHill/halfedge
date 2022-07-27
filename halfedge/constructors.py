@@ -20,32 +20,24 @@ then passing that raw data to mesh_from_vr would create a mesh with 6 faces and
 
 from __future__ import annotations
 
-from typing import Any, Generic, Iterable, List, Optional, Set, Tuple, Type, TypeVar, Sequence
+from typing import Iterable, List, Optional, Set, Tuple, Type, TypeVar
 
-from .half_edge_elements import ManifoldMeshError, TEdge, TFace, TVert, Vert, Edge, Face
-from .element_attributes import ElemAttribBase, IncompatibleAttributeBase
+from .half_edge_elements import Edge, Face, ManifoldMeshError, Vert
 
 _TBlindHalfEdges = TypeVar("_TBlindHalfEdges", bound="BlindHalfEdges")
 
 
-class BlindHalfEdges(Generic[TVert, TEdge, TFace]):
-    Vert: Type[TVert]
-    Edge: Type[TEdge]
-    Face: Type[TFace]
+class BlindHalfEdges:
 
-    def __init__(self, edges: Optional[Set[TEdge]] = None) -> None:
+    def __init__(self, edges: Optional[Set[Edge]] = None) -> None:
         if edges is None:
-            self.edges: Set[TEdge] = set()
+            self.edges: Set[Edge] = set()
         else:
             self.edges = edges
 
-    def vert(self, *args, **kwargs) -> TVert:
-        return self.Vert.factory(*args, **kwargs)
-
-
     def _create_face_edges(
-        self, face_verts: Iterable[TVert], face: TFace
-    ) -> List[TEdge]:
+        self, face_verts: Iterable[Vert], face: Face
+    ) -> List[Edge]:
         """Create edges around a face defined by vert indices."""
         new_edges = [Edge(orig=vert, face=face) for vert in face_verts]
         for idx, edge in enumerate(new_edges):
@@ -102,11 +94,11 @@ class BlindHalfEdges(Generic[TVert, TEdge, TFace]):
 
     @classmethod
     def from_vlvi(
-        cls: Type[_TBlindHalfEdges],
+        cls,
         vl: List[Vert],
         fi: Set[Tuple[int, ...]],
         hi: Optional[Set[Tuple[int, ...]]] = None,
-    ) -> _TBlindHalfEdges:
+    ) -> BlindHalfEdges:
         """A set of half edges from a vertex list and vertex index.
 
         :param vl: (vertex list) a seq of vertices
@@ -152,29 +144,3 @@ class BlindHalfEdges(Generic[TVert, TEdge, TFace]):
         mesh._find_pairs()
         mesh._infer_holes()
         return mesh
-
-
-# TODO: remove below inheritance type exploration
-
-TV2 = TypeVar("TV2", bound="V2")
-TE2 = TypeVar("TE2", bound="E2")
-TF2 = TypeVar("TF2", bound="F2")
-
-
-class V2(Vert[TV2, TE2, TF2]):
-    def new_method(self):
-        return self
-
-
-class E2(Edge[TV2, TE2, TF2]):
-    def new_method(self):
-        return self
-
-
-class F2(Face[TV2, TE2, TF2]):
-    pass
-
-
-class BE2(BlindHalfEdges[TV2, TE2, TF2]):
-    def new_method(self) -> TE2:
-        return next(iter(self.edges)).new_method()
