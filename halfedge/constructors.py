@@ -20,11 +20,9 @@ then passing that raw data to mesh_from_vr would create a mesh with 6 faces and
 
 from __future__ import annotations
 
-from typing import Iterable, List, Optional, Set, Tuple, Type, TypeVar
+from typing import Iterable, List, Optional, Set, Tuple
 
 from .half_edge_elements import Edge, Face, ManifoldMeshError, Vert
-
-_TBlindHalfEdges = TypeVar("_TBlindHalfEdges", bound="BlindHalfEdges")
 
 
 class BlindHalfEdges:
@@ -57,8 +55,6 @@ class BlindHalfEdges:
         """
         Fill in missing hole faces where unambiguous.
 
-        :param edges: Edge instances
-        :returns: input edges plus hole edges
         :raises: Manifold mesh error if holes touch at corners. If this happens, holes
         are ambiguous.
 

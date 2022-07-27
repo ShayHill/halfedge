@@ -359,7 +359,7 @@ class HalfEdges(StaticHalfEdges):
         """
         Remove (chains of) peninsula edges from around a vert.
 
-        If peninsulas (edge and pair share the same face
+        If peninsula's (edge and pair share the same face
         """
         # TODO move function_lap into a public place to identify these
         return vert

@@ -54,20 +54,20 @@ class ManifoldMeshError(ValueError):
     require valid, manifold mesh data to infer.
     """
 
-
-def _all_equal(*args: Any):
-    """
-    Are all arguments equal, including type?
-
-    :param args: will work with items or sequences
-    """
-    if len({type(x) for x in args}) > 1:
-        return False
-    with suppress(ValueError, TypeError):
-        return all(x == args[0] for x in args[1:])
-    with suppress(ValueError, TypeError):
-        return all(_all_equal(*x) for x in zip(args))
-    raise NotImplementedError(f"module does not support equality test between {args}")
+# TODO: Delete below if tests pass
+# def _all_equal(*args: Any):
+#     """
+#     Are all arguments equal, including type?
+#
+#     :param args: will work with items or sequences
+#     """
+#     if len({type(x) for x in args}) > 1:
+#         return False
+#     with suppress(ValueError, TypeError):
+#         return all(x == args[0] for x in args[1:])
+#     with suppress(ValueError, TypeError):
+#         return all(_all_equal(*x) for x in zip(args))
+#     raise NotImplementedError(f"module does not support equality test between {args}")
 
 
 def _all_is(*args: Any) -> bool:

@@ -6,11 +6,43 @@ A "triangle" mesh in 2D will never be entirely triangular (and also manifold). T
 
 Holes are useful for more than just 2D mesh boundaries, you can explicitly create holes (`Face` instances with an as `is_hole == True` property to maintain manifold mesh conditions in many circumstances. The constructor `HalfEdges.from_vlvi()` will try to insert hole faces to maintain manifold conditions.)
 
-Four main types: Vert, Edge, Face, and HalfEdges. Vert and Face instances have `*.faces` properties which will return all adjacent faces. These properties will *not* return faces flagged as holes.
+Four main types: Vert, Edge, Face, and HalfEdges. Vert and Face instances have `*.faces` properties which will return all adjacent faces. These properties will *not* return faces flagged as holes. The holes are there to keep things simple and manifold, but otherwise stay out of your way.
 
-Vert and Face instances have
-Faces flagged as holes will not appear under querries `vert.faces` or `mesh.faces`.
-`edge.face` may show a hole or face, but `vert.faces` and `mesh.faces` will not list holes. In these cases, holes should be safe to ignore. 
+The `is_hole` `__init__` kwarg is shorthand for
+
+    class IsHole(ContagionAttributeBase):
+        pass
+
+    vert = Vert()
+    vert.add_attrib(IsHole())
+
+The `is_hole` property getter is shorthand for
+
+    vert.get_attrib(IsHole())
+
+More on `AttributeBase` classes below and in `element_attributes.py`.
+
+## Element Attributes
+
+By halfedge convention, each Vert instance holds a pointer to one Edge instance, each Face instance holds a pointer to one Edge instance, and each Edge instance holds four pointers (orig, pair, face, next). These describe the geometry of a mesh, but there may be other attributes you would like to assign to these instances. For example, each Face instance might have a color or each Vert instance an (x, y) location.
+
+These cannot be stored as simple attributes (e.g., `face.color`), because it wouldn't be clear what to do when two faces were combined--by, for instance, deleting a shared edge. Somewhere, you have to define a rule for how different colored faces merge or how coordinate locations combine when merging verts. So, properties like color must be defined here as `ElemAttribBase` instances. To create an attribute, inherit from `ElemAttribBase` or one of its children defined in `element_attributes.py`. Define `merged` and `_infer_value` methods to determine how (for instance, face color) will behave when merged or cached.
+
+You cannot assign these with `instance.attribute`. Instead assign with `vert.add_attrib(elem_attrib_instance)`. This will add the attribute to the Vert instance dict. Retrieve the value with `vert_instance.get_attrib(elem_attrib_class)`. Everything will be keyed to the class name, so you will need a new ElemAttribBase descendant for each attribute type.
+
+    class Coordinate(IncompatibleAttributeBase):
+        pass
+
+    vert = Vert()
+    vert.add_attrib(Coordinate((1, 2)))
+    assert vert.get_attrib(Coordinate) == (1, 2)
+
+These element attributes can also be passed at `__init__`
+
+    vert = Vert(Coordinate(1, 2))
+    assert vert.get_attrib(Coordinate) == (1, 2)
+
+## You Should Know
 
 A proper half-edge data structure stores:
 
