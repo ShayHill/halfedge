@@ -33,11 +33,12 @@ This module is all the base elements (Vert, Edge, and Face).
 
 from __future__ import annotations
 
-from contextlib import suppress
 from itertools import count
 from typing import Any, Callable, List, Optional, Type, TypeVar
 
 from .element_attributes import ContagionAttributeBase, ElemAttribBase
+
+_TMeshElem = TypeVar("_TMeshElem", bound="MeshElementBase")
 
 
 class IsHole(ContagionAttributeBase):
@@ -53,21 +54,6 @@ class ManifoldMeshError(ValueError):
     so you might catch this one and continue in some cases, but many operations will
     require valid, manifold mesh data to infer.
     """
-
-# TODO: Delete below if tests pass
-# def _all_equal(*args: Any):
-#     """
-#     Are all arguments equal, including type?
-#
-#     :param args: will work with items or sequences
-#     """
-#     if len({type(x) for x in args}) > 1:
-#         return False
-#     with suppress(ValueError, TypeError):
-#         return all(x == args[0] for x in args[1:])
-#     with suppress(ValueError, TypeError):
-#         return all(_all_equal(*x) for x in zip(args))
-#     raise NotImplementedError(f"module does not support equality test between {args}")
 
 
 def _all_is(*args: Any) -> bool:
@@ -146,7 +132,7 @@ class MeshElementBase:
 
         type(attrib).__name__ : attrib
 
-        :param attrib: an ElemAttribBase instance, presumable with a None element
+        :param attribs: ElemAttribBase instances, presumably with a None element
         attribute.
         """
         for attrib in attribs:
@@ -154,7 +140,7 @@ class MeshElementBase:
             self.__dict__[type(attrib).__name__] = attrib
         return self
 
-    def maybe_set_attrib(self, *attribs: Optional[ElemAttribBase]) -> None:
+    def maybe_set_attrib(self, *attribs: None | ElemAttribBase) -> None:
         """Set attribute if attrib is an ElemAttribBase. Pass silently if None"""
         self.set_attrib(*[x for x in attribs if isinstance(x, ElemAttribBase)])
 
