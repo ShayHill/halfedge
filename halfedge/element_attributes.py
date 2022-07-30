@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# last modified: 220727 11:16:56
+# last modified: 220730 11:28:27
 """Attribute values that know how to merge with each other.
 
 As a mesh is transformed, Verts, Edges, and Faces will be split or combined with each
@@ -90,7 +90,7 @@ class ElemAttribBase(ABC, Generic[_TAttribValue]):
         element: Optional[MeshElementBase] = None,
     ) -> None:
         self._value = value
-        self.element = element
+        self._element = element
 
     @property
     def value(self) -> _TAttribValue:
@@ -99,6 +99,15 @@ class ElemAttribBase(ABC, Generic[_TAttribValue]):
             if self._value is None:
                 raise TypeError(f"no value set and failed to infer from {self.element}")
         return self._value
+
+    @property
+    def element(self) -> MeshElementBase:
+        if self._element is None:
+            raise AttributeError(
+                f"No 'element' attribute set for '{type(self).__name}'"
+            )
+        else:
+            return self._element
 
     @classmethod
     @abstractmethod

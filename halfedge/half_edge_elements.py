@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # _*_ coding: utf-8 _*_
-# Last modified: 220727 12:51:28
+# Last modified: 220730 11:26:52
 """A half-edges data container with view methods.
 
 A simple container for a list of half edges. Provides lookups and a serial
@@ -34,7 +34,7 @@ This module is all the base elements (Vert, Edge, and Face).
 from __future__ import annotations
 
 from itertools import count
-from typing import Any, Callable, List, Optional, Type, TypeVar
+from typing import Any, Callable, List, Optional, Type, TypeVar, overload, Literal
 
 from .element_attributes import ContagionAttributeBase, ElemAttribBase
 
@@ -144,15 +144,37 @@ class MeshElementBase:
         """Set attribute if attrib is an ElemAttribBase. Pass silently if None"""
         self.set_attrib(*[x for x in attribs if isinstance(x, ElemAttribBase)])
 
-    def get_attrib(self, type_: Type[ElemAttribBase]) -> Optional[Any]:
+    @overload
+    def get_attrib(
+        self, type_: Type[ElemAttribBase], allow_none: Literal[True]
+    ) -> Optional[Any]:
+        ...
+
+    @overload
+    def get_attrib(self, type_: Type[ElemAttribBase], allow_none: Any) -> Any:
+        ...
+
+    def get_attrib(self, type_, allow_none=True):
         """Try to get an attribute value, None if attrib is not set.
 
         :param type_: type of ElemAttribBase to seek in the attrib dictionary. This
             takes a type instead of a string to eliminate any possibility of getting
             a None value just because an attrib dictionary key was mistyped.
+        :param allow_none: this method will, by default, silenty return none if the
+            MeshElementBase instance does not have`type_.__name__` in its dict. This
+            simplifies setting something like EdgeHardness on some edges without
+            having to set EdgeHardness on every edge in the mess. Edges without
+            EdgeHardness `elem.get_attrib(EdgeHardness) == None` can be handled in
+            the `EdgeHardness.merged` method. The optional argument `allow_none` will
+            raise an AttributeError if the attribute is not found in the element
+            __dict__. This is solely to facilitate type narrowing.
         """
         if hasattr(self, type_.__name__):
             return getattr(self, type_.__name__).value
+        if allow_none is not None:
+            raise AttributeError(
+                f"'{type(self).__name__}' has no ElemAttribBase '{type_.__name__}'"
+            )
 
     def __lt__(self: _TMeshElem, other: _TMeshElem) -> bool:
         """Sort by id
