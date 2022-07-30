@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# last modified: 220730 11:28:27
+# last modified: 220730 12:47:25
 """Attribute values that know how to merge with each other.
 
 As a mesh is transformed, Verts, Edges, and Faces will be split or combined with each
@@ -30,9 +30,8 @@ element property, even if the behavior is the same.
 
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
 from contextlib import suppress
-from typing import TYPE_CHECKING, Generic, Optional, Protocol, Type, TypeVar, cast
+from typing import Generic, Optional, Protocol, TYPE_CHECKING, Type, TypeVar, cast
 
 if TYPE_CHECKING:
     from .half_edge_elements import MeshElementBase
@@ -55,72 +54,67 @@ _TSupportsAverage = TypeVar("_TSupportsAverage", bound=_SupportsAverage)
 _TSupportsEqual = TypeVar("_TSupportsEqual", bound=_SupportsEqual)
 _TAttribValue = TypeVar("_TAttribValue")
 _TElemAttrib = TypeVar("_TElemAttrib", bound="ElemAttribBase")
-_T = TypeVar("_T")
 
 
-def find_optional_arg_type(*args: Optional[_T]) -> Type[_T]:
-    """Find the type of non-None optional args
+class ElemAttribBase(Generic[_TAttribValue]):
+    """Base class for element attributes.
 
-    :param args: either None or some number of args of the same type
-    :return: type of non-None args if all are the same type
+    MeshElementBase has methods set_attrib and get_attrib that will store
+    ElemAttribBase instances in the MeshElemenBase __dict__. The ElemAttribBase class
+    defines how these attributes behave when mesh elements are merged and allows a
+    value (e.g., edge length) to be inferred from the ElemAttribBase.element property
+    when and if needed, allowing us to cache (and potentially never access) slow
+    attributes.
 
-    :raises: Value error if all args are None
-    :raises: Value error if non-None args are of different types
-
-    If any optional args are given, assert that they are of the same type and return
-    that type. The purpose is to identify the type of ElemAttribBase values pulled
-    from multiple dictionaries with x.get(key).
+    Do not overload `__init__` or `value`. For the most part, treat as an ABC with
+    abstract methods `merged` and `_infer_value`--although the base methods are
+    marginally useful and instructive, so you will not need to overload both in every
+    case.
     """
-    iter_args = iter(args)
-    try:
-        arg_type = next(type(x) for x in iter_args if x is not None)
-    except StopIteration:
-        raise ValueError("no non-None argument in args")
-    if any(arg_type != type(x) for x in iter_args if x is not None):
-        raise ValueError("non-None argument types do not match")
-    return arg_type
 
-
-class ElemAttribBase(ABC, Generic[_TAttribValue]):
-    __slots__ = ("_value",)
+    __slots__ = ("_value", "element")
 
     def __init__(
         self,
         value: Optional[_TAttribValue] = None,
         element: Optional[MeshElementBase] = None,
     ) -> None:
-        self._value = value
-        self._element = element
+        self.element: MeshElementBase
+        self._value: _TAttribValue
+        if value is not None:
+            self._value = value
+        if element is not None:
+            self.element = element
 
     @property
     def value(self) -> _TAttribValue:
-        if self._value is None:
-            self._value = self._infer_value()
-            if self._value is None:
+        """Return value if set, else try to infer a value"""
+        if not hasattr(self, "_value"):
+            value = self._infer_value()
+            if value is None:
                 raise TypeError(f"no value set and failed to infer from {self.element}")
+            else:
+                self._value = value
         return self._value
 
-    @property
-    def element(self) -> MeshElementBase:
-        if self._element is None:
-            raise AttributeError(
-                f"No 'element' attribute set for '{type(self).__name}'"
-            )
-        else:
-            return self._element
-
     @classmethod
-    @abstractmethod
     def merged(
         cls: Type[_TElemAttrib], *merge_from: Optional[_TElemAttrib]
     ) -> Optional[_TElemAttrib]:
         """Get value of self from self._merge_from
 
         Use merge_from values to determine a value. If no value can be determined,
-        return None.
-        """
+        return None. No element attribute will be set for a None return value.
+        ElemAttribBase attributes are assumed None if not defined and are never defined
+        if their value is None.
 
-    @abstractmethod
+        This base method will not merge attributes, which is desirable in some cases.
+        For example, a triangle circumcenter that will be meaningless when the
+        triangle is merged.
+        """
+        _ = merge_from
+        return None
+
     def _infer_value(self) -> Optional[_TAttribValue]:
         """Get value of self from self._element
 
@@ -128,11 +122,32 @@ class ElemAttribBase(ABC, Generic[_TAttribValue]):
         determined, return None.
 
         The purpose is to allow lazy attributes like edge norm and face area. Use
-        caution, however, these need to be calculated before merging if the method
+        caution, however. These need to be calculated before merging since the method
         may not support the new shape. For instance, this method might calculate the
         area of a triangle, but would fail if two triangles were merged into a
-        square.
+        square. To keep this safe, the _value is colculated *before* any merging. In
+        the "area of a triangle" example,
+
+            * The area calculation is deferred until the first merge.
+            * At the first merge, the area of each merged triangle is calculated. The
+              implication here is that calculation *cannot* be deferred till after a
+              merge.
+            * the merged method areas of the merged triangles at the first and
+              subsequent mergers, so further triangle area calculations (which
+              wouldn't work on the merged shapes anyway) are not required.
+
+        If you infer a value, cache it by setting self._value.
+
+        If you do not intend to infer values, raise an exception. This exception
+        should occur *before* an AttributeError is raised for a potentially missing
+        element attribute. It should be clear that _infer_value failed because there
+        is no provision for inferring this ElemAttribBase.value, *not* because the
+        user failed to set the ElemAttribBase property attribute.
         """
+        raise NotImplementedError(
+            f"'{type(self).__name__}' has no provision "
+            "for inferring a value from 'self.element'"
+        )
 
 
 class ContagionAttributeBase(ElemAttribBase[_TSupportsEqual]):
