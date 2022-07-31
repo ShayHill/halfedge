@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # _*_ coding: utf-8 _*_
-# Last modified: 220730 11:26:52
+# Last modified: 220730 22:35:28
 """A half-edges data container with view methods.
 
 A simple container for a list of half edges. Provides lookups and a serial
@@ -39,6 +39,7 @@ from typing import Any, Callable, List, Optional, Type, TypeVar, overload, Liter
 from .element_attributes import ContagionAttributeBase, ElemAttribBase
 
 _TMeshElem = TypeVar("_TMeshElem", bound="MeshElementBase")
+_T = TypeVar("_T")
 
 
 class IsHole(ContagionAttributeBase):
@@ -145,13 +146,17 @@ class MeshElementBase:
         self.set_attrib(*[x for x in attribs if isinstance(x, ElemAttribBase)])
 
     @overload
-    def get_attrib(
-        self, type_: Type[ElemAttribBase], allow_none: Literal[True]
-    ) -> Optional[Any]:
+    def get_attrib(self, type_: Type[ElemAttribBase[_T]]) -> Optional[_T]:
         ...
 
     @overload
-    def get_attrib(self, type_: Type[ElemAttribBase], allow_none: Any) -> Any:
+    def get_attrib(
+        self, type_: Type[ElemAttribBase[_T]], allow_none: Literal[True]
+    ) -> Optional[_T]:
+        ...
+
+    @overload
+    def get_attrib(self, type_: Type[ElemAttribBase[_T]], allow_none: Any) -> _T:
         ...
 
     def get_attrib(self, type_, allow_none=True):
@@ -175,6 +180,10 @@ class MeshElementBase:
             raise AttributeError(
                 f"'{type(self).__name__}' has no ElemAttribBase '{type_.__name__}'"
             )
+
+    def strict_get_attrib(self, type_: Type[ElemAttribBase[_T]]) -> _T:
+        """Get attrib that will fail is attrib is not set"""
+        return self.get_attrib(type_, allow_none=False)
 
     def __lt__(self: _TMeshElem, other: _TMeshElem) -> bool:
         """Sort by id
