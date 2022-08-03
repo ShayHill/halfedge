@@ -220,7 +220,7 @@ class HalfEdges(StaticHalfEdges):
         if face is None:
             face = self._infer_face(orig, dest)
 
-        # create a floating edge
+        # create a floating edge. pass attributes later
         edge = Edge()
         edge.pair = Edge(pair=edge, next=edge, prev=edge)
 
@@ -231,34 +231,27 @@ class HalfEdges(StaticHalfEdges):
         if getattr(edge_orig, "edge", None) and edge_dest in edge_orig.neighbors:
             raise ManifoldMeshError("overwriting existing edge")
 
-        if set(face.verts) & {edge_orig, edge_dest} != self.verts & {
-            edge_orig,
-            edge_dest,
-        }:
+        edge_points_in_face = set(face.verts) & {edge_orig, edge_dest}
+        edge_points_in_mesh = set(self.verts) & {edge_orig, edge_dest}
+        if edge_points_in_face != edge_points_in_mesh:
             raise ManifoldMeshError("orig or dest in mesh but not on given face")
 
         if edge_orig == edge_dest:
             raise ManifoldMeshError("orig and dest are the same")
 
-        if not set(face.verts) & {edge_orig, edge_dest} and face in self.faces:
+        if not edge_points_in_face and face in self.faces:
             raise ManifoldMeshError("adding floating edge to existing face")
 
-        # edge.update_references(
-        #     *face_edges, orig=edge_orig, prev=edge_prev, next=pair_next, **edge_kwargs
-        # )
         edge.orig = edge_orig
         edge.prev = edge_prev
         edge.next = pair_next
 
-        # edge.pair.update_references(
-        #     *face_edges, orig=edge_dest, prev=pair_prev, next=edge_next, **edge_kwargs
-        # )
         edge.pair.orig = edge_dest
         edge.pair.prev = pair_prev
         edge.pair.next = edge_next
 
         # if face is not split, new face will be created then immediately written over
-        _update_face_edges(Face().merge_from(face), edge)
+        _update_face_edges(Face().slice_from(face), edge)
         _update_face_edges(face, edge.pair)
 
         edge.merge_from(*[x for x in edge.face_edges if x not in {edge, edge.pair}])
@@ -474,8 +467,8 @@ class HalfEdges(StaticHalfEdges):
         pair_face = edge.pair.face
         for orig, dest in ((edge.dest, new_vert), (new_vert, edge.orig)):
             new_edge = self.insert_edge(orig, dest, edge.face)
-            new_edge.merge_from(edge.pair)
-            new_edge.pair.merge_from(edge)
+            new_edge.slice_from(edge.pair)
+            new_edge.pair.slice_from(edge)
         self.remove_edge(edge)
         _update_face_edges(edge_face, new_edge.pair)
         _update_face_edges(pair_face, new_edge)
