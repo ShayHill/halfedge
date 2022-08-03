@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# last modified: 220730 12:47:25
+# last modified: 220802 16:21:27
 """Attribute values that know how to merge with each other.
 
 As a mesh is transformed, Verts, Edges, and Faces will be split or combined with each
@@ -67,9 +67,9 @@ class ElemAttribBase(Generic[_TAttribValue]):
     attributes.
 
     Do not overload `__init__` or `value`. For the most part, treat as an ABC with
-    abstract methods `merged` and `_infer_value`--although the base methods are
-    marginally useful and instructive, so you will not need to overload both in every
-    case.
+    abstract methods `merge`, `slice`, and `_infer_value`--although the base methods
+    are marginally useful and instructive, so you will not need to overload both in
+    every case.
     """
 
     __slots__ = ("_value", "element")
@@ -98,7 +98,7 @@ class ElemAttribBase(Generic[_TAttribValue]):
         return self._value
 
     @classmethod
-    def merged(
+    def merge(
         cls: Type[_TElemAttrib], *merge_from: Optional[_TElemAttrib]
     ) -> Optional[_TElemAttrib]:
         """Get value of self from self._merge_from
@@ -113,6 +113,24 @@ class ElemAttribBase(Generic[_TAttribValue]):
         triangle is merged.
         """
         _ = merge_from
+        return None
+
+    @classmethod
+    def slice(
+        cls: Type[_TElemAttrib], slice_from: Optional[_TElemAttrib]
+    ) -> Optional[_TElemAttrib]:
+        """Define how attribute will be passed when dividing self.element.
+
+        When an element is divided (face divided by an edge, edge divided by a vert,
+        etc.) or altered, define how, if at all, this attribute will be passed to the
+        altered element or pieces of the divided element. If a face with a color is
+        divided, you might want to give the divided pieces the same color. If an
+        attribute is lazy (e.g., edge norm), you might want to unset _value for each
+        piece of a split edge.
+
+        This base method will not pass an attribute when dividing or altering.
+        """
+        _ = slice_from
         return None
 
     def _infer_value(self) -> Optional[_TAttribValue]:
@@ -163,13 +181,25 @@ class ContagionAttributeBase(ElemAttribBase[_TSupportsEqual]):
         super().__init__(cast("_TSupportsEqual", True), element)
 
     @classmethod
-    def merged(cls, *merge_from):
+    def merge(cls, *merge_from):
         """If any element has a ContagionAttributeBase attribute, return a new
         instance with that attribute. Otherwise None.
         """
         with suppress(AttributeError):
             if any(getattr(x, "value", None) for x in merge_from):
                 return cls()
+        return None
+
+    @classmethod
+    def slice(cls, slice_from):
+        """Copy attribute to slices.
+
+        Holes are defined with IsHole(ContagionAttributeBase), so this will split a
+        non-face hole into two non-face holes and a hole (is_face == True) into two
+        holes.
+        """
+        if getattr(slice_from, "value", None):
+            return cls()
         return None
 
     def _infer_value(self):
@@ -180,10 +210,13 @@ class ContagionAttributeBase(ElemAttribBase[_TSupportsEqual]):
 
 
 class IncompatibleAttributeBase(ElemAttribBase[_TSupportsEqual]):
-    """Keep value when all merge_from values are the same"""
+    """Keep value when all merge_from values are the same
+    
+    This class in intended for flags like IsEdge or Hardness.
+    """
 
     @classmethod
-    def merged(cls, *merge_from):
+    def merge(cls, *merge_from):
         """If all values match and every contributing element has an analog, return
         a new instance with that value. Otherwise None.
         """
@@ -191,6 +224,14 @@ class IncompatibleAttributeBase(ElemAttribBase[_TSupportsEqual]):
             values = [x.value for x in merge_from]  # type: ignore
             if values and all(values[0] == x for x in values[1:]):
                 return cls(values[0], None)
+        return None
+
+    @classmethod
+    def split(cls, split_from):
+        """Pass the value on.
+        """
+        if value := split_from.value:
+            return cls(value)
         return None
 
     def _infer_value(self) -> Optional[_TSupportsEqual]:
@@ -203,7 +244,7 @@ class NumericAttributeBase(ElemAttribBase[_TSupportsAverage]):
     """Average merge_from values"""
 
     @classmethod
-    def merged(cls, *merge_from):
+    def merge(cls, *merge_from):
         """Average values if every contributor has a value. Otherwise None"""
         with suppress(AttributeError):
             values = [x.value for x in merge_from]  # type: ignore

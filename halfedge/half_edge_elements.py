@@ -112,7 +112,7 @@ class MeshElementBase:
             return
         raise AttributeError(f"'{type(self).__name__}' has no attribute '{key}'")
 
-    def fill_from(self: _TMeshElem, *elements: _TMeshElem) -> _TMeshElem:
+    def merge_from(self: _TMeshElem, *elements: _TMeshElem) -> _TMeshElem:
         """
         Fill in missing references from other elements.
         """
@@ -122,10 +122,21 @@ class MeshElementBase:
                 keys_seen.add(key)
                 vals = [getattr(x, key, None) for x in elements]
                 if isinstance(getattr(element, key), ElemAttribBase):
-                    self.maybe_set_attrib(type(getattr(element, key)).merged(*vals))
+                    self.maybe_set_attrib(type(getattr(element, key)).merge(*vals))
                     continue
                 if _all_is(*vals):  # will have be something in _pointers
                     setattr(self, key[1:], vals[0])
+        return self
+
+    def split_from(self: _TMeshElem, element: _TMeshElem) -> _TMeshElem:
+        """
+        Pass attributes when dividing or altering elements.
+
+        Do not pass any pointers. ElemAttribBase instances are passed as defined by
+        their classes.
+        """
+        for key in set(element.__dict__) - set(self.__dict__):
+            self.maybe_set_attrib(getattr(element, key))
         return self
 
     def set_attrib(self: _TMeshElem, *attribs: ElemAttribBase) -> _TMeshElem:

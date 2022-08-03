@@ -50,27 +50,27 @@ class TestElemAttribs:
     def test_incompatible_merge_match(self) -> None:
         """Return a new attribute with same value if all values are equal"""
         attribs = [IncompatibleAttributeBase(7, None) for _ in range(3)]
-        new_attrib = IncompatibleAttributeBase().merged(*attribs)
+        new_attrib = IncompatibleAttributeBase().merge(*attribs)
         assert new_attrib.value == 7
 
     def test_incompatible_merge_mismatch(self) -> None:
         """Return None if all values are not equal"""
         attribs = [IncompatibleAttributeBase(7, None) for _ in range(3)]
         attribs.append(IncompatibleAttributeBase(3))
-        new_attrib = IncompatibleAttributeBase().merged(*attribs)
+        new_attrib = IncompatibleAttributeBase().merge(*attribs)
         assert new_attrib is None
 
     def test_numeric_all_nos(self) -> None:
         """Return a new attribute with same value if all values are equal"""
         attribs = [NumericAttributeBase(x) for x in range(1, 6)]
-        new_attrib = NumericAttributeBase().merged(*attribs)
+        new_attrib = NumericAttributeBase().merge(*attribs)
         assert new_attrib.value == 3
 
     def test_lazy(self) -> None:
         """Given no value, LazyAttrib will try to infer a value from self.element"""
         class LazyAttrib(ElemAttribBase):
             @classmethod
-            def merged(cls, *merge_from):
+            def merge(cls, *merge_from):
                 raise NotImplementedError()
             def _infer_value(self):
                 return self.element.sn
@@ -112,7 +112,7 @@ class TestMeshElementBase:
         elem1 = MeshElementBase(NumericAttributeBase(8), IncompatibleAttributeBase(3))
         elem2 = MeshElementBase(NumericAttributeBase(6), IncompatibleAttributeBase(3))
         elem3 = MeshElementBase(IncompatibleAttributeBase(1))
-        elem3.fill_from(elem1, elem2)
+        elem3.merge_from(elem1, elem2)
         assert elem3.get_attrib(IncompatibleAttributeBase) == 1  # unchanged
         assert elem3.get_attrib(NumericAttributeBase) == 7  # filled
 
@@ -150,7 +150,7 @@ class TestInitVert:
         edge = Edge()
         vert = Vert(edge=edge)
         filler = Vert(edge=Edge())
-        vert.fill_from(filler)
+        vert.merge_from(filler)
         assert vert.edge is edge
 
 
