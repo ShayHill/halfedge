@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Last modified: 211211 08:16:15
+# Last modified: 220803 08:33:17
 """ test halfedge.operations
 
 created: 181121 13:38:46
@@ -19,11 +19,15 @@ from .conftest import get_canonical_mesh
 from ..halfedge.half_edge_elements import Edge, ManifoldMeshError, Vert, Face
 from ..halfedge.half_edge_object import HalfEdges
 from ..halfedge.validations import validate_mesh
-from ..halfedge.element_attributes import IncompatibleAttributeBase, NumericAttributeBase
+from ..halfedge.element_attributes import (
+    IncompatibleAttributeBase,
+    NumericAttributeBase,
+)
 
 
 class NamedAttribute(IncompatibleAttributeBase):
     """For color, flags. etc. to ensure attributes are passed"""
+
 
 class Coordinate(NumericAttributeBase):
     """Hold coordinates when creating a mesh from a list of vertices"""
@@ -62,6 +66,20 @@ class TestInsertEdge:
         assert len(new_edge.face_edges) == 3
         assert len(new_edge.pair.face_edges) == 3
         validate_mesh(mesh)
+
+    @pytest.mark.parametrize("index", range(4))
+    def test_new_edge_inherits_attribs(self, index, mesh_faces) -> None:
+        """If all edges share an attribute, that attribute is merged into new edge"""
+        mesh, face = mesh_faces
+        for edge in face.edges[:2]:
+            edge.set_attrib(NamedAttribute("red"))
+        for edge in face.edges[2:]:
+            edge.set_attrib(NamedAttribute("blue"))
+        new_edge = mesh.insert_edge(face.verts[index], face.verts[index - 2], face)
+        edge_named = ["blue", None, "red", None][index]
+        pair_named = ["red", None, "blue", None][index]
+        assert new_edge.get_attrib(NamedAttribute) == edge_named
+        assert new_edge.pair.get_attrib(NamedAttribute) == pair_named
 
     @pytest.mark.parametrize("index", range(4))
     def test_orig_on_face(self, index, mesh_faces) -> None:
@@ -165,19 +183,19 @@ class TestInsertEdge:
     def test_face_attrs_pass(self, index, mesh_faces) -> None:
         """Pass attributes from face when face is split"""
         mesh, face = mesh_faces
-        face.set_attrib(IncompatibleAttributeBase('orange'))
+        face.set_attrib(IncompatibleAttributeBase("orange"))
         edge = mesh.insert_edge(face.verts[0], face.verts[2])
         assert edge.face.get_attrib(IncompatibleAttributeBase) == "orange"
-        assert edge.pair.face.get_attrib(IncompatibleAttributeBase)== "orange"
+        assert edge.pair.face.get_attrib(IncompatibleAttributeBase) == "orange"
 
     @pytest.mark.parametrize("index", range(4))
     def test_edge_kwargs(self, index, mesh_faces) -> None:
         """Shared face edge attributes pass to new edge"""
         mesh, face = mesh_faces
         for edge in face.edges[:2]:
-            edge.set_attrib(IncompatibleAttributeBase('blue'))
+            edge.set_attrib(IncompatibleAttributeBase("blue"))
         for edge in face.edges[2:]:
-            edge.set_attrib(IncompatibleAttributeBase('red'))
+            edge.set_attrib(IncompatibleAttributeBase("red"))
         edge = mesh.insert_edge(face.verts[0], face.verts[2])
         assert edge.get_attrib(IncompatibleAttributeBase) == "red"
         assert edge.pair.get_attrib(IncompatibleAttributeBase) == "blue"
@@ -188,7 +206,7 @@ class TestInsertVert:
         """Shared face.verts attrs pass to new vert"""
         mesh, face = mesh_faces
         for vert in face.verts:
-            vert.set_attrib(NamedAttribute('purple'))
+            vert.set_attrib(NamedAttribute("purple"))
         new_vert = mesh.insert_vert(face)
         assert new_vert.get_attrib(NamedAttribute) == "purple"  # type: ignore
 
@@ -196,17 +214,17 @@ class TestInsertVert:
         """vert_kwargs assigned to new vert"""
         mesh, face = mesh_faces
         for vert in face.verts:
-            vert.set_attrib(NamedAttribute('purple'))
+            vert.set_attrib(NamedAttribute("purple"))
         new_vert = mesh.insert_vert(face)
-        assert new_vert.get_attrib(NamedAttribute) == 'purple'  # type: ignore
+        assert new_vert.get_attrib(NamedAttribute) == "purple"  # type: ignore
 
 
 class TestRemoveEdge:
     def test_face_attributes_passed(self, mesh_edges) -> None:
         """face attributed inherited"""
         mesh, edge = mesh_edges
-        edge.face.set_attrib (NamedAttribute("brown"))
-        edge.pair.face.set_attrib (NamedAttribute("brown"))
+        edge.face.set_attrib(NamedAttribute("brown"))
+        edge.pair.face.set_attrib(NamedAttribute("brown"))
         new_face = mesh.remove_edge(edge)
         validate_mesh(mesh)
         assert new_face.get_attrib(NamedAttribute) == "brown"
@@ -214,7 +232,7 @@ class TestRemoveEdge:
     def test_face_kwargs_passed(self, mesh_edges) -> None:
         """face_kwargs become attributes"""
         mesh, edge = mesh_edges
-        new_face = mesh.remove_edge(edge).set_attrib(NamedAttribute('green'))
+        new_face = mesh.remove_edge(edge).set_attrib(NamedAttribute("green"))
         assert new_face.get_attrib(NamedAttribute) == "green"
 
     def test_missing_edge(self, he_mesh) -> None:
@@ -363,8 +381,8 @@ class TestSplitEdge:
     def test_vert_attributes_passed_to_new_vert(self, mesh_edges) -> None:
         """New vert inherits common attributes of orig and dest verts."""
         mesh, edge = mesh_edges
-        edge.orig.set_attrib(NamedAttribute('black'))
-        edge.dest.set_attrib(NamedAttribute('black'))
+        edge.orig.set_attrib(NamedAttribute("black"))
+        edge.dest.set_attrib(NamedAttribute("black"))
         new_vert = mesh.split_edge(edge)
         assert new_vert.get_attrib(NamedAttribute) == "black"
 
@@ -400,7 +418,9 @@ class TestFlipEdge:
         vl = [Vert(Coordinate(x)) for x in range(4)]
         vi = {(0, 1, 2), (0, 2, 3)}
         mesh = HalfEdges.from_vlvi(vl, vi)
-        split = next(x for x in mesh.edges if x.orig.valence == 3 and x.pair.orig.valence == 3)
+        split = next(
+            x for x in mesh.edges if x.orig.valence == 3 and x.pair.orig.valence == 3
+        )
         new_edge = mesh.flip_edge(split)
         assert split not in mesh.edges
         assert new_edge.orig.valence == 3
@@ -458,7 +478,9 @@ class TestCollapseEdge:
         vl = [Vert(Coordinate(x)) for x in range(4)]
         mesh = HalfEdges.from_vlvi(vl, {(0, 1, 3), (1, 2, 0, 3)})
         edge = next(
-            x for x in mesh.edges if x.orig.get_attrib(Coordinate) == 0 and x.dest.get_attrib(Coordinate) == 1
+            x
+            for x in mesh.edges
+            if x.orig.get_attrib(Coordinate) == 0 and x.dest.get_attrib(Coordinate) == 1
         )
         mesh.collapse_edge(edge)
         assert not mesh.verts

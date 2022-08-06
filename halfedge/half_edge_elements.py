@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # _*_ coding: utf-8 _*_
-# Last modified: 220730 22:35:28
+# Last modified: 220803 09:12:38
 """A half-edges data container with view methods.
 
 A simple container for a list of half edges. Provides lookups and a serial
@@ -128,7 +128,7 @@ class MeshElementBase:
                     setattr(self, key[1:], vals[0])
         return self
 
-    def split_from(self: _TMeshElem, element: _TMeshElem) -> _TMeshElem:
+    def slice_from(self: _TMeshElem, element: _TMeshElem) -> _TMeshElem:
         """
         Pass attributes when dividing or altering elements.
 
