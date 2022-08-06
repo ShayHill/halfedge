@@ -187,7 +187,7 @@ class MeshElementBase:
         """
         if hasattr(self, type_.__name__):
             return getattr(self, type_.__name__).value
-        if allow_none is not None:
+        if not allow_none:
             raise AttributeError(
                 f"'{type(self).__name__}' has no ElemAttribBase '{type_.__name__}'"
             )
