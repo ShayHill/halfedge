@@ -176,7 +176,7 @@ class MeshElementBase:
         :param type_: type of ElemAttribBase to seek in the attrib dictionary. This
             takes a type instead of a string to eliminate any possibility of getting
             a None value just because an attrib dictionary key was mistyped.
-        :param allow_none: this method will, by default, silenty return none if the
+        :param allow_none: this method will, by default, silently return none if the
             MeshElementBase instance does not have`type_.__name__` in its dict. This
             simplifies setting something like EdgeHardness on some edges without
             having to set EdgeHardness on every edge in the mess. Edges without
