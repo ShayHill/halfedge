@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # _*_ coding: utf-8 _*_
-# Last modified: 220808 13:13:25
+# Last modified: 220808 15:00:26
 """A half-edges data container with view methods.
 
 A simple container for a list of half edges. Provides lookups and a serial
@@ -88,6 +88,15 @@ class MeshElementBase(AttribHolder):
         for k, v in pointers.items():
             if v is not None:
                 setattr(self, k, v)
+
+    @property
+    def mesh(self) -> "BlindHalfEdges":
+        return self._mesh
+
+    @mesh.setter
+    def mesh(self, mesh_: mesh) -> None:
+        self._mesh = mesh_
+        mesh_._orig = self
 
     def __setattr__(self, key: str, value: Any) -> None:
         """To prevent any mistyped attributes, which would clobber fill_from
