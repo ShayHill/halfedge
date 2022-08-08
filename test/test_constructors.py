@@ -13,8 +13,8 @@ import pytest
 
 # noinspection PyProtectedMember,PyProtectedMember
 from .conftest import get_canonical_mesh
-from ..halfedge.element_attributes import IncompatibleAttributeBase, \
-    NumericAttributeBase
+from ..halfedge.type_attrib import IncompatibleAttrib, \
+    NumericAttrib
 from ..halfedge.half_edge_elements import (
     ManifoldMeshError,
     MeshElementBase,
@@ -27,7 +27,7 @@ identifiers = (
     "".join(random.choice(alphabet) for _ in range(10)) for _ in itertools.count()
 )
 
-class Coordinate(IncompatibleAttributeBase):
+class Coordinate(IncompatibleAttrib):
     pass
 
 
@@ -45,8 +45,8 @@ class TestMeshElementBase:
 
     def test_fill_attrs_from_fills_missing(self) -> None:
         """Fills attrs if not present."""
-        class Flag1(NumericAttributeBase):pass
-        class Flag2(NumericAttributeBase):pass
+        class Flag1(NumericAttrib):pass
+        class Flag2(NumericAttrib):pass
         flag1_defined = MeshElementBase(Flag1(2))
         flag2_defined_a = MeshElementBase(Flag2(3))
         flag2_defined_b = MeshElementBase(Flag2(5))

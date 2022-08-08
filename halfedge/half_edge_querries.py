@@ -23,7 +23,7 @@ from typing import (
     Union,
 )
 
-from .constructors import BlindHalfEdges
+from .half_edge_constructors import BlindHalfEdges
 
 if TYPE_CHECKING:
     from .half_edge_elements import Edge, Face, Vert

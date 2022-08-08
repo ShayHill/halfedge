@@ -6,7 +6,7 @@ from typing import Any, Optional, Set, TYPE_CHECKING, Tuple, Union
 from .half_edge_elements import ManifoldMeshError
 from .half_edge_querries import StaticHalfEdges
 from .half_edge_elements import Edge, Face, Vert
-from .element_attributes import ElemAttribBase
+from .type_attrib import Attrib
 
 if TYPE_CHECKING:
     from .half_edge_elements import Vert, Face

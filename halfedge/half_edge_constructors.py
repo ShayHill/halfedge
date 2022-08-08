@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # _*_ coding: utf-8 _*_
-# last modified: 220727 12:33:38
+# last modified: 220808 13:18:25
 """Create HalfEdges instances.
 
 Nothing in this module will ever try to "match" Verts by their coordinate values. The
@@ -23,10 +23,10 @@ from __future__ import annotations
 from typing import Iterable, List, Optional, Set, Tuple
 
 from .half_edge_elements import Edge, Face, ManifoldMeshError, Vert
-from .element_attributes import ElemAttribBase
+from .type_attrib import Attrib, AttribHolder
 
 
-class BlindHalfEdges:
+class BlindHalfEdges(AttribHolder):
     def __init__(self, edges: Optional[Set[Edge]] = None) -> None:
         if edges is None:
             self.edges: Set[Edge] = set()
@@ -34,13 +34,13 @@ class BlindHalfEdges:
             self.edges = edges
 
     def new_vert(
-        self, *attributes: ElemAttribBase, edge: Optional[Edge] = None
+        self, *attributes: Attrib, edge: Optional[Edge] = None
     ) -> Vert:
         return Vert(*attributes, mesh=self, edge=edge)
 
     def new_edge(
         self,
-        *attributes: ElemAttribBase,
+        *attributes: Attrib,
         orig: Optional[Vert] = None,
         pair: Optional[Edge] = None,
         face: Optional[Face] = None,
@@ -58,12 +58,12 @@ class BlindHalfEdges:
         )
 
     def new_face(
-            self, *attributes: ElemAttribBase, edge: Optional[Edge] = None
+            self, *attributes: Attrib, edge: Optional[Edge] = None
     ) -> Face:
         return Face(*attributes, mesh=self, edge=edge)
 
     def new_hole(
-            self, *attributes: ElemAttribBase, edge: Optional[Edge] = None
+            self, *attributes: Attrib, edge: Optional[Edge] = None
     ) -> Face:
         return Face(*attributes, mesh=self, edge=edge, is_hole=True)
 

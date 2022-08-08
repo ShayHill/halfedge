@@ -15,10 +15,10 @@ import pytest
 from .conftest import compare_circular_2
 
 # noinspection PyProtectedMember,PyProtectedMember
-from ..halfedge.element_attributes import (
-    IncompatibleAttributeBase,
-    NumericAttributeBase,
-    ElemAttribBase
+from ..halfedge.type_attrib import (
+    IncompatibleAttrib,
+    NumericAttrib,
+    Attrib
 )
 from ..halfedge.half_edge_elements import (
     Edge,
@@ -49,26 +49,26 @@ def valid_identifier():
 class TestElemAttribs:
     def test_incompatible_merge_match(self) -> None:
         """Return a new attribute with same value if all values are equal"""
-        attribs = [IncompatibleAttributeBase(7, None) for _ in range(3)]
-        new_attrib = IncompatibleAttributeBase().merge(*attribs)
+        attribs = [IncompatibleAttrib(7, None) for _ in range(3)]
+        new_attrib = IncompatibleAttrib().merge(*attribs)
         assert new_attrib.value == 7
 
     def test_incompatible_merge_mismatch(self) -> None:
         """Return None if all values are not equal"""
-        attribs = [IncompatibleAttributeBase(7, None) for _ in range(3)]
-        attribs.append(IncompatibleAttributeBase(3))
-        new_attrib = IncompatibleAttributeBase().merge(*attribs)
+        attribs = [IncompatibleAttrib(7, None) for _ in range(3)]
+        attribs.append(IncompatibleAttrib(3))
+        new_attrib = IncompatibleAttrib().merge(*attribs)
         assert new_attrib is None
 
     def test_numeric_all_nos(self) -> None:
         """Return a new attribute with same value if all values are equal"""
-        attribs = [NumericAttributeBase(x) for x in range(1, 6)]
-        new_attrib = NumericAttributeBase().merge(*attribs)
+        attribs = [NumericAttrib(x) for x in range(1, 6)]
+        new_attrib = NumericAttrib().merge(*attribs)
         assert new_attrib.value == 3
 
     def test_lazy(self) -> None:
         """Given no value, LazyAttrib will try to infer a value from self.element"""
-        class LazyAttrib(ElemAttribBase):
+        class LazyAttrib(Attrib):
             @classmethod
             def merge(cls, *merge_from):
                 raise NotImplementedError()
@@ -90,17 +90,17 @@ class TestMeshElementBase:
     def test_set_attrib(self) -> None:
         """Set an attrib by passing a MeshElementBase instance"""
         elem = MeshElementBase()
-        elem_attrib = IncompatibleAttributeBase(8)
+        elem_attrib = IncompatibleAttrib(8)
         elem.set_attrib(elem_attrib)
         assert getattr(elem, type(elem_attrib).__name__) is elem_attrib
 
     def test_attribs_through_init(self) -> None:
         """MeshElement attributes are captured when passed to init"""
         base_with_attrib = MeshElementBase(
-            IncompatibleAttributeBase(7), NumericAttributeBase(8)
+            IncompatibleAttrib(7), NumericAttrib(8)
         )
-        assert base_with_attrib.try_attrib(IncompatibleAttributeBase) == 7
-        assert base_with_attrib.try_attrib(NumericAttributeBase) == 8
+        assert base_with_attrib.try_attrib(IncompatibleAttrib) == 7
+        assert base_with_attrib.try_attrib(NumericAttrib) == 8
 
     def test_pointers_through_init(self) -> None:
         """Key, val pairs passed as kwargs fail if key does not have a setter"""
@@ -109,12 +109,12 @@ class TestMeshElementBase:
 
     def test_fill_attrib(self) -> None:
         """Fill missing attrib values from fill_from"""
-        elem1 = MeshElementBase(NumericAttributeBase(8), IncompatibleAttributeBase(3))
-        elem2 = MeshElementBase(NumericAttributeBase(6), IncompatibleAttributeBase(3))
-        elem3 = MeshElementBase(IncompatibleAttributeBase(1))
+        elem1 = MeshElementBase(NumericAttrib(8), IncompatibleAttrib(3))
+        elem2 = MeshElementBase(NumericAttrib(6), IncompatibleAttrib(3))
+        elem3 = MeshElementBase(IncompatibleAttrib(1))
         elem3.merge_from(elem1, elem2)
-        assert elem3.try_attrib(IncompatibleAttributeBase) == 1  # unchanged
-        assert elem3.try_attrib(NumericAttributeBase) == 7  # filled
+        assert elem3.try_attrib(IncompatibleAttrib) == 1  # unchanged
+        assert elem3.try_attrib(NumericAttrib) == 7  # filled
 
 
 def test_edge_lap_succeeds(he_triangle: Dict[str, Any]) -> None:
@@ -135,7 +135,7 @@ def test_edge_lap_fails(he_triangle: Dict[str, Any]) -> None:
     assert "infinite" in err.value.args[0]
 
 
-class Coordinate(IncompatibleAttributeBase[Tuple[int, int, int]]):
+class Coordinate(IncompatibleAttrib[Tuple[int, int, int]]):
     pass
 
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# last modified: 220802 16:21:27
+# last modified: 220808 13:25:07
 """Attribute values that know how to merge with each other.
 
 As a mesh is transformed, Verts, Edges, and Faces will be split or combined with each
@@ -15,14 +15,25 @@ other. Different attributes will combine in different ways, for instance:
     * expensive attributes might be cached
 
 The MeshElement classes in this library don't support inheritance (with proper
-typing), because the mess involved adds too much complication. Properties like
-vertex, is_boundary, area, etc are held in each element's `attrib` attribute (similar
-to lxml). Rules governing combination of these properties are defined in the property
-classes themselves.
+typing), because the mess involved adds too much complication. If you need to extend
+the Vert, Edge, Face, or HalfEdges classes with additional attributes, you will need
+to define each attribute as a descendent of Attrib.
 
-ElementBase.attrib is a dictionary, the keys of which are the class names of the
-ElemAttrib instances they hold, so a new ElemAttrib child class is needed for every
-element property, even if the behavior is the same.
+    class MyAttrib(Attrib):
+        ...
+
+    vert = Vert()
+    vert.set_attrib(MyAttrib('value'))
+    assert vert.get_attrib(MyAttrib) == 'value'
+
+These attributes are held in an AttribHolder __dict__ keyed to the class name of the
+attribute.
+
+    assert vert.MyAttrib.value == 'value'
+    assert vert.__dict__['MyAttrib'].value == 'value'
+
+Rules governing combination of these properties are defined in the Attrib classes
+themselves.
 
 :author: Shay Hill
 :created: 2022-06-14
@@ -31,10 +42,58 @@ element property, even if the behavior is the same.
 from __future__ import annotations
 
 from contextlib import suppress
-from typing import Generic, Optional, Protocol, TYPE_CHECKING, Type, TypeVar, cast
+from typing import Generic, Optional, Protocol, Type, TypeVar, cast
 
-if TYPE_CHECKING:
-    from .half_edge_elements import MeshElementBase
+
+_TAttribHolder = TypeVar("_TAttribHolder", bound="AttribHolder")
+_T = TypeVar("_T")
+
+
+class AttribHolder:
+    """Hold AttribBase instances and retrieve values"""
+
+    def set_attrib(self: _TAttribHolder, *attribs: Attrib) -> _TAttribHolder:
+        """Set attribute with an ElemAttribBase instance.
+
+        type(attrib).__name__ : attrib
+
+        :param attribs: ElemAttribBase instances, presumably with a None element
+        attribute.
+        """
+        for attrib in attribs:
+            attrib.element = self
+            self.__dict__[type(attrib).__name__] = attrib
+        return self
+
+    def _maybe_set_attrib(self, *attribs: Optional[Attrib]) -> None:
+        """Set attribute if attrib is an ElemAttribBase. Pass silently if None"""
+        self.set_attrib(*[x for x in attribs if isinstance(x, Attrib)])
+
+    def try_attrib(self, type_: Type[Attrib[_T]]) -> Optional[_T]:
+        """Try to get an attribute value, None if attrib is not set.
+
+        :param type_: type of ElemAttribBase to seek in the attrib dictionary. This
+            takes a type instead of a string to eliminate any possibility of getting
+            a None value just because an attrib dictionary key was mistyped.
+        """
+        try:
+            return self.get_attrib(type_)
+        except AttributeError:
+            return None
+
+    def get_attrib(self, type_: Type[Attrib[_T]]) -> _T:
+        """Get attrib value. Will fail if attrib is not set
+
+        :param type_: type of ElemAttribBase to seek in the attrib dictionary. This
+            takes a type instead of a string to eliminate any possibility of getting
+            a None value just because an attrib dictionary key was mistyped.
+        """
+        try:
+            return getattr(self, type_.__name__).value
+        except AttributeError:
+            raise AttributeError(
+                f"'{type(self).__name__}' has no ElemAttribBase '{type_.__name__}'"
+            )
 
 
 class _SupportsEqual(Protocol):
@@ -56,7 +115,7 @@ _TAttribValue = TypeVar("_TAttribValue")
 _TElemAttrib = TypeVar("_TElemAttrib", bound="ElemAttribBase")
 
 
-class ElemAttribBase(Generic[_TAttribValue]):
+class Attrib(Generic[_TAttribValue]):
     """Base class for element attributes.
 
     MeshElementBase has methods set_attrib and get_attrib that will store
@@ -77,10 +136,10 @@ class ElemAttribBase(Generic[_TAttribValue]):
     def __init__(
         self,
         value: Optional[_TAttribValue] = None,
-        element: Optional[MeshElementBase] = None,
+        element: Optional[AttribHolder] = None,
     ) -> None:
-        self.element: MeshElementBase
         self._value: _TAttribValue
+        self.element: AttribHolder
         if value is not None:
             self._value = value
         if element is not None:
@@ -168,7 +227,7 @@ class ElemAttribBase(Generic[_TAttribValue]):
         )
 
 
-class ContagionAttributeBase(ElemAttribBase[_TSupportsEqual]):
+class ContagionAttrib(Attrib[_TSupportsEqual]):
     """Spread value when combining with anything.
 
     This is for element properties like 'IsHole' that are always passed when combining
@@ -209,9 +268,9 @@ class ContagionAttributeBase(ElemAttribBase[_TSupportsEqual]):
         )
 
 
-class IncompatibleAttributeBase(ElemAttribBase[_TSupportsEqual]):
+class IncompatibleAttrib(Attrib[_TSupportsEqual]):
     """Keep value when all merge_from values are the same
-    
+
     This class in intended for flags like IsEdge or Hardness.
     """
 
@@ -227,9 +286,8 @@ class IncompatibleAttributeBase(ElemAttribBase[_TSupportsEqual]):
         return None
 
     @classmethod
-    def split(cls, split_from):
-        """Pass the value on.
-        """
+    def slice(cls, split_from):
+        """Pass the value on."""
         if value := split_from.value:
             return cls(value)
         return None
@@ -240,7 +298,7 @@ class IncompatibleAttributeBase(ElemAttribBase[_TSupportsEqual]):
         return None
 
 
-class NumericAttributeBase(ElemAttribBase[_TSupportsAverage]):
+class NumericAttrib(Attrib[_TSupportsAverage]):
     """Average merge_from values"""
 
     @classmethod

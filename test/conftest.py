@@ -13,11 +13,11 @@ from pytest_lazyfixture import lazy_fixture
 from ..halfedge import half_edge_elements
 from ..halfedge.half_edge_elements import Edge, Face, Vert
 from ..halfedge.half_edge_object import HalfEdges
-from ..halfedge.element_attributes import NumericAttributeBase, IncompatibleAttributeBase
+from ..halfedge.type_attrib import NumericAttrib, IncompatibleAttrib
 
 
 
-class Coordinate(IncompatibleAttributeBase):
+class Coordinate(IncompatibleAttrib):
     pass
 
 

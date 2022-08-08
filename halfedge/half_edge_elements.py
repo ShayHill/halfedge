@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # _*_ coding: utf-8 _*_
-# Last modified: 220803 09:12:38
+# Last modified: 220808 13:13:25
 """A half-edges data container with view methods.
 
 A simple container for a list of half edges. Provides lookups and a serial
@@ -36,13 +36,13 @@ from __future__ import annotations
 from itertools import count
 from typing import Any, Callable, List, Optional, Type, TypeVar, overload, Literal
 
-from .element_attributes import ContagionAttributeBase, ElemAttribBase
+from .type_attrib import ContagionAttrib, Attrib, AttribHolder
 
 _TMeshElem = TypeVar("_TMeshElem", bound="MeshElementBase")
 _T = TypeVar("_T")
 
 
-class IsHole(ContagionAttributeBase):
+class IsHole(ContagionAttrib):
     """Flag a Face instance as a hole"""
 
 
@@ -62,13 +62,13 @@ def _all_is(*args: Any) -> bool:
     return args and all(args[0] is x for x in args[1:])
 
 
-class MeshElementBase:
+class MeshElementBase(AttribHolder):
     _sn_generator = count()
     _pointers = {"mesh"}
 
     def __init__(
         self,
-        *attributes: ElemAttribBase,
+        *attributes: Attrib,
         **pointers: MeshElementBase,
     ) -> None:
         """
@@ -106,7 +106,7 @@ class MeshElementBase:
         allow = key == "sn"
         allow = allow or key in self._pointers
         allow = allow or key.lstrip("_") in self._pointers
-        allow = allow or isinstance(value, ElemAttribBase)
+        allow = allow or isinstance(value, Attrib)
         if allow:
             super().__setattr__(key, value)
             return
@@ -121,7 +121,7 @@ class MeshElementBase:
             for key in (x for x in element.__dict__.keys() if x not in keys_seen):
                 keys_seen.add(key)
                 vals = [getattr(x, key, None) for x in elements]
-                if isinstance(getattr(element, key), ElemAttribBase):
+                if isinstance(getattr(element, key), Attrib):
                     self._maybe_set_attrib(type(getattr(element, key)).merge(*vals))
                     continue
                 if _all_is(*vals):  # will have be something in _pointers
@@ -138,49 +138,6 @@ class MeshElementBase:
         for key in set(element.__dict__) - set(self.__dict__):
             self._maybe_set_attrib(getattr(element, key))
         return self
-
-    def set_attrib(self: _TMeshElem, *attribs: ElemAttribBase) -> _TMeshElem:
-        """Set attribute with an ElemAttribBase instance.
-
-        type(attrib).__name__ : attrib
-
-        :param attribs: ElemAttribBase instances, presumably with a None element
-        attribute.
-        """
-        for attrib in attribs:
-            attrib.element = self
-            self.__dict__[type(attrib).__name__] = attrib
-        return self
-
-    def _maybe_set_attrib(self, *attribs: None | ElemAttribBase) -> None:
-        """Set attribute if attrib is an ElemAttribBase. Pass silently if None"""
-        self.set_attrib(*[x for x in attribs if isinstance(x, ElemAttribBase)])
-
-    def try_attrib(self, type_: Type[ElemAttribBase[_T]]) -> Optional[_T]:
-        """Try to get an attribute value, None if attrib is not set.
-
-        :param type_: type of ElemAttribBase to seek in the attrib dictionary. This
-            takes a type instead of a string to eliminate any possibility of getting
-            a None value just because an attrib dictionary key was mistyped.
-        """
-        try:
-            return self.get_attrib(type_)
-        except AttributeError:
-            return None
-
-    def get_attrib(self, type_: Type[ElemAttribBase[_T]]) -> _T:
-        """Get attrib value. Will fail if attrib is not set
-
-        :param type_: type of ElemAttribBase to seek in the attrib dictionary. This
-            takes a type instead of a string to eliminate any possibility of getting
-            a None value just because an attrib dictionary key was mistyped.
-        """
-        try:
-            return getattr(self, type_.__name__).value
-        except AttributeError:
-            raise AttributeError(
-                f"'{type(self).__name__}' has no ElemAttribBase '{type_.__name__}'"
-            )
 
     def __lt__(self: _TMeshElem, other: _TMeshElem) -> bool:
         """Sort by id
@@ -225,7 +182,7 @@ class Vert(MeshElementBase):
 
     def __init__(
         self,
-        *attributes: ElemAttribBase,
+        *attributes: Attrib,
         mesh: Optional["HalfEdges"] = None,
         edge: Optional[Edge] = None,
     ):
@@ -291,7 +248,7 @@ class Edge(MeshElementBase):
 
     def __init__(
         self,
-        *attributes: ElemAttribBase,
+        *attributes: Attrib,
         mesh: Optional["HalfEdges"] = None,
         orig: Optional[Vert] = None,
         pair: Optional["Edge"] = None,
@@ -426,7 +383,7 @@ class Face(MeshElementBase):
 
     def __init__(
         self,
-        *attributes: ElemAttribBase,
+        *attributes: Attrib,
         mesh: Optional["HalfEdges"] = None,
         edge: Optional[Edge] = None,
         is_hole: bool = False,

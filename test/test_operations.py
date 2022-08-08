@@ -19,17 +19,17 @@ from .conftest import get_canonical_mesh
 from ..halfedge.half_edge_elements import Edge, ManifoldMeshError, Vert, Face
 from ..halfedge.half_edge_object import HalfEdges
 from ..halfedge.validations import validate_mesh
-from ..halfedge.element_attributes import (
-    IncompatibleAttributeBase,
-    NumericAttributeBase,
+from ..halfedge.type_attrib import (
+    IncompatibleAttrib,
+    NumericAttrib,
 )
 
 
-class NamedAttribute(IncompatibleAttributeBase):
+class NamedAttribute(IncompatibleAttrib):
     """For color, flags. etc. to ensure attributes are passed"""
 
 
-class Coordinate(NumericAttributeBase):
+class Coordinate(NumericAttrib):
     """Hold coordinates when creating a mesh from a list of vertices"""
 
 
@@ -183,22 +183,22 @@ class TestInsertEdge:
     def test_face_attrs_pass(self, index, mesh_faces) -> None:
         """Pass attributes from face when face is split"""
         mesh, face = mesh_faces
-        face.set_attrib(IncompatibleAttributeBase("orange"))
+        face.set_attrib(IncompatibleAttrib("orange"))
         edge = mesh.insert_edge(face.verts[0], face.verts[2])
-        assert edge.face.try_attrib(IncompatibleAttributeBase) == "orange"
-        assert edge.pair.face.try_attrib(IncompatibleAttributeBase) == "orange"
+        assert edge.face.try_attrib(IncompatibleAttrib) == "orange"
+        assert edge.pair.face.try_attrib(IncompatibleAttrib) == "orange"
 
     @pytest.mark.parametrize("index", range(4))
     def test_edge_kwargs(self, index, mesh_faces) -> None:
         """Shared face edge attributes pass to new edge"""
         mesh, face = mesh_faces
         for edge in face.edges[:2]:
-            edge.set_attrib(IncompatibleAttributeBase("blue"))
+            edge.set_attrib(IncompatibleAttrib("blue"))
         for edge in face.edges[2:]:
-            edge.set_attrib(IncompatibleAttributeBase("red"))
+            edge.set_attrib(IncompatibleAttrib("red"))
         edge = mesh.insert_edge(face.verts[0], face.verts[2])
-        assert edge.try_attrib(IncompatibleAttributeBase) == "red"
-        assert edge.pair.try_attrib(IncompatibleAttributeBase) == "blue"
+        assert edge.try_attrib(IncompatibleAttrib) == "red"
+        assert edge.pair.try_attrib(IncompatibleAttrib) == "blue"
 
 
 class TestInsertVert:
