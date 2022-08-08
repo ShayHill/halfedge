@@ -169,7 +169,7 @@ class MeshElementBase:
             return None
 
     def get_attrib(self, type_: Type[ElemAttribBase[_T]]) -> _T:
-        """Get attrib value. Will fail is attrib is not set
+        """Get attrib value. Will fail if attrib is not set
 
         :param type_: type of ElemAttribBase to seek in the attrib dictionary. This
             takes a type instead of a string to eliminate any possibility of getting
