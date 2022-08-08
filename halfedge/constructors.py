@@ -23,21 +23,53 @@ from __future__ import annotations
 from typing import Iterable, List, Optional, Set, Tuple
 
 from .half_edge_elements import Edge, Face, ManifoldMeshError, Vert
+from .element_attributes import ElemAttribBase
 
 
 class BlindHalfEdges:
-
     def __init__(self, edges: Optional[Set[Edge]] = None) -> None:
         if edges is None:
             self.edges: Set[Edge] = set()
         else:
             self.edges = edges
 
-    def _create_face_edges(
-        self, face_verts: Iterable[Vert], face: Face
-    ) -> List[Edge]:
+    def new_vert(
+        self, *attributes: ElemAttribBase, edge: Optional[Edge] = None
+    ) -> Vert:
+        return Vert(*attributes, mesh=self, edge=edge)
+
+    def new_edge(
+        self,
+        *attributes: ElemAttribBase,
+        orig: Optional[Vert] = None,
+        pair: Optional[Edge] = None,
+        face: Optional[Face] = None,
+        next: Optional[Edge] = None,
+        prev: Optional[Edge] = None,
+    ):
+        return Edge(
+            *attributes,
+            mesh=self,
+            orig=orig,
+            pair=pair,
+            face=face,
+            next=next,
+            prev=prev,
+        )
+
+    def new_face(
+            self, *attributes: ElemAttribBase, edge: Optional[Edge] = None
+    ) -> Face:
+        return Face(*attributes, mesh=self, edge=edge)
+
+    def new_hole(
+            self, *attributes: ElemAttribBase, edge: Optional[Edge] = None
+    ) -> Face:
+        return Face(*attributes, mesh=self, edge=edge, is_hole=True)
+
+    def _create_face_edges(self, face_verts: Iterable[Vert], face: Face) -> List[Edge]:
         """Create edges around a face defined by vert indices."""
-        new_edges = [Edge(orig=vert, face=face) for vert in face_verts]
+        new_edges = [self.new_edge(orig=vert, face=face) for vert in face_verts]
         for idx, edge in enumerate(new_edges):
             new_edges[idx - 1].next = edge
         return new_edges
@@ -69,7 +101,9 @@ class BlindHalfEdges:
         This function can also fill in holes inside the mesh.
         """
         hole_edges = {
-            Edge(orig=x.dest, pair=x) for x in self.edges if not hasattr(x, "pair")
+            self.new_edge(orig=x.dest, pair=x)
+            for x in self.edges
+            if not hasattr(x, "pair")
         }
         orig2hole_edge = {x.orig: x for x in hole_edges}
 
@@ -81,7 +115,7 @@ class BlindHalfEdges:
 
         while orig2hole_edge:
             _, edge = next(iter(orig2hole_edge.items()))
-            edge.face = Face(is_hole=True)
+            edge.face = self.new_hole()
             while edge.dest in orig2hole_edge:
                 edge.next = orig2hole_edge.pop(edge.dest)
                 edge.next.face = edge.face
@@ -134,9 +168,11 @@ class BlindHalfEdges:
 
         mesh = cls()
         for face_verts in vr:
-            mesh.edges.update(mesh._create_face_edges(face_verts, Face()))
+            mesh.edges.update(mesh._create_face_edges(face_verts, mesh.new_face()))
         for face_verts in hr:
-            mesh.edges.update(mesh._create_face_edges(face_verts, Face(is_hole=True)))
+            mesh.edges.update(
+                mesh._create_face_edges(face_verts, mesh.new_hole())
+            )
         mesh._find_pairs()
         mesh._infer_holes()
         return mesh

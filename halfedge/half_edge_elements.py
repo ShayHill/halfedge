@@ -64,7 +64,7 @@ def _all_is(*args: Any) -> bool:
 
 class MeshElementBase:
     _sn_generator = count()
-    _pointers: set[str] = set()
+    _pointers = {"mesh"}
 
     def __init__(
         self,
@@ -122,10 +122,10 @@ class MeshElementBase:
                 keys_seen.add(key)
                 vals = [getattr(x, key, None) for x in elements]
                 if isinstance(getattr(element, key), ElemAttribBase):
-                    self.maybe_set_attrib(type(getattr(element, key)).merge(*vals))
+                    self._maybe_set_attrib(type(getattr(element, key)).merge(*vals))
                     continue
                 if _all_is(*vals):  # will have be something in _pointers
-                    setattr(self, key[1:], vals[0])
+                    setattr(self, key.lstrip("_"), vals[0])
         return self
 
     def slice_from(self: _TMeshElem, element: _TMeshElem) -> _TMeshElem:
@@ -136,7 +136,7 @@ class MeshElementBase:
         their classes.
         """
         for key in set(element.__dict__) - set(self.__dict__):
-            self.maybe_set_attrib(getattr(element, key))
+            self._maybe_set_attrib(getattr(element, key))
         return self
 
     def set_attrib(self: _TMeshElem, *attribs: ElemAttribBase) -> _TMeshElem:
@@ -152,49 +152,35 @@ class MeshElementBase:
             self.__dict__[type(attrib).__name__] = attrib
         return self
 
-    def maybe_set_attrib(self, *attribs: None | ElemAttribBase) -> None:
+    def _maybe_set_attrib(self, *attribs: None | ElemAttribBase) -> None:
         """Set attribute if attrib is an ElemAttribBase. Pass silently if None"""
         self.set_attrib(*[x for x in attribs if isinstance(x, ElemAttribBase)])
 
-    @overload
-    def get_attrib(self, type_: Type[ElemAttribBase[_T]]) -> Optional[_T]:
-        ...
-
-    @overload
-    def get_attrib(
-        self, type_: Type[ElemAttribBase[_T]], allow_none: Literal[True]
-    ) -> Optional[_T]:
-        ...
-
-    @overload
-    def get_attrib(self, type_: Type[ElemAttribBase[_T]], allow_none: Any) -> _T:
-        ...
-
-    def get_attrib(self, type_, allow_none=True):
+    def try_attrib(self, type_: Type[ElemAttribBase[_T]]) -> Optional[_T]:
         """Try to get an attribute value, None if attrib is not set.
 
         :param type_: type of ElemAttribBase to seek in the attrib dictionary. This
             takes a type instead of a string to eliminate any possibility of getting
             a None value just because an attrib dictionary key was mistyped.
-        :param allow_none: this method will, by default, silently return none if the
-            MeshElementBase instance does not have`type_.__name__` in its dict. This
-            simplifies setting something like EdgeHardness on some edges without
-            having to set EdgeHardness on every edge in the mess. Edges without
-            EdgeHardness `elem.get_attrib(EdgeHardness) == None` can be handled in
-            the `EdgeHardness.merged` method. The optional argument `allow_none` will
-            raise an AttributeError if the attribute is not found in the element
-            __dict__. This is solely to facilitate type narrowing.
         """
-        if hasattr(self, type_.__name__):
+        try:
+            return self.get_attrib(type_)
+        except AttributeError:
+            return None
+
+    def get_attrib(self, type_: Type[ElemAttribBase[_T]]) -> _T:
+        """Get attrib value. Will fail is attrib is not set
+
+        :param type_: type of ElemAttribBase to seek in the attrib dictionary. This
+            takes a type instead of a string to eliminate any possibility of getting
+            a None value just because an attrib dictionary key was mistyped.
+        """
+        try:
             return getattr(self, type_.__name__).value
-        if not allow_none:
+        except AttributeError:
             raise AttributeError(
                 f"'{type(self).__name__}' has no ElemAttribBase '{type_.__name__}'"
             )
-
-    def strict_get_attrib(self, type_: Type[ElemAttribBase[_T]]) -> _T:
-        """Get attrib that will fail is attrib is not set"""
-        return self.get_attrib(type_, allow_none=False)
 
     def __lt__(self: _TMeshElem, other: _TMeshElem) -> bool:
         """Sort by id
@@ -235,10 +221,15 @@ class Vert(MeshElementBase):
     :edge: pointer to one edge originating at vert
     """
 
-    _pointers = {"edge"}
+    _pointers = {"mesh", "edge"}
 
-    def __init__(self, *attributes: ElemAttribBase, edge: Optional[Edge] = None):
-        super().__init__(*attributes, edge=edge)
+    def __init__(
+        self,
+        *attributes: ElemAttribBase,
+        mesh: Optional["HalfEdges"] = None,
+        edge: Optional[Edge] = None,
+    ):
+        super().__init__(*attributes, mesh=mesh, edge=edge)
 
     @property
     def edge(self) -> Edge:
@@ -296,7 +287,27 @@ class Edge(MeshElementBase):
     :next: pointer to next edge along face
     """
 
-    _pointers = {"orig", "pair", "face", "next", "prev"}
+    _pointers = {"mesh", "orig", "pair", "face", "next", "prev"}
+
+    def __init__(
+        self,
+        *attributes: ElemAttribBase,
+        mesh: Optional["HalfEdges"] = None,
+        orig: Optional[Vert] = None,
+        pair: Optional["Edge"] = None,
+        face: Optional["Face"] = None,
+        next: Optional["Edge"] = None,
+        prev: Optional["Edge"] = None,
+    ):
+        super().__init__(
+            *attributes,
+            mesh=mesh,
+            orig=orig,
+            pair=pair,
+            face=face,
+            next=next,
+            prev=prev,
+        )
 
     @property
     def orig(self) -> Vert:
@@ -411,18 +422,18 @@ class Face(MeshElementBase):
     :edge: pointer to one edge on the face
     """
 
-    _pointers = {"edge"}
+    _pointers = {"mesh", "edge"}
 
     def __init__(
-        self, *args, edge: Optional[Edge] = None, is_hole: bool = False
+        self,
+        *attributes: ElemAttribBase,
+        mesh: Optional["HalfEdges"] = None,
+        edge: Optional[Edge] = None,
+        is_hole: bool = False,
     ) -> None:
         if is_hole:
-            args += (IsHole(),)
-        if isinstance(edge, Edge):
-            kwargs = {"edge": edge}
-        else:
-            kwargs = {}
-        super().__init__(*args, **kwargs)
+            attributes += (IsHole(),)
+        super().__init__(*attributes, mesh=mesh, edge=edge)
 
     @property
     def edge(self) -> Edge:

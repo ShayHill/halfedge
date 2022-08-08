@@ -80,7 +80,7 @@ class HalfEdges(StaticHalfEdges):
             * empty mesh: a new Hole
         """
         if not self.edges:
-            return Face(is_hole=True)
+            return self.new_hole()
         orig_faces = self._get_edge_or_vert_faces(orig)
         dest_faces = self._get_edge_or_vert_faces(dest)
         with suppress(ValueError):
@@ -221,8 +221,8 @@ class HalfEdges(StaticHalfEdges):
             face = self._infer_face(orig, dest)
 
         # create a floating edge. pass attributes later
-        edge = Edge()
-        edge.pair = Edge(pair=edge, next=edge, prev=edge)
+        edge = self.new_edge()
+        edge.pair = self.new_edge(pair=edge, next=edge, prev=edge)
 
         edge_orig, edge_prev = self._infer_wing(orig, face, edge.pair)
         edge_dest, pair_prev = self._infer_wing(dest, face, edge)
@@ -251,7 +251,7 @@ class HalfEdges(StaticHalfEdges):
         edge.pair.next = edge_next
 
         # if face is not split, new face will be created then immediately written over
-        _update_face_edges(Face().slice_from(face), edge)
+        _update_face_edges(self.new_face().slice_from(face), edge)
         _update_face_edges(face, edge.pair)
 
         edge.merge_from(*[x for x in edge.face_edges if x not in {edge, edge.pair}])
@@ -283,7 +283,7 @@ class HalfEdges(StaticHalfEdges):
             * shared face.verts attributes passed to new vert
         """
 
-        new_vert = Vert().merge_from(*face.verts)
+        new_vert = self.new_vert().merge_from(*face.verts)
         try:
             for vert in face.verts:
                 self.insert_edge(vert, new_vert, face)
@@ -337,7 +337,7 @@ class HalfEdges(StaticHalfEdges):
         pair_face_edges = set(pair.face_edges)
 
         # point all edges to new face
-        new_face: Face = Face().merge_from(*{edge.face, pair.face})
+        new_face: Face = self.new_face().merge_from(*{edge.face, pair.face})
         for edge_ in (edge_face_edges | pair_face_edges) - {edge, pair}:
             edge_.face = new_face
 
@@ -462,7 +462,7 @@ class HalfEdges(StaticHalfEdges):
         remove_edge will replace the original faces, so these are restored at the end
         of the method.
         """
-        new_vert = Vert().merge_from(*{edge.orig, edge.dest})
+        new_vert = self.new_vert().merge_from(*{edge.orig, edge.dest})
         edge_face = edge.face
         pair_face = edge.pair.face
         for orig, dest in ((edge.dest, new_vert), (new_vert, edge.orig)):
@@ -545,7 +545,7 @@ class HalfEdges(StaticHalfEdges):
         if not self._is_stitchable(edge):
             raise ValueError("edge collapse would create non-manifold mesh")
 
-        new_vert = Vert().merge_from(*{edge.orig, edge.dest})
+        new_vert = self.new_vert().merge_from(*{edge.orig, edge.dest})
         for edge_ in set(edge.orig.edges) | set(edge.dest.edges):
             edge_.orig = new_vert
 

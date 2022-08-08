@@ -51,8 +51,8 @@ class TestMeshElementBase:
         flag2_defined_a = MeshElementBase(Flag2(3))
         flag2_defined_b = MeshElementBase(Flag2(5))
         flag1_defined.merge_from(flag2_defined_a, flag2_defined_b)
-        assert flag1_defined.get_attrib(Flag1) == 2
-        assert flag1_defined.get_attrib(Flag2) == 4
+        assert flag1_defined.try_attrib(Flag1) == 2
+        assert flag1_defined.try_attrib(Flag2) == 4
 
 
 def test_edge_lap_succeeds(he_triangle: Dict[str, Any]) -> None:
@@ -147,14 +147,14 @@ class TestHalfEdges:
         for mesh, key in ((he_grid, "grid"), (he_cube, "cube")):
             input_vl, input_vi = meshes_vlvi[key + "_vl"], meshes_vlvi[key + "_vi"]
             expect = get_canonical_mesh(input_vl, input_vi)
-            result = get_canonical_mesh([x.get_attrib(Coordinate) for x in mesh.vl], mesh.fi)
+            result = get_canonical_mesh([x.try_attrib(Coordinate) for x in mesh.vl], mesh.fi)
             assert expect == result
 
     def test_hi(self, meshes_vlvi: Dict[str, Any], he_grid) -> None:
         """Convert unaltered mesh holes back to input holes."""
         input_vl, input_hi = meshes_vlvi["grid_vl"], meshes_vlvi["grid_hi"]
         expect = get_canonical_mesh(input_vl, input_hi)
-        result = get_canonical_mesh([x.get_attrib(Coordinate) for x in he_grid.vl], he_grid.hi)
+        result = get_canonical_mesh([x.try_attrib(Coordinate) for x in he_grid.vl], he_grid.hi)
         assert expect == result
 
 
