@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# last modified: 220808 13:25:07
+# last modified: 220808 14:42:46
 """Attribute values that know how to merge with each other.
 
 As a mesh is transformed, Verts, Edges, and Faces will be split or combined with each
@@ -53,11 +53,11 @@ class AttribHolder:
     """Hold AttribBase instances and retrieve values"""
 
     def set_attrib(self: _TAttribHolder, *attribs: Attrib) -> _TAttribHolder:
-        """Set attribute with an ElemAttribBase instance.
+        """Set attribute with an Attrib instance.
 
         type(attrib).__name__ : attrib
 
-        :param attribs: ElemAttribBase instances, presumably with a None element
+        :param attribs: Attrib instances, presumably with a None element
         attribute.
         """
         for attrib in attribs:
@@ -66,13 +66,13 @@ class AttribHolder:
         return self
 
     def _maybe_set_attrib(self, *attribs: Optional[Attrib]) -> None:
-        """Set attribute if attrib is an ElemAttribBase. Pass silently if None"""
+        """Set attribute if attrib is an Attrib. Pass silently if None"""
         self.set_attrib(*[x for x in attribs if isinstance(x, Attrib)])
 
     def try_attrib(self, type_: Type[Attrib[_T]]) -> Optional[_T]:
         """Try to get an attribute value, None if attrib is not set.
 
-        :param type_: type of ElemAttribBase to seek in the attrib dictionary. This
+        :param type_: type of Attrib to seek in the attrib dictionary. This
             takes a type instead of a string to eliminate any possibility of getting
             a None value just because an attrib dictionary key was mistyped.
         """
@@ -84,7 +84,7 @@ class AttribHolder:
     def get_attrib(self, type_: Type[Attrib[_T]]) -> _T:
         """Get attrib value. Will fail if attrib is not set
 
-        :param type_: type of ElemAttribBase to seek in the attrib dictionary. This
+        :param type_: type of Attrib to seek in the attrib dictionary. This
             takes a type instead of a string to eliminate any possibility of getting
             a None value just because an attrib dictionary key was mistyped.
         """
@@ -92,7 +92,7 @@ class AttribHolder:
             return getattr(self, type_.__name__).value
         except AttributeError:
             raise AttributeError(
-                f"'{type(self).__name__}' has no ElemAttribBase '{type_.__name__}'"
+                f"'{type(self).__name__}' has no Attrib '{type_.__name__}'"
             )
 
 
@@ -112,16 +112,16 @@ class _SupportsAverage(Protocol):
 _TSupportsAverage = TypeVar("_TSupportsAverage", bound=_SupportsAverage)
 _TSupportsEqual = TypeVar("_TSupportsEqual", bound=_SupportsEqual)
 _TAttribValue = TypeVar("_TAttribValue")
-_TElemAttrib = TypeVar("_TElemAttrib", bound="ElemAttribBase")
+_TElemAttrib = TypeVar("_TElemAttrib", bound="Attrib")
 
 
 class Attrib(Generic[_TAttribValue]):
     """Base class for element attributes.
 
     MeshElementBase has methods set_attrib and get_attrib that will store
-    ElemAttribBase instances in the MeshElemenBase __dict__. The ElemAttribBase class
+    Attrib instances in the MeshElemenBase __dict__. The Attrib class
     defines how these attributes behave when mesh elements are merged and allows a
-    value (e.g., edge length) to be inferred from the ElemAttribBase.element property
+    value (e.g., edge length) to be inferred from the Attrib.element property
     when and if needed, allowing us to cache (and potentially never access) slow
     attributes.
 
@@ -164,7 +164,7 @@ class Attrib(Generic[_TAttribValue]):
 
         Use merge_from values to determine a value. If no value can be determined,
         return None. No element attribute will be set for a None return value.
-        ElemAttribBase attributes are assumed None if not defined and are never defined
+        Attrib attributes are assumed None if not defined and are never defined
         if their value is None.
 
         This base method will not merge attributes, which is desirable in some cases.
@@ -218,8 +218,8 @@ class Attrib(Generic[_TAttribValue]):
         If you do not intend to infer values, raise an exception. This exception
         should occur *before* an AttributeError is raised for a potentially missing
         element attribute. It should be clear that _infer_value failed because there
-        is no provision for inferring this ElemAttribBase.value, *not* because the
-        user failed to set the ElemAttribBase property attribute.
+        is no provision for inferring this Attrib.value, *not* because the
+        user failed to set the Attrib property attribute.
         """
         raise NotImplementedError(
             f"'{type(self).__name__}' has no provision "
