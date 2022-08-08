@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # _*_ coding: utf-8 _*_
-# last modified: 220808 14:32:35
+# last modified: 220808 14:44:46
 """Create HalfEdges instances.
 
 Nothing in this module will ever try to "match" Verts by their coordinate values. The
@@ -169,7 +169,6 @@ class BlindHalfEdges(AttribHolder):
         mesh = cls()
         for vert in vl:
             vert.mesh = mesh
-
         for face_verts in vr:
             mesh.edges.update(mesh._create_face_edges(face_verts, mesh.new_face()))
         for face_verts in hr:
