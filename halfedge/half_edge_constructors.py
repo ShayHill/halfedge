@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # _*_ coding: utf-8 _*_
-# last modified: 220808 14:44:46
+# last modified: 220809 15:52:44
 """Create HalfEdges instances.
 
 Nothing in this module will ever try to "match" Verts by their coordinate values. The
@@ -20,10 +20,12 @@ then passing that raw data to mesh_from_vr would create a mesh with 6 faces and
 
 from __future__ import annotations
 
-from typing import Iterable, List, Optional, Set, Tuple
+from typing import Iterable, List, Optional, Set, Tuple, Type, TypeVar
 
 from .half_edge_elements import Edge, Face, ManifoldMeshError, Vert
 from .type_attrib import Attrib, AttribHolder
+
+_TBlindHalfEdges = TypeVar("_TBlindHalfEdges", bound="BlindHalfEdges")
 
 
 class BlindHalfEdges(AttribHolder):
@@ -33,9 +35,7 @@ class BlindHalfEdges(AttribHolder):
         else:
             self.edges = edges
 
-    def new_vert(
-        self, *attributes: Attrib, edge: Optional[Edge] = None
-    ) -> Vert:
+    def new_vert(self, *attributes: Attrib, edge: Optional[Edge] = None) -> Vert:
         return Vert(*attributes, mesh=self, edge=edge)
 
     def new_edge(
@@ -57,14 +57,10 @@ class BlindHalfEdges(AttribHolder):
             prev=prev,
         )
 
-    def new_face(
-            self, *attributes: Attrib, edge: Optional[Edge] = None
-    ) -> Face:
+    def new_face(self, *attributes: Attrib, edge: Optional[Edge] = None) -> Face:
         return Face(*attributes, mesh=self, edge=edge)
 
-    def new_hole(
-            self, *attributes: Attrib, edge: Optional[Edge] = None
-    ) -> Face:
+    def new_hole(self, *attributes: Attrib, edge: Optional[Edge] = None) -> Face:
         return Face(*attributes, mesh=self, edge=edge, is_hole=True)
 
     def _create_face_edges(self, face_verts: Iterable[Vert], face: Face) -> List[Edge]:
@@ -124,11 +120,11 @@ class BlindHalfEdges(AttribHolder):
 
     @classmethod
     def from_vlvi(
-        cls,
+        cls: Type[_TBlindHalfEdges],
         vl: List[Vert],
         fi: Set[Tuple[int, ...]],
         hi: Optional[Set[Tuple[int, ...]]] = None,
-    ) -> BlindHalfEdges:
+    ) -> _TBlindHalfEdges:
         """A set of half edges from a vertex list and vertex index.
 
         :param vl: (vertex list) a seq of vertices
@@ -172,9 +168,7 @@ class BlindHalfEdges(AttribHolder):
         for face_verts in vr:
             mesh.edges.update(mesh._create_face_edges(face_verts, mesh.new_face()))
         for face_verts in hr:
-            mesh.edges.update(
-                mesh._create_face_edges(face_verts, mesh.new_hole())
-            )
+            mesh.edges.update(mesh._create_face_edges(face_verts, mesh.new_hole()))
         mesh._find_pairs()
         mesh._infer_holes()
         return mesh

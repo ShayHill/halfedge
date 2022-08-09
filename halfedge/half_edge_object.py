@@ -1,15 +1,11 @@
 from __future__ import annotations
 
 from contextlib import suppress
-from typing import Any, Optional, Set, TYPE_CHECKING, Tuple, Union
+from typing import Any, Optional, Set, Tuple, Union
 
 from .half_edge_elements import ManifoldMeshError
 from .half_edge_querries import StaticHalfEdges
 from .half_edge_elements import Edge, Face, Vert
-from .type_attrib import Attrib
-
-if TYPE_CHECKING:
-    from .half_edge_elements import Vert, Face
 
 
 def _update_face_edges(face: Face, edge: Edge) -> None:

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # _*_ coding: utf-8 _*_
-# Last modified: 220808 15:00:26
+# Last modified: 220809 15:50:23
 """A half-edges data container with view methods.
 
 A simple container for a list of half edges. Provides lookups and a serial
@@ -34,12 +34,14 @@ This module is all the base elements (Vert, Edge, and Face).
 from __future__ import annotations
 
 from itertools import count
-from typing import Any, Callable, List, Optional, Type, TypeVar, overload, Literal
+from typing import Any, Callable, List, Optional, TypeVar, TYPE_CHECKING
 
 from .type_attrib import ContagionAttrib, Attrib, AttribHolder
 
+if TYPE_CHECKING:
+    from .half_edge_constructors import BlindHalfEdges
+
 _TMeshElem = TypeVar("_TMeshElem", bound="MeshElementBase")
-_T = TypeVar("_T")
 
 
 class IsHole(ContagionAttrib):
@@ -59,7 +61,7 @@ class ManifoldMeshError(ValueError):
 
 def _all_is(*args: Any) -> bool:
     """True if all arguments are `a is b`"""
-    return args and all(args[0] is x for x in args[1:])
+    return bool(args) and all(args[0] is x for x in args[1:])
 
 
 class MeshElementBase(AttribHolder):
@@ -69,7 +71,8 @@ class MeshElementBase(AttribHolder):
     def __init__(
         self,
         *attributes: Attrib,
-        **pointers: MeshElementBase,
+        mesh: Optional[BlindHalfEdges] = None,
+        **pointers: Optional[MeshElementBase],
     ) -> None:
         """
         Create an instance (and copy attrs from fill_from).
@@ -85,18 +88,19 @@ class MeshElementBase(AttribHolder):
         self.sn = next(self._sn_generator)
         for attribute in attributes:
             self.set_attrib(attribute)
+        if mesh is not None:
+            self.mesh = mesh
         for k, v in pointers.items():
             if v is not None:
                 setattr(self, k, v)
 
     @property
-    def mesh(self) -> "BlindHalfEdges":
+    def mesh(self) -> BlindHalfEdges:
         return self._mesh
 
     @mesh.setter
-    def mesh(self, mesh_: mesh) -> None:
+    def mesh(self, mesh_: BlindHalfEdges) -> None:
         self._mesh = mesh_
-        mesh_._orig = self
 
     def __setattr__(self, key: str, value: Any) -> None:
         """To prevent any mistyped attributes, which would clobber fill_from
@@ -192,7 +196,7 @@ class Vert(MeshElementBase):
     def __init__(
         self,
         *attributes: Attrib,
-        mesh: Optional["HalfEdges"] = None,
+        mesh: Optional[BlindHalfEdges] = None,
         edge: Optional[Edge] = None,
     ):
         super().__init__(*attributes, mesh=mesh, edge=edge)
@@ -258,7 +262,7 @@ class Edge(MeshElementBase):
     def __init__(
         self,
         *attributes: Attrib,
-        mesh: Optional["HalfEdges"] = None,
+        mesh: Optional[BlindHalfEdges] = None,
         orig: Optional[Vert] = None,
         pair: Optional["Edge"] = None,
         face: Optional["Face"] = None,
@@ -393,7 +397,7 @@ class Face(MeshElementBase):
     def __init__(
         self,
         *attributes: Attrib,
-        mesh: Optional["HalfEdges"] = None,
+        mesh: Optional[BlindHalfEdges] = None,
         edge: Optional[Edge] = None,
         is_hole: bool = False,
     ) -> None:
