@@ -78,8 +78,8 @@ class TestInsertEdge:
         new_edge = mesh.insert_edge(face.verts[index], face.verts[index - 2], face)
         edge_named = ["blue", None, "red", None][index]
         pair_named = ["red", None, "blue", None][index]
-        assert new_edge.try_attrib(NamedAttribute) == edge_named
-        assert new_edge.pair.try_attrib(NamedAttribute) == pair_named
+        assert new_edge.try_attrib_value(NamedAttribute) == edge_named
+        assert new_edge.pair.try_attrib_value(NamedAttribute) == pair_named
 
     @pytest.mark.parametrize("index", range(4))
     def test_orig_on_face(self, index, mesh_faces) -> None:
@@ -185,8 +185,8 @@ class TestInsertEdge:
         mesh, face = mesh_faces
         face.set_attrib(IncompatibleAttrib("orange"))
         edge = mesh.insert_edge(face.verts[0], face.verts[2])
-        assert edge.face.try_attrib(IncompatibleAttrib) == "orange"
-        assert edge.pair.face.try_attrib(IncompatibleAttrib) == "orange"
+        assert edge.face.try_attrib_value(IncompatibleAttrib) == "orange"
+        assert edge.pair.face.try_attrib_value(IncompatibleAttrib) == "orange"
 
     @pytest.mark.parametrize("index", range(4))
     def test_edge_kwargs(self, index, mesh_faces) -> None:
@@ -197,8 +197,8 @@ class TestInsertEdge:
         for edge in face.edges[2:]:
             edge.set_attrib(IncompatibleAttrib("red"))
         edge = mesh.insert_edge(face.verts[0], face.verts[2])
-        assert edge.try_attrib(IncompatibleAttrib) == "red"
-        assert edge.pair.try_attrib(IncompatibleAttrib) == "blue"
+        assert edge.try_attrib_value(IncompatibleAttrib) == "red"
+        assert edge.pair.try_attrib_value(IncompatibleAttrib) == "blue"
 
 
 class TestInsertVert:
@@ -208,7 +208,7 @@ class TestInsertVert:
         for vert in face.verts:
             vert.set_attrib(NamedAttribute("purple"))
         new_vert = mesh.insert_vert(face)
-        assert new_vert.try_attrib(NamedAttribute) == "purple"  # type: ignore
+        assert new_vert.try_attrib_value(NamedAttribute) == "purple"  # type: ignore
 
     def test_vert_kwargs_pass(self, mesh_faces) -> None:
         """vert_kwargs assigned to new vert"""
@@ -216,7 +216,7 @@ class TestInsertVert:
         for vert in face.verts:
             vert.set_attrib(NamedAttribute("purple"))
         new_vert = mesh.insert_vert(face)
-        assert new_vert.try_attrib(NamedAttribute) == "purple"  # type: ignore
+        assert new_vert.try_attrib_value(NamedAttribute) == "purple"  # type: ignore
 
 
 class TestRemoveEdge:
@@ -227,13 +227,13 @@ class TestRemoveEdge:
         edge.pair.face.set_attrib(NamedAttribute("brown"))
         new_face = mesh.remove_edge(edge)
         validate_mesh(mesh)
-        assert new_face.try_attrib(NamedAttribute) == "brown"
+        assert new_face.try_attrib_value(NamedAttribute) == "brown"
 
     def test_face_kwargs_passed(self, mesh_edges) -> None:
         """face_kwargs become attributes"""
         mesh, edge = mesh_edges
         new_face = mesh.remove_edge(edge).set_attrib(NamedAttribute("green"))
-        assert new_face.try_attrib(NamedAttribute) == "green"
+        assert new_face.try_attrib_value(NamedAttribute) == "green"
 
     def test_missing_edge(self, he_mesh) -> None:
         """Raise ManifoldMeshError if edge not in mesh"""
@@ -384,7 +384,7 @@ class TestSplitEdge:
         edge.orig.set_attrib(NamedAttribute("black"))
         edge.dest.set_attrib(NamedAttribute("black"))
         new_vert = mesh.split_edge(edge)
-        assert new_vert.try_attrib(NamedAttribute) == "black"
+        assert new_vert.try_attrib_value(NamedAttribute) == "black"
 
     def test_geometry(self, mesh_edges) -> None:
         """Add one to number of face edges."""
@@ -480,7 +480,7 @@ class TestCollapseEdge:
         edge = next(
             x
             for x in mesh.edges
-            if x.orig.try_attrib(Coordinate) == 0 and x.dest.try_attrib(Coordinate) == 1
+            if x.orig.try_attrib_value(Coordinate) == 0 and x.dest.try_attrib_value(Coordinate) == 1
         )
         mesh.collapse_edge(edge)
         assert not mesh.verts

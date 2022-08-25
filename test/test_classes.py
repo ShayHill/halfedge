@@ -76,7 +76,7 @@ class TestElemAttribs:
                 return self.element.sn
         elem = MeshElementBase()
         elem.set_attrib(LazyAttrib())
-        assert elem.try_attrib(LazyAttrib) == elem.sn
+        assert elem.try_attrib_value(LazyAttrib) == elem.sn
 
 
 class TestMeshElementBase:
@@ -99,8 +99,8 @@ class TestMeshElementBase:
         base_with_attrib = MeshElementBase(
             IncompatibleAttrib(7), NumericAttrib(8)
         )
-        assert base_with_attrib.try_attrib(IncompatibleAttrib) == 7
-        assert base_with_attrib.try_attrib(NumericAttrib) == 8
+        assert base_with_attrib.try_attrib_value(IncompatibleAttrib) == 7
+        assert base_with_attrib.try_attrib_value(NumericAttrib) == 8
 
     def test_pointers_through_init(self) -> None:
         """Key, val pairs passed as kwargs fail if key does not have a setter"""
@@ -113,8 +113,8 @@ class TestMeshElementBase:
         elem2 = MeshElementBase(NumericAttrib(6), IncompatibleAttrib(3))
         elem3 = MeshElementBase(IncompatibleAttrib(1))
         elem3.merge_from(elem1, elem2)
-        assert elem3.try_attrib(IncompatibleAttrib) == 1  # unchanged
-        assert elem3.try_attrib(NumericAttrib) == 7  # filled
+        assert elem3.try_attrib_value(IncompatibleAttrib) == 1  # unchanged
+        assert elem3.try_attrib_value(NumericAttrib) == 7  # filled
 
 
 def test_edge_lap_succeeds(he_triangle: Dict[str, Any]) -> None:
@@ -164,7 +164,7 @@ class TestInitVert:
 
     def test_coordinate_value_has_not_changes(self):
         """Coordinate value is still (1, 2, 3)"""
-        assert self.vert.try_attrib(Coordinate) == (1, 2, 3)
+        assert self.vert.try_attrib_value(Coordinate) == (1, 2, 3)
 
     def test_points_to_edge(self):
         """vert.edge points to input edge"""
@@ -194,7 +194,7 @@ class TestInitEdge:
 
     def test_coordinate_value_has_not_changes(self):
         """Coordinate value is still (1, 2, 3)"""
-        assert self.edge.try_attrib(Coordinate) == (1, 2, 3)
+        assert self.edge.try_attrib_value(Coordinate) == (1, 2, 3)
 
     def test_points_to_orig(self):
         """vert.edge points to input edge"""
@@ -240,7 +240,7 @@ class TestInitFace:
 
     def test_coordinate_value_has_not_changes(self):
         """Coordinate value is still (1, 2, 3)"""
-        assert self.face.try_attrib(Coordinate) == (1, 2, 3)
+        assert self.face.try_attrib_value(Coordinate) == (1, 2, 3)
 
     def test_points_to_edge(self):
         """face.edge points to input edge"""
@@ -336,8 +336,8 @@ class TestHalfEdges:
 
     def test_vl(self, meshes_vlvi: Dict[str, Any], he_cube, he_grid) -> None:
         """Converts unaltered mesh verts back to input vl."""
-        assert {x.try_attrib(Coordinate) for x in he_cube.vl} == set(meshes_vlvi["cube_vl"])
-        assert {x.try_attrib(Coordinate) for x in he_grid.vl} == set(meshes_vlvi["grid_vl"])
+        assert {x.try_attrib_value(Coordinate) for x in he_cube.vl} == set(meshes_vlvi["cube_vl"])
+        assert {x.try_attrib_value(Coordinate) for x in he_grid.vl} == set(meshes_vlvi["grid_vl"])
 
     def test_vi(self, meshes_vlvi: Dict[str, Any], he_cube, he_grid) -> None:
         """Convert unaltered mesh faces back to input vi.
@@ -348,7 +348,7 @@ class TestHalfEdges:
     def test_hi(self, meshes_vlvi: Dict[str, Any], he_grid) -> None:
         """Convert unaltered mesh holes back to input holes."""
         expect = get_canonical_mesh(meshes_vlvi["grid_vl"], meshes_vlvi["grid_hi"])
-        result = get_canonical_mesh([x.try_attrib(Coordinate) for x in he_grid.vl], he_grid.hi)
+        result = get_canonical_mesh([x.try_attrib_value(Coordinate) for x in he_grid.vl], he_grid.hi)
         assert expect == result
 
 

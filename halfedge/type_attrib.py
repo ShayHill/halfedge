@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# last modified: 220808 14:42:46
+# last modified: 220824 21:07:56
 """Attribute values that know how to merge with each other.
 
 As a mesh is transformed, Verts, Edges, and Faces will be split or combined with each
@@ -46,6 +46,7 @@ from typing import Generic, Optional, Protocol, Type, TypeVar, cast
 
 
 _TAttribHolder = TypeVar("_TAttribHolder", bound="AttribHolder")
+_TAttrib = TypeVar("_TAttrib", bound="Attrib")
 _T = TypeVar("_T")
 
 
@@ -69,8 +70,15 @@ class AttribHolder:
         """Set attribute if attrib is an Attrib. Pass silently if None"""
         self.set_attrib(*[x for x in attribs if isinstance(x, Attrib)])
 
-    def try_attrib(self, type_: Type[Attrib[_T]]) -> Optional[_T]:
-        """Try to get an attribute value, None if attrib is not set.
+    def get_attrib(self, type_: Type[_TAttrib]) -> _TAttrib:
+        name = type_.__name__
+        try:
+            return getattr(self, name)
+        except AttributeError:
+            raise AttributeError(f"'{type(self).__name__}' has no Attrib '{name}'")
+
+    def try_attrib(self, type_: Type[_TAttrib]) -> Optional[_TAttrib]:
+        """Try to get an attribute, None if attrib is not set.
 
         :param type_: type of Attrib to seek in the attrib dictionary. This
             takes a type instead of a string to eliminate any possibility of getting
@@ -81,19 +89,33 @@ class AttribHolder:
         except AttributeError:
             return None
 
-    def get_attrib(self, type_: Type[Attrib[_T]]) -> _T:
+    def get_attrib_value(self, type_: Type[Attrib[_T]]) -> _T:
         """Get attrib value. Will fail if attrib is not set
 
         :param type_: type of Attrib to seek in the attrib dictionary. This
             takes a type instead of a string to eliminate any possibility of getting
             a None value just because an attrib dictionary key was mistyped.
         """
+        return self.get_attrib(type_).value
+
+    def try_attrib_value(self, type_: Type[Attrib[_T]]) -> Optional[_T]:
+        """Try to get an attribute value, None if attrib is not set.
+
+        :param type_: type of Attrib to seek in the attrib dictionary. This
+            takes a type instead of a string to eliminate any possibility of getting
+            a None value just because an attrib dictionary key was mistyped.
+        """
         try:
-            return getattr(self, type_.__name__).value
+            return self.get_attrib_value(type_)
         except AttributeError:
-            raise AttributeError(
-                f"'{type(self).__name__}' has no Attrib '{type_.__name__}'"
-            )
+            return None
+
+    def cached_attrib_value(self, type_: Type[Attrib[_T]]) -> Optional[_T]:
+        # TODO: docstring
+        attrib = self.try_attrib(type_)
+        if attrib is not None and hasattr(attrib, '_value'):
+            return attrib.value
+        return None
 
 
 class _SupportsEqual(Protocol):
