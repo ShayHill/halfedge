@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# last modified: 220824 21:07:56
+# last modified: 220913 15:36:06
 """Attribute values that know how to merge with each other.
 
 As a mesh is transformed, Verts, Edges, and Faces will be split or combined with each
@@ -42,18 +42,20 @@ themselves.
 from __future__ import annotations
 
 from contextlib import suppress
-from typing import Generic, Optional, Protocol, Type, TypeVar, cast
+from typing import Any, Generic, Optional, Protocol, Type, TypeVar, cast, TYPE_CHECKING
 
+if TYPE_CHECKING:
+    from halfedge.half_edge_elements import MeshElementBase
 
 _TAttribHolder = TypeVar("_TAttribHolder", bound="AttribHolder")
-_TAttrib = TypeVar("_TAttrib", bound="Attrib")
+_TAttrib = TypeVar("_TAttrib", bound="Attrib[Any]")
 _T = TypeVar("_T")
 
 
 class AttribHolder:
     """Hold AttribBase instances and retrieve values"""
 
-    def set_attrib(self: _TAttribHolder, *attribs: Attrib) -> _TAttribHolder:
+    def set_attrib(self: _TAttribHolder, *attribs: Attrib[Any]) -> _TAttribHolder:
         """Set attribute with an Attrib instance.
 
         type(attrib).__name__ : attrib
@@ -66,7 +68,7 @@ class AttribHolder:
             self.__dict__[type(attrib).__name__] = attrib
         return self
 
-    def _maybe_set_attrib(self, *attribs: Optional[Attrib]) -> None:
+    def _maybe_set_attrib(self, *attribs: Optional[Attrib[Any]]) -> None:
         """Set attribute if attrib is an Attrib. Pass silently if None"""
         self.set_attrib(*[x for x in attribs if isinstance(x, Attrib)])
 
@@ -113,13 +115,13 @@ class AttribHolder:
     def cached_attrib_value(self, type_: Type[Attrib[_T]]) -> Optional[_T]:
         # TODO: docstring
         attrib = self.try_attrib(type_)
-        if attrib is not None and hasattr(attrib, '_value'):
+        if attrib is not None and hasattr(attrib, "_value"):
             return attrib.value
         return None
 
 
 class _SupportsEqual(Protocol):
-    def __eq__(self, other):
+    def __eq__(self: _T, other: _T) -> bool:
         pass
 
 
@@ -134,7 +136,7 @@ class _SupportsAverage(Protocol):
 _TSupportsAverage = TypeVar("_TSupportsAverage", bound=_SupportsAverage)
 _TSupportsEqual = TypeVar("_TSupportsEqual", bound=_SupportsEqual)
 _TAttribValue = TypeVar("_TAttribValue")
-_TElemAttrib = TypeVar("_TElemAttrib", bound="Attrib")
+_TElemAttrib = TypeVar("_TElemAttrib", bound="Attrib[Any]")
 
 
 class Attrib(Generic[_TAttribValue]):
@@ -198,7 +200,7 @@ class Attrib(Generic[_TAttribValue]):
 
     @classmethod
     def slice(
-        cls: Type[_TElemAttrib], slice_from: Optional[_TElemAttrib]
+        cls: Type[_TElemAttrib], slice_from: _TElemAttrib
     ) -> Optional[_TElemAttrib]:
         """Define how attribute will be passed when dividing self.element.
 
@@ -245,7 +247,7 @@ class Attrib(Generic[_TAttribValue]):
         """
         raise NotImplementedError(
             f"'{type(self).__name__}' has no provision "
-            "for inferring a value from 'self.element'"
+            + "for inferring a value from 'self.element'"
         )
 
 
@@ -258,11 +260,15 @@ class ContagionAttrib(Attrib[_TSupportsEqual]):
     element will have that attribute.
     """
 
-    def __init__(self, value=None, element=None) -> None:
+    def __init__(
+        self,
+        value: Optional[_TSupportsEqual] = None,
+        element: Optional[MeshElementBase] = None,
+    ) -> None:
         super().__init__(cast("_TSupportsEqual", True), element)
 
     @classmethod
-    def merge(cls, *merge_from):
+    def merge(cls: type[_TAttrib], *merge_from: Optional[_TAttrib]) -> Optional[_TAttrib]:
         """If any element has a ContagionAttributeBase attribute, return a new
         instance with that attribute. Otherwise None.
         """
@@ -272,7 +278,7 @@ class ContagionAttrib(Attrib[_TSupportsEqual]):
         return None
 
     @classmethod
-    def slice(cls, slice_from):
+    def slice(cls: type[_TAttrib], slice_from: _TAttrib) -> Optional[_TAttrib]:
         """Copy attribute to slices.
 
         Holes are defined with IsHole(ContagionAttributeBase), so this will split a
@@ -286,7 +292,7 @@ class ContagionAttrib(Attrib[_TSupportsEqual]):
     def _infer_value(self):
         raise RuntimeError(
             "This will only be called if self._value is None, "
-            "which should not happen."
+            + "which should not happen."
         )
 
 
