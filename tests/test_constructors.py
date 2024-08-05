@@ -3,6 +3,8 @@
 
 created: 170204 14:22:23
 """
+# pyright: reportPrivateUsage=false
+
 import itertools
 import random
 from keyword import iskeyword
