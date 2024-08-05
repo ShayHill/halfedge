@@ -15,12 +15,12 @@ import pytest
 from .conftest import compare_circular_2
 
 # noinspection PyProtectedMember,PyProtectedMember
-from ..halfedge.type_attrib import (
+from halfedge.type_attrib import (
     IncompatibleAttrib,
     NumericAttrib,
     Attrib
 )
-from ..halfedge.half_edge_elements import (
+from halfedge.half_edge_elements import (
     Edge,
     Face,
     ManifoldMeshError,
@@ -28,7 +28,7 @@ from ..halfedge.half_edge_elements import (
     MeshElementBase,
     _function_lap,
 )
-from ..halfedge.half_edge_querries import StaticHalfEdges
+from halfedge.half_edge_querries import StaticHalfEdges
 
 alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 identifiers = (

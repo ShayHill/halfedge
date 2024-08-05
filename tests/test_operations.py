@@ -16,10 +16,10 @@ import pytest
 import random
 
 from .conftest import get_canonical_mesh
-from ..halfedge.half_edge_elements import Edge, ManifoldMeshError, Vert, Face
-from ..halfedge.half_edge_object import HalfEdges
-from ..halfedge.validations import validate_mesh
-from ..halfedge.type_attrib import (
+from halfedge.half_edge_elements import Edge, ManifoldMeshError, Vert, Face
+from halfedge.half_edge_object import HalfEdges
+from halfedge.validations import validate_mesh
+from halfedge.type_attrib import (
     IncompatibleAttrib,
     NumericAttrib,
 )

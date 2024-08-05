@@ -7,10 +7,10 @@ created: 170204 14:22:23
 
 import pytest
 
-from ..halfedge.type_attrib import IncompatibleAttrib
-from ..halfedge.half_edge_elements import ManifoldMeshError, Vert
-from ..halfedge.half_edge_querries import StaticHalfEdges
-from ..halfedge.validations import validate_mesh
+from halfedge.type_attrib import IncompatibleAttrib
+from halfedge.half_edge_elements import ManifoldMeshError, Vert
+from halfedge.half_edge_querries import StaticHalfEdges
+from halfedge.validations import validate_mesh
 
 
 class Coordinate(IncompatibleAttrib):

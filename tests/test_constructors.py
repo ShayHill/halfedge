@@ -13,14 +13,14 @@ import pytest
 
 # noinspection PyProtectedMember,PyProtectedMember
 from .conftest import get_canonical_mesh
-from ..halfedge.type_attrib import IncompatibleAttrib, \
+from halfedge.type_attrib import IncompatibleAttrib, \
     NumericAttrib
-from ..halfedge.half_edge_elements import (
+from halfedge.half_edge_elements import (
     ManifoldMeshError,
     MeshElementBase,
     _function_lap,
 )
-from ..halfedge.half_edge_querries import StaticHalfEdges
+from halfedge.half_edge_querries import StaticHalfEdges
 
 alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 identifiers = (

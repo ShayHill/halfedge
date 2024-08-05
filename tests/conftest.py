@@ -8,12 +8,11 @@ from itertools import product
 from typing import Any, Dict, Hashable, Iterable, List, Sequence, Set, Tuple, TypeVar
 
 import pytest
-from pytest_lazyfixture import lazy_fixture
 
-from ..halfedge import half_edge_elements
-from ..halfedge.half_edge_elements import Edge, Face, Vert
-from ..halfedge.half_edge_object import HalfEdges
-from ..halfedge.type_attrib import NumericAttrib, IncompatibleAttrib
+from halfedge import half_edge_elements
+from halfedge.half_edge_elements import Edge, Face, Vert
+from halfedge.half_edge_object import HalfEdges
+from halfedge.type_attrib import NumericAttrib, IncompatibleAttrib
 
 
 
@@ -87,7 +86,7 @@ def he_grid(meshes_vlvi: Dict[str, Any]) -> HalfEdges:
     return HalfEdges.from_vlvi(vl, meshes_vlvi["grid_vi"])
 
 
-@pytest.fixture(params=[lazy_fixture("he_grid"), lazy_fixture("he_cube")])
+@pytest.fixture(scope="function", params=[he_cube, he_grid])
 def he_mesh(request, he_cube, he_grid) -> HalfEdges:
     """A cube and a 3 x 3 grid as HalfEdges instances"""
     return request.param
@@ -105,7 +104,7 @@ def cube_faces(request, he_cube) -> Tuple[HalfEdges, Face]:
     return he_cube, sorted(he_cube.faces)[request.param]
 
 
-@pytest.fixture(params=[lazy_fixture("grid_faces"), lazy_fixture("cube_faces")])
+@pytest.fixture(params=[grid_faces, cube_faces])
 def mesh_faces(request) -> Tuple[HalfEdges, Face]:
     """A cube and a 3 x 3 grid as HalfEdges instances"""
     return request.param
@@ -123,7 +122,7 @@ def cube_edges(request, he_cube) -> Tuple[HalfEdges, Edge]:
     return he_cube, sorted(he_cube.edges)[request.param]
 
 
-@pytest.fixture(params=[lazy_fixture("grid_edges"), lazy_fixture("cube_edges")])
+@pytest.fixture(params=[grid_edges, cube_edges])
 def mesh_edges(request) -> Tuple[HalfEdges, Edge]:
     """A cube and a 3 x 3 grid as HalfEdges instances"""
     return request.param
