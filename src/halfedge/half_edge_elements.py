@@ -30,8 +30,10 @@ This module is all the base elements (Vert, Edge, and Face).
 
 from __future__ import annotations
 
+import itertools as it
+from contextlib import suppress
 from itertools import count
-from typing import TYPE_CHECKING, Any, Callable, TypeVar
+from typing import TYPE_CHECKING, Any, Callable, Type, TypeVar
 
 from halfedge.type_attrib import Attrib, AttribHolder, ContagionAttrib
 
@@ -39,6 +41,9 @@ if TYPE_CHECKING:
     from .half_edge_constructors import BlindHalfEdges
 
 _TMeshElem = TypeVar("_TMeshElem", bound="MeshElementBase")
+
+_TAttrib = TypeVar("_TAttrib", bound=Attrib[Any])
+_T = TypeVar("_T")
 
 
 class IsHole(ContagionAttrib):
@@ -60,17 +65,14 @@ def _all_is(*args: Any) -> bool:
     return bool(args) and all(args[0] is x for x in args[1:])
 
 
-class MeshElementBase(AttribHolder):
+class MeshElementBase:
     """Base class for Vert, Edge, and Face."""
 
     _sn_generator = count()
     _pointers = {"mesh"}
 
     def __init__(
-        self,
-        *attributes: Attrib[Any],
-        mesh: BlindHalfEdges | None = None,
-        **pointers: MeshElementBase | None,
+        self, *attributes: Attrib[Any], mesh: BlindHalfEdges | None = None
     ) -> None:
         """Create an instance (and copy attrs from fill_from).
 
@@ -83,59 +85,94 @@ class MeshElementBase(AttribHolder):
         (e.g., _vert, _pair, _face, _next).
         """
         self.sn = next(self._sn_generator)
+        self.attrib: dict[str, Attrib[Any]] = {}
+        self.mesh = mesh
+
         for attribute in attributes:
             _ = self.set_attrib(attribute)
-        if mesh is not None:
-            self._mesh = mesh
-        for k, v in pointers.items():
-            if v is not None:
-                setattr(self, k, v)
 
-    @property
-    def mesh(self) -> BlindHalfEdges:
-        """Return the mesh instance."""
-        return self._mesh
+        # if mesh is not None:
+        #     self._mesh = mesh
+        # for k, v in pointers.items():
+        #     if v is not None:
+        #         setattr(self, k, v)
 
-    @mesh.setter
-    def mesh(self, mesh_: BlindHalfEdges) -> None:
-        self._mesh = mesh_
+    def set_attrib(self, attrib: Attrib[Any]) -> None:
+        """Set an attribute."""
+        attrib.element = self
+        self.attrib[type(attrib).__name__] = attrib
 
-    def __setattr__(self, key: str, value: Any) -> None:
-        """To prevent any mistyped attributes, which would clobber fill_from.
+    def get_attrib(self, attrib: type[_TAttrib]) -> _TAttrib:
+        """Get an attribute."""
+        return self.attrib[attrib.__name__]
 
-        This is here to help refactoring, but isn't necessary or necessarily
-        Pythonic. Basically, you can only set public attributes which are defined in
-        init or have setters.
+    def try_attrib(self, attrib: type[_TAttrib]) -> _TAttrib | None:
+        """Try to get an attribute."""
+        try:
+            return self.get_attrib(attrib)
+        except KeyError:
+            return None
 
-        I started off allowing element attributes as simple properties, so I had a
-        lot of tests with code like `edge_instance.color = "purple"`. Overloading
-        setattr this way allowed me to find those quickly. I'm going to leave this in
-        for now because it prevents typos and it will help me remember later on that
-        I cannot set ElemAttribBase properties with `edge_instance.something =
-        ElemAttribBase_instance`.
-        """
-        allow = key == "sn"
-        allow = allow or key in self._pointers
-        allow = allow or key.lstrip("_") in self._pointers
-        allow = allow or isinstance(value, Attrib)
-        if allow:
-            super().__setattr__(key, value)
-            return
-        msg = f"'{type(self).__name__}' has no attribute '{key}'"
-        raise AttributeError(msg)
+    def try_attrib_value(self, attrib: type[Attrib[_T]]) -> _T | None:
+        """Try to get the value of an attribute."""
+        attrib_found = self.try_attrib(attrib)
+        if attrib_found is None:
+            return None
+        return attrib_found.value
+
+    def _maybe_set_attrib(self, *attribs: Attrib[Any] | None) -> None:
+        """Set an attribute if it is not None."""
+        for attrib in attribs:
+            if attrib is not None:
+                self.set_attrib(attrib)
+
+    # @property
+    # def mesh(self) -> BlindHalfEdges:
+    #     """Return the mesh instance."""
+    #     return self._mesh
+
+    # @mesh.setter
+    # def mesh(self, mesh_: BlindHalfEdges) -> None:
+    #     self._mesh = mesh_
+
+    # def __setattr__(self, key: str, value: Any) -> None:
+    #     """To prevent any mistyped attributes, which would clobber fill_from.
+
+    #     This is here to help refactoring, but isn't necessary or necessarily
+    #     Pythonic. Basically, you can only set public attributes which are defined in
+    #     init or have setters.
+
+    #     I started off allowing element attributes as simple properties, so I had a
+    #     lot of tests with code like `edge_instance.color = "purple"`. Overloading
+    #     setattr this way allowed me to find those quickly. I'm going to leave this in
+    #     for now because it prevents typos and it will help me remember later on that
+    #     I cannot set ElemAttribBase properties with `edge_instance.something =
+    #     ElemAttribBase_instance`.
+    #     """
+    #     allow = key == "sn"
+    #     allow = allow or key in self._pointers
+    #     allow = allow or key.lstrip("_") in self._pointers
+    #     allow = allow or isinstance(value, Attrib)
+    #     if allow:
+    #         super().__setattr__(key, value)
+    #         return
+    #     msg = f"'{type(self).__name__}' has no attribute '{key}'"
+    #     raise AttributeError(msg)
 
     def merge_from(self: _TMeshElem, *elements: _TMeshElem) -> _TMeshElem:
         """Fill in missing references from other elements."""
-        keys_seen = {k for k, v in self.__dict__.items() if v is not None}
-        for element in elements:
-            for key in (x for x in element.__dict__ if x not in keys_seen):
-                keys_seen.add(key)
-                vals = [getattr(x, key, None) for x in elements]
-                if isinstance(getattr(element, key), Attrib):
-                    self._maybe_set_attrib(type(getattr(element, key)).merge(*vals))
-                    continue
-                if _all_is(*vals):  # will have be something in _pointers
-                    setattr(self, key.lstrip("_"), vals[0])
+        # TODO: maybe split merge_from into merge_from and fill_from
+        all_attrib_names = set(it.chain(*(x.attrib.keys() for x in elements)))
+        for new_attrib_name in all_attrib_names - set(self.attrib.keys()):
+            maybe_attribs = [x.attrib.get(new_attrib_name) for x in elements]
+            elements_attribs = [x for x in maybe_attribs if x is not None]
+            if not elements_attribs:
+                # shouldn't ever happen
+                continue
+            merged_attrib = type(elements_attribs[0]).merge(*elements_attribs)
+            if merged_attrib is None:
+                continue
+            self.set_attrib(merged_attrib)
         return self
 
     def slice_from(self: _TMeshElem, element: _TMeshElem) -> _TMeshElem:
@@ -144,8 +181,8 @@ class MeshElementBase(AttribHolder):
         Do not pass any pointers. ElemAttribBase instances are passed as defined by
         their classes.
         """
-        for key in set(element.__dict__) - set(self.__dict__):
-            self._maybe_set_attrib(getattr(element, key))
+        for key in set(element.attrib) - set(self.attrib):
+            self._maybe_set_attrib(element.attrib[key])
         return self
 
     def __lt__(self: _TMeshElem, other: _TMeshElem) -> bool:
@@ -196,12 +233,23 @@ class Vert(MeshElementBase):
         edge: Edge | None = None,
     ) -> None:
         """Create a vert instance."""
-        super().__init__(*attributes, mesh=mesh, edge=edge)
+        super().__init__(*attributes, mesh=mesh)
+        self._edge = None
+        if edge is not None:
+            self.edge = edge
+
+    @property
+    def has_edge(self) -> bool:
+        """Return True if .edge is set."""
+        return self._edge is not None
 
     @property
     def edge(self) -> Edge:
         """One edge originating at vert."""
-        return self._edge
+        if self._edge is not None:
+            return self._edge
+        msg = ".edge not set for Vert instance."
+        raise AttributeError(msg)
 
     @edge.setter
     def edge(self, edge_: Edge) -> None:
@@ -211,7 +259,7 @@ class Vert(MeshElementBase):
     @property
     def edges(self) -> list[Edge]:
         """Half edges radiating from vert."""
-        if hasattr(self, "edge"):
+        if self.has_edge:
             return self.edge.vert_edges
         return []
 
@@ -268,20 +316,34 @@ class Edge(MeshElementBase):
         prev: Edge | None = None,
     ) -> None:
         """Create an edge instance."""
-        super().__init__(
-            *attributes,
-            mesh=mesh,
-            orig=orig,
-            pair=pair,
-            face=face,
-            next=next,
-            prev=prev,
-        )
+        super().__init__(*attributes, mesh=mesh)
+        self._orig = None
+        self._pair = None
+        self._face = None
+        self._next = None
+        if orig is not None:
+            self.orig = orig
+        if pair is not None:
+            self.pair = pair
+        if face is not None:
+            self.face = face
+        if next is not None:
+            self.next = next
+        if prev is not None:
+            self.prev = prev
+
+    @property
+    def has_orig(self) -> bool:
+        """Return True if .orig is set."""
+        return self._orig is not None
 
     @property
     def orig(self) -> Vert:
         """Vert at which edge originates."""
-        return self._orig
+        if self._orig is not None:
+            return self._orig
+        msg = ".orig vertex not set for Edge instance."
+        raise AttributeError(msg)
 
     @orig.setter
     def orig(self, orig: Vert) -> None:
@@ -289,9 +351,17 @@ class Edge(MeshElementBase):
         orig._edge = self
 
     @property
+    def has_pair(self) -> bool:
+        """Return True if .pair is set."""
+        return self._pair is not None
+
+    @property
     def pair(self) -> Edge:
         """Edge running opposite direction over same verts."""
-        return self._pair
+        if self._pair is not None:
+            return self._pair
+        msg = ".pair edge not set for Edge instance."
+        raise AttributeError(msg)
 
     @pair.setter
     def pair(self, pair: Edge) -> None:
@@ -299,9 +369,17 @@ class Edge(MeshElementBase):
         pair._pair = self
 
     @property
+    def has_face(self) -> bool:
+        """Return True if .face is set."""
+        return self._face is not None
+
+    @property
     def face(self) -> Face:
         """Face to which edge belongs."""
-        return self._face
+        if self._face is not None:
+            return self._face
+        msg = ".face not set for Edge instance."
+        raise AttributeError(msg)
 
     @face.setter
     def face(self, face_: Face) -> None:
@@ -309,9 +387,17 @@ class Edge(MeshElementBase):
         face_._edge = self
 
     @property
+    def has_next(self) -> bool:
+        """Return True if .next is set."""
+        return self._next is not None
+
+    @property
     def next(self: Edge) -> Edge:
         """Next edge along face."""
-        return self._next
+        if self._next is not None:
+            return self._next
+        msg = ".next not set for Edge instance."
+        raise AttributeError(msg)
 
     @next.setter
     def next(self: Edge, next_: Edge) -> None:
@@ -400,12 +486,23 @@ class Face(MeshElementBase):
         """Create a face instance."""
         if is_hole:
             attributes += (IsHole(),)
-        super().__init__(*attributes, mesh=mesh, edge=edge)
+        super().__init__(*attributes, mesh=mesh)
+        self._edge = edge
+        if edge is not None:
+            self.edge = edge
+
+    @property
+    def has_edge(self) -> bool:
+        """Does face have one edge identified."""
+        return self._edge is not None
 
     @property
     def edge(self) -> Edge:
         """One edge on the face."""
-        return self._edge
+        if self._edge is not None:
+            return self._edge
+        msg = ".edge not set for Face instance."
+        raise AttributeError(msg)
 
     @edge.setter
     def edge(self, edge: Edge) -> None:
@@ -420,12 +517,12 @@ class Face(MeshElementBase):
         "hole-ness" is assigned at instance creation by passing ``is_hole=True`` to
         ``__init__``
         """
-        return hasattr(self, "IsHole")
+        return self.try_attrib(IsHole) is not None
 
     @property
     def edges(self) -> list[Edge]:
         """Look up all edges around face."""
-        if hasattr(self, "edge"):
+        if self.edge is not None:
             return self.edge.face_edges
         return []
 

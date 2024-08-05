@@ -245,7 +245,9 @@ class HalfEdges(StaticHalfEdges):
         edge.pair.next = edge_next
 
         # if face is not split, new face will be created then immediately written over
-        _update_face_edges(self.new_face().slice_from(face), edge)
+        new_face = self.new_face()
+        new_face.slice_from(face)
+        _update_face_edges(new_face, edge)
         _update_face_edges(face, edge.pair)
 
         _ = edge.merge_from(*[x for x in edge.face_edges if x not in {edge, edge.pair}])

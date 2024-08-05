@@ -142,11 +142,11 @@ class Attrib(Generic[_T]):
     __slots__ = ("_value", "element")
 
     def __init__(
-        self, value: _T | None = None, element: AttribHolder | None = None
+        self, value: _T | None = None, element: MeshElementBase | None = None
     ) -> None:
         """Set value and element."""
         self._value: _T
-        self.element: AttribHolder
+        self.element: MeshElementBase
         if value is not None:
             self._value = value
         if element is not None:

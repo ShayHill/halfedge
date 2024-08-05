@@ -20,6 +20,7 @@ from halfedge.half_edge_elements import (
     Vert,
     _function_lap,
 )
+from halfedge.half_edge_object import HalfEdges
 from halfedge.half_edge_querries import StaticHalfEdges
 
 # noinspection PyProtectedMember,PyProtectedMember
@@ -92,7 +93,7 @@ class TestMeshElementBase:
         elem = MeshElementBase()
         elem_attrib = IncompatibleAttrib(8)
         elem.set_attrib(elem_attrib)
-        assert getattr(elem, type(elem_attrib).__name__) is elem_attrib
+        assert elem.get_attrib(IncompatibleAttrib) is elem_attrib
 
     def test_attribs_through_init(self) -> None:
         """MeshElement attributes are captured when passed to init"""
@@ -102,15 +103,15 @@ class TestMeshElementBase:
 
     def test_pointers_through_init(self) -> None:
         """Key, val pairs passed as kwargs fail if key does not have a setter"""
-        with pytest.raises(AttributeError):
-            MeshElementBase(edge=MeshElementBase())
+        with pytest.raises(TypeError):
+            MeshElementBase(edge=MeshElementBase())  # type: ignore
 
     def test_fill_attrib(self) -> None:
         """Fill missing attrib values from fill_from"""
         elem1 = MeshElementBase(NumericAttrib(8), IncompatibleAttrib(3))
         elem2 = MeshElementBase(NumericAttrib(6), IncompatibleAttrib(3))
         elem3 = MeshElementBase(IncompatibleAttrib(1))
-        elem3.merge_from(elem1, elem2)
+        _ = elem3.merge_from(elem1, elem2)
         assert elem3.try_attrib_value(IncompatibleAttrib) == 1  # unchanged
         assert elem3.try_attrib_value(NumericAttrib) == 7  # filled
 
@@ -153,11 +154,11 @@ class TestInitVert:
 
     def test_coordinate_is_attribute(self):
         """Coordinate has been captured as an attribute"""
-        assert self.vert.Coordinate is self.coordinate
+        assert self.vert.get_attrib(Coordinate) is self.coordinate
 
     def test_coordinate_element_is_vert(self):
         """Coordinate.element is set during init/"""
-        assert self.vert.Coordinate.element is self.vert
+        assert self.vert.get_attrib(Coordinate).element is self.vert
 
     def test_coordinate_value_has_not_changes(self):
         """Coordinate value is still (1, 2, 3)"""
@@ -190,11 +191,11 @@ class TestInitEdge:
 
     def test_coordinate_is_attribute(self):
         """Coordinate has been captured as an attribute"""
-        assert self.edge.Coordinate is self.coordinate
+        assert self.edge.get_attrib(Coordinate) is self.coordinate
 
     def test_coordinate_element_is_vert(self):
         """Coordinate.element is set during init/"""
-        assert self.edge.Coordinate.element is self.edge
+        assert self.edge.get_attrib(Coordinate).element is self.edge
 
     def test_coordinate_value_has_not_changes(self):
         """Coordinate value is still (1, 2, 3)"""
@@ -237,11 +238,11 @@ class TestInitFace:
 
     def test_coordinate_is_attribute(self):
         """Coordinate has been captured as an attribute"""
-        assert self.face.Coordinate is self.coordinate
+        assert self.face.get_attrib(Coordinate) is self.coordinate
 
     def test_coordinate_element_is_vert(self):
         """Coordinate.element is set during init/"""
-        assert self.face.Coordinate.element is self.face
+        assert self.face.get_attrib(Coordinate).element is self.face
 
     def test_coordinate_value_has_not_changes(self):
         """Coordinate value is still (1, 2, 3)"""
@@ -339,7 +340,9 @@ def test_half_edges_init(he_triangle: Dict[str, Any]) -> None:
 class TestHalfEdges:
     """Keep the linter happy."""
 
-    def test_vl(self, meshes_vlvi: Dict[str, Any], he_cube, he_grid) -> None:
+    def test_vl(
+        self, meshes_vlvi: Dict[str, Any], he_cube: HalfEdges, he_grid: HalfEdges
+    ) -> None:
         """Converts unaltered mesh verts back to input vl."""
         assert {x.try_attrib_value(Coordinate) for x in he_cube.vl} == set(
             meshes_vlvi["cube_vl"]
@@ -348,13 +351,15 @@ class TestHalfEdges:
             meshes_vlvi["grid_vl"]
         )
 
-    def test_vi(self, meshes_vlvi: Dict[str, Any], he_cube, he_grid) -> None:
+    def test_vi(
+        self, meshes_vlvi: Dict[str, Any], he_cube: HalfEdges, he_grid: HalfEdges
+    ) -> None:
         """Convert unaltered mesh faces back to input vi.
         Demonstrates preservation of face edge beginning point."""
-        compare_circular_2(he_cube.fi, meshes_vlvi["cube_vi"])
-        compare_circular_2(he_grid.fi, meshes_vlvi["grid_vi"])
+        _ = compare_circular_2(he_cube.fi, meshes_vlvi["cube_vi"])
+        _ = compare_circular_2(he_grid.fi, meshes_vlvi["grid_vi"])
 
-    def test_hi(self, meshes_vlvi: Dict[str, Any], he_grid) -> None:
+    def test_hi(self, meshes_vlvi: Dict[str, Any], he_grid: HalfEdges) -> None:
         """Convert unaltered mesh holes back to input holes."""
         expect = get_canonical_mesh(meshes_vlvi["grid_vl"], meshes_vlvi["grid_hi"])
         result = get_canonical_mesh(
@@ -363,28 +368,28 @@ class TestHalfEdges:
         assert expect == result
 
 
-def test_half_edges_boundary_edges(he_grid) -> None:
+def test_half_edges_boundary_edges(he_grid: HalfEdges) -> None:
     """12 edges on grid. All face holes."""
     edges = he_grid.boundary_edges
     assert len(edges) == 12
     assert all(x.face.is_hole for x in edges)
 
 
-def test_half_edges_boundary_verts(he_grid) -> None:
+def test_half_edges_boundary_verts(he_grid: HalfEdges) -> None:
     """12 verts on grid. All valence 2 or 3."""
     verts = he_grid.boundary_verts
     assert len(verts) == 12
     assert all(x.valence in (2, 3) for x in verts)
 
 
-def test_half_edges_interior_edges(he_grid) -> None:
+def test_half_edges_interior_edges(he_grid: HalfEdges) -> None:
     """36 in grid. All face Faces."""
     edges = he_grid.interior_edges
     assert len(edges) == 36
     assert not any(x.face.is_hole for x in edges)
 
 
-def test_half_edges_interior_verts(he_grid) -> None:
+def test_half_edges_interior_verts(he_grid: HalfEdges) -> None:
     """4 in grid. All valence 4"""
     verts = he_grid.interior_verts
     assert len(verts) == 4

@@ -104,7 +104,8 @@ class BlindHalfEdges(AttribHolder):
         hole_edges = {
             self.new_edge(orig=x.dest, pair=x)
             for x in self.edges
-            if not hasattr(x, "pair")
+            if not x.has_pair
+            # if not hasattr(x, "pair")
         }
         orig2hole_edge = {x.orig: x for x in hole_edges}
 
@@ -118,10 +119,13 @@ class BlindHalfEdges(AttribHolder):
         while orig2hole_edge:
             _, edge = next(iter(orig2hole_edge.items()))
             edge.face = self.new_hole()
-            while edge.dest in orig2hole_edge:
-                edge.next = orig2hole_edge.pop(edge.dest)
-                edge.next.face = edge.face
-                edge = edge.next
+            try:
+                while edge.dest in orig2hole_edge:
+                    edge.next = orig2hole_edge.pop(edge.dest)
+                    edge.next.face = edge.face
+                    edge = edge.next
+            except:
+                breakpoint()
         self.edges.update(hole_edges)
 
     @classmethod
