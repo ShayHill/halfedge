@@ -86,10 +86,12 @@ def he_grid(meshes_vlvi: Dict[str, Any]) -> HalfEdges:
     return HalfEdges.from_vlvi(vl, meshes_vlvi["grid_vi"])
 
 
-@pytest.fixture(scope="function", params=[he_cube, he_grid])
+@pytest.fixture(scope="function", params=range(2))
 def he_mesh(request, he_cube, he_grid) -> HalfEdges:
     """A cube and a 3 x 3 grid as HalfEdges instances"""
-    return request.param
+    if request.param == 0:
+        return he_grid
+    return he_cube
 
 
 @pytest.fixture(scope="function", params=range(9))
@@ -104,10 +106,12 @@ def cube_faces(request, he_cube) -> Tuple[HalfEdges, Face]:
     return he_cube, sorted(he_cube.faces)[request.param]
 
 
-@pytest.fixture(params=[grid_faces, cube_faces])
-def mesh_faces(request) -> Tuple[HalfEdges, Face]:
+@pytest.fixture(params=range(2))
+def mesh_faces(request, grid_faces, cube_faces) -> Tuple[HalfEdges, Face]:
     """A cube and a 3 x 3 grid as HalfEdges instances"""
-    return request.param
+    if request.param == 0:
+        return grid_faces
+    return cube_faces
 
 
 @pytest.fixture(scope="function", params=range(48))
@@ -122,10 +126,12 @@ def cube_edges(request, he_cube) -> Tuple[HalfEdges, Edge]:
     return he_cube, sorted(he_cube.edges)[request.param]
 
 
-@pytest.fixture(params=[grid_edges, cube_edges])
-def mesh_edges(request) -> Tuple[HalfEdges, Edge]:
+@pytest.fixture(params=range(2))
+def mesh_edges(request, grid_edges, cube_edges) -> Tuple[HalfEdges, Edge]:
     """A cube and a 3 x 3 grid as HalfEdges instances"""
-    return request.param
+    if request.param == 0:
+        return grid_edges
+    return cube_edges
 
 
 def compare_circular(seq_a: Sequence[Any], seq_b: Sequence[Any]) -> bool:
