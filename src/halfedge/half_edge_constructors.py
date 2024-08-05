@@ -1,6 +1,3 @@
-#!/usr/bin/env python3
-# _*_ coding: utf-8 _*_
-# last modified: 220809 15:52:44
 """Create HalfEdges instances.
 
 Nothing in this module will ever try to "match" Verts by their coordinate values. The
@@ -29,23 +26,23 @@ _TBlindHalfEdges = TypeVar("_TBlindHalfEdges", bound="BlindHalfEdges")
 
 
 class BlindHalfEdges(AttribHolder):
-    def __init__(self, edges: Optional[Set[Edge]] = None) -> None:
+    def __init__(self, edges: set[Edge] | None = None) -> None:
         if edges is None:
-            self.edges: Set[Edge] = set()
+            self.edges: set[Edge] = set()
         else:
             self.edges = edges
 
-    def new_vert(self, *attributes: Attrib, edge: Optional[Edge] = None) -> Vert:
+    def new_vert(self, *attributes: Attrib, edge: Edge | None = None) -> Vert:
         return Vert(*attributes, mesh=self, edge=edge)
 
     def new_edge(
         self,
         *attributes: Attrib,
-        orig: Optional[Vert] = None,
-        pair: Optional[Edge] = None,
-        face: Optional[Face] = None,
-        next: Optional[Edge] = None,
-        prev: Optional[Edge] = None,
+        orig: Vert | None = None,
+        pair: Edge | None = None,
+        face: Face | None = None,
+        next: Edge | None = None,
+        prev: Edge | None = None,
     ):
         return Edge(
             *attributes,
@@ -57,13 +54,13 @@ class BlindHalfEdges(AttribHolder):
             prev=prev,
         )
 
-    def new_face(self, *attributes: Attrib, edge: Optional[Edge] = None) -> Face:
+    def new_face(self, *attributes: Attrib, edge: Edge | None = None) -> Face:
         return Face(*attributes, mesh=self, edge=edge)
 
-    def new_hole(self, *attributes: Attrib, edge: Optional[Edge] = None) -> Face:
+    def new_hole(self, *attributes: Attrib, edge: Edge | None = None) -> Face:
         return Face(*attributes, mesh=self, edge=edge, is_hole=True)
 
-    def _create_face_edges(self, face_verts: Iterable[Vert], face: Face) -> List[Edge]:
+    def _create_face_edges(self, face_verts: Iterable[Vert], face: Face) -> list[Edge]:
         """Create edges around a face defined by vert indices."""
         new_edges = [self.new_edge(orig=vert, face=face) for vert in face_verts]
         for idx, edge in enumerate(new_edges):
@@ -120,10 +117,10 @@ class BlindHalfEdges(AttribHolder):
 
     @classmethod
     def from_vlvi(
-        cls: Type[_TBlindHalfEdges],
-        vl: List[Vert],
-        fi: Set[Tuple[int, ...]],
-        hi: Optional[Set[Tuple[int, ...]]] = None,
+        cls: type[_TBlindHalfEdges],
+        vl: list[Vert],
+        fi: set[tuple[int, ...]],
+        hi: set[tuple[int, ...]] | None = None,
     ) -> _TBlindHalfEdges:
         """A set of half edges from a vertex list and vertex index.
 

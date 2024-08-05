@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-# _*_ coding: utf-8 _*_
 """Ensure meshes are valid.
 
 This is here instead of my test suite to test input I might enter when
@@ -10,7 +8,7 @@ created: 181127
 """
 
 from itertools import chain
-from typing import Iterator, Set, Any, Callable, TypeVar
+from typing import Any, Callable, Iterator, Set, TypeVar
 
 from .half_edge_elements import Face, ManifoldMeshError
 from .half_edge_querries import StaticHalfEdges
@@ -41,7 +39,6 @@ def validate_mesh(mesh: StaticHalfEdges) -> None:
     """Test for a "legal" mesh."""
     if not mesh.edges:
         return
-
 
     for vert in mesh.verts:
         try:

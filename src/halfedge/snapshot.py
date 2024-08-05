@@ -1,17 +1,16 @@
-#!/usr/bin/env python3
-# _*_ coding: utf-8 _*_
 """Take a picture of mesh elements for debugging
 
 :author: Shay Hill
 :created: 11/1/2020
 """
 
-from svg_ultralight import new_svg_root, write_svg
-from svg_ultralight.constructors import new_sub_element, new_element
-from .half_edge_elements import Vert, Face, Edge
 import decimal
 
+from svg_ultralight import new_svg_root, write_svg
+from svg_ultralight.constructors import new_element, new_sub_element
 from svg_ultralight.strings import svg_color_tuple, svg_float_tuples
+
+from .half_edge_elements import Edge, Face, Vert
 
 
 class Snapshot:
@@ -66,7 +65,7 @@ class Snapshot:
             color_ = color if color and face in elements else (200, 200, 200)
             self.faces.append((coords, color_))
 
-    def draw(self, filename='snapshot'):
+    def draw(self, filename="snapshot"):
         coordinates = {tuple(x[0]) for x in self.verts}
         bbox = [
             min(x for x, y in coordinates),
@@ -80,14 +79,14 @@ class Snapshot:
         screen = new_svg_root(
             bbox[0], bbox[1], width, height, pad_=15 / scale, dpu_=scale
         )
-        circle_rad = max(.08, 3/scale)
-        line_stroke = max(.03, 2/scale)
+        circle_rad = max(0.08, 3 / scale)
+        line_stroke = max(0.03, 2 / scale)
         for coos, col in self.faces:
             new_sub_element(
                 screen,
                 "polygon",
-                points = svg_float_tuples(coos),
-                fill = svg_color_tuple(col)
+                points=svg_float_tuples(coos),
+                fill=svg_color_tuple(col),
             )
         for coo_a, coo_b, col in self.edges:
             new_sub_element(

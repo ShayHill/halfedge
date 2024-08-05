@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-# last modified: 220913 15:36:06
 """Attribute values that know how to merge with each other.
 
 As a mesh is transformed, Verts, Edges, and Faces will be split or combined with each
@@ -42,7 +40,7 @@ themselves.
 from __future__ import annotations
 
 from contextlib import suppress
-from typing import Any, Generic, Optional, Protocol, Type, TypeVar, cast, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Generic, Optional, Protocol, Type, TypeVar, cast
 
 if TYPE_CHECKING:
     from halfedge.half_edge_elements import MeshElementBase
@@ -68,18 +66,18 @@ class AttribHolder:
             self.__dict__[type(attrib).__name__] = attrib
         return self
 
-    def _maybe_set_attrib(self, *attribs: Optional[Attrib[Any]]) -> None:
+    def _maybe_set_attrib(self, *attribs: Attrib[Any] | None) -> None:
         """Set attribute if attrib is an Attrib. Pass silently if None"""
         self.set_attrib(*[x for x in attribs if isinstance(x, Attrib)])
 
-    def get_attrib(self, type_: Type[_TAttrib]) -> _TAttrib:
+    def get_attrib(self, type_: type[_TAttrib]) -> _TAttrib:
         name = type_.__name__
         try:
             return getattr(self, name)
         except AttributeError:
             raise AttributeError(f"'{type(self).__name__}' has no Attrib '{name}'")
 
-    def try_attrib(self, type_: Type[_TAttrib]) -> Optional[_TAttrib]:
+    def try_attrib(self, type_: type[_TAttrib]) -> _TAttrib | None:
         """Try to get an attribute, None if attrib is not set.
 
         :param type_: type of Attrib to seek in the attrib dictionary. This
@@ -91,7 +89,7 @@ class AttribHolder:
         except AttributeError:
             return None
 
-    def get_attrib_value(self, type_: Type[Attrib[_T]]) -> _T:
+    def get_attrib_value(self, type_: type[Attrib[_T]]) -> _T:
         """Get attrib value. Will fail if attrib is not set
 
         :param type_: type of Attrib to seek in the attrib dictionary. This
@@ -100,7 +98,7 @@ class AttribHolder:
         """
         return self.get_attrib(type_).value
 
-    def try_attrib_value(self, type_: Type[Attrib[_T]]) -> Optional[_T]:
+    def try_attrib_value(self, type_: type[Attrib[_T]]) -> _T | None:
         """Try to get an attribute value, None if attrib is not set.
 
         :param type_: type of Attrib to seek in the attrib dictionary. This
@@ -112,7 +110,7 @@ class AttribHolder:
         except AttributeError:
             return None
 
-    def cached_attrib_value(self, type_: Type[Attrib[_T]]) -> Optional[_T]:
+    def cached_attrib_value(self, type_: type[Attrib[_T]]) -> _T | None:
         # TODO: docstring
         attrib = self.try_attrib(type_)
         if attrib is not None and hasattr(attrib, "_value"):
@@ -159,8 +157,8 @@ class Attrib(Generic[_TAttribValue]):
 
     def __init__(
         self,
-        value: Optional[_TAttribValue] = None,
-        element: Optional[AttribHolder] = None,
+        value: _TAttribValue | None = None,
+        element: AttribHolder | None = None,
     ) -> None:
         self._value: _TAttribValue
         self.element: AttribHolder
@@ -182,8 +180,8 @@ class Attrib(Generic[_TAttribValue]):
 
     @classmethod
     def merge(
-        cls: Type[_TElemAttrib], *merge_from: Optional[_TElemAttrib]
-    ) -> Optional[_TElemAttrib]:
+        cls: type[_TElemAttrib], *merge_from: _TElemAttrib | None
+    ) -> _TElemAttrib | None:
         """Get value of self from self._merge_from
 
         Use merge_from values to determine a value. If no value can be determined,
@@ -200,8 +198,8 @@ class Attrib(Generic[_TAttribValue]):
 
     @classmethod
     def slice(
-        cls: Type[_TElemAttrib], slice_from: _TElemAttrib
-    ) -> Optional[_TElemAttrib]:
+        cls: type[_TElemAttrib], slice_from: _TElemAttrib
+    ) -> _TElemAttrib | None:
         """Define how attribute will be passed when dividing self.element.
 
         When an element is divided (face divided by an edge, edge divided by a vert,
@@ -216,7 +214,7 @@ class Attrib(Generic[_TAttribValue]):
         _ = slice_from
         return None
 
-    def _infer_value(self) -> Optional[_TAttribValue]:
+    def _infer_value(self) -> _TAttribValue | None:
         """Get value of self from self._element
 
         Use the containing element to determine a value for self. If no value can be
@@ -262,13 +260,15 @@ class ContagionAttrib(Attrib[_TSupportsEqual]):
 
     def __init__(
         self,
-        value: Optional[_TSupportsEqual] = None,
-        element: Optional[MeshElementBase] = None,
+        value: _TSupportsEqual | None = None,
+        element: MeshElementBase | None = None,
     ) -> None:
         super().__init__(cast("_TSupportsEqual", True), element)
 
     @classmethod
-    def merge(cls: type[_TAttrib], *merge_from: Optional[_TAttrib]) -> Optional[_TAttrib]:
+    def merge(
+        cls: type[_TAttrib], *merge_from: _TAttrib | None
+    ) -> _TAttrib | None:
         """If any element has a ContagionAttributeBase attribute, return a new
         instance with that attribute. Otherwise None.
         """
@@ -278,7 +278,7 @@ class ContagionAttrib(Attrib[_TSupportsEqual]):
         return None
 
     @classmethod
-    def slice(cls: type[_TAttrib], slice_from: _TAttrib) -> Optional[_TAttrib]:
+    def slice(cls: type[_TAttrib], slice_from: _TAttrib) -> _TAttrib | None:
         """Copy attribute to slices.
 
         Holes are defined with IsHole(ContagionAttributeBase), so this will split a
@@ -320,7 +320,7 @@ class IncompatibleAttrib(Attrib[_TSupportsEqual]):
             return cls(value)
         return None
 
-    def _infer_value(self) -> Optional[_TSupportsEqual]:
+    def _infer_value(self) -> _TSupportsEqual | None:
         """No way to infer a value. If value is not set in init or merged from init
         arg merge_from, fail (i.e., return None). This should never happen."""
         return None
@@ -337,7 +337,7 @@ class NumericAttrib(Attrib[_TSupportsAverage]):
             return cls(sum(values) / len(values))
         return None
 
-    def _infer_value(self) -> Optional[_TSupportsAverage]:
+    def _infer_value(self) -> _TSupportsAverage | None:
         """No way to infer a value. If value is not set in init or merged from init
         arg merge_from, fail (i.e., return None). This should never happen."""
         return None

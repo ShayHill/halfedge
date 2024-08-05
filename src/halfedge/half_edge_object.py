@@ -3,9 +3,8 @@ from __future__ import annotations
 from contextlib import suppress
 from typing import Any, Optional, Set, Tuple, Union
 
-from .half_edge_elements import ManifoldMeshError
+from .half_edge_elements import Edge, Face, ManifoldMeshError, Vert
 from .half_edge_querries import StaticHalfEdges
-from .half_edge_elements import Edge, Face, Vert
 
 
 def _update_face_edges(face: Face, edge: Edge) -> None:
@@ -22,7 +21,7 @@ def _update_face_edges(face: Face, edge: Edge) -> None:
         edge_.face = face
 
 
-def _get_singleton_item(one: Set) -> Any:
+def _get_singleton_item(one: set) -> Any:
     """
     If a set has exactly one item, return that item.
 
@@ -47,7 +46,7 @@ class UnrecoverableManifoldMeshError(ValueError):
 
 
 class HalfEdges(StaticHalfEdges):
-    def _get_edge_or_vert_faces(self, elem: Union[Edge, Vert]) -> Set[Face]:
+    def _get_edge_or_vert_faces(self, elem: Edge | Vert) -> set[Face]:
         """
         Get faces (unordered) adjacent to a vert or edge
 
@@ -60,11 +59,7 @@ class HalfEdges(StaticHalfEdges):
             return {elem.face}
         return set(elem.faces)
 
-    def _infer_face(
-        self,
-        orig: Union[Edge, Vert],
-        dest: Union[Edge, Vert],
-    ) -> Face:
+    def _infer_face(self, orig: Edge | Vert, dest: Edge | Vert) -> Face:
         """
         Infer which face two verts lie on.
 
@@ -84,8 +79,8 @@ class HalfEdges(StaticHalfEdges):
         raise ValueError("face cannot be determined from orig and dest")
 
     def _infer_wing(
-        self, elem: Union[Edge, Vert], face: Face, default: Edge
-    ) -> Tuple[Vert, Edge]:
+        self, elem: Edge | Vert, face: Face, default: Edge
+    ) -> tuple[Vert, Edge]:
         """
         Given a vert or edge, try to return vert and edge such that edge.dest == vert
 
@@ -176,9 +171,9 @@ class HalfEdges(StaticHalfEdges):
 
     def insert_edge(
         self,
-        orig: Union[Edge, Vert],
-        dest: Union[Edge, Vert],
-        face: Optional[Face] = None,
+        orig: Edge | Vert,
+        dest: Edge | Vert,
+        face: Face | None = None,
     ) -> Edge:
         """
         Insert a new edge between two verts.
@@ -320,7 +315,7 @@ class HalfEdges(StaticHalfEdges):
         # TODO: new hole every time
         # TODO: make this ManifoldMeshError a ValueError
         if edge not in self.edges:
-            raise ManifoldMeshError("edge {} does not exist in mesh".format(id(edge)))
+            raise ManifoldMeshError(f"edge {id(edge)} does not exist in mesh")
 
         pair = edge.pair
 

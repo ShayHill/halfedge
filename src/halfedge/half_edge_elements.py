@@ -1,6 +1,3 @@
-#!/usr/bin/env python3
-# _*_ coding: utf-8 _*_
-# Last modified: 220809 15:50:23
 """A half-edges data container with view methods.
 
 A simple container for a list of half edges. Provides lookups and a serial
@@ -34,9 +31,9 @@ This module is all the base elements (Vert, Edge, and Face).
 from __future__ import annotations
 
 from itertools import count
-from typing import Any, Callable, List, Optional, TypeVar, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Callable, List, Optional, TypeVar
 
-from .type_attrib import ContagionAttrib, Attrib, AttribHolder
+from .type_attrib import Attrib, AttribHolder, ContagionAttrib
 
 if TYPE_CHECKING:
     from .half_edge_constructors import BlindHalfEdges
@@ -71,8 +68,8 @@ class MeshElementBase(AttribHolder):
     def __init__(
         self,
         *attributes: Attrib,
-        mesh: Optional[BlindHalfEdges] = None,
-        **pointers: Optional[MeshElementBase],
+        mesh: BlindHalfEdges | None = None,
+        **pointers: MeshElementBase | None,
     ) -> None:
         """
         Create an instance (and copy attrs from fill_from).
@@ -167,7 +164,7 @@ _TFLapArg = TypeVar("_TFLapArg")
 
 def _function_lap(
     func: Callable[[_TFLapArg], _TFLapArg], first_arg: _TFLapArg
-) -> List[_TFLapArg]:
+) -> list[_TFLapArg]:
     """
     Repeatedly apply func till first_arg is reached again.
 
@@ -196,8 +193,8 @@ class Vert(MeshElementBase):
     def __init__(
         self,
         *attributes: Attrib,
-        mesh: Optional[BlindHalfEdges] = None,
-        edge: Optional[Edge] = None,
+        mesh: BlindHalfEdges | None = None,
+        edge: Edge | None = None,
     ):
         super().__init__(*attributes, mesh=mesh, edge=edge)
 
@@ -211,31 +208,31 @@ class Vert(MeshElementBase):
         edge_._orig = self
 
     @property
-    def edges(self) -> List[Edge]:
+    def edges(self) -> list[Edge]:
         """Half edges radiating from vert."""
         if hasattr(self, "edge"):
             return self.edge.vert_edges
         return []
 
     @property
-    def all_faces(self) -> List[Face]:
+    def all_faces(self) -> list[Face]:
         """Faces radiating from vert"""
         if hasattr(self, "edge"):
             return self.edge.vert_all_faces
         return []
 
     @property
-    def faces(self) -> List[Face]:
+    def faces(self) -> list[Face]:
         """Faces radiating from vert"""
         return [x for x in self.all_faces if not x.is_hole]
 
     @property
-    def holes(self) -> List[Face]:
+    def holes(self) -> list[Face]:
         """Faces radiating from vert"""
         return [x for x in self.all_faces if x.is_hole]
 
     @property
-    def neighbors(self) -> List[Vert]:
+    def neighbors(self) -> list[Vert]:
         """Evert vert connected to vert by one edge."""
         if hasattr(self, "edge"):
             return self.edge.vert_neighbors
@@ -262,12 +259,12 @@ class Edge(MeshElementBase):
     def __init__(
         self,
         *attributes: Attrib,
-        mesh: Optional[BlindHalfEdges] = None,
-        orig: Optional[Vert] = None,
-        pair: Optional["Edge"] = None,
-        face: Optional["Face"] = None,
-        next: Optional["Edge"] = None,
-        prev: Optional["Edge"] = None,
+        mesh: BlindHalfEdges | None = None,
+        orig: Vert | None = None,
+        pair: Edge | None = None,
+        face: Face | None = None,
+        next: Edge | None = None,
+        prev: Edge | None = None,
     ):
         super().__init__(
             *attributes,
@@ -335,7 +332,7 @@ class Edge(MeshElementBase):
             return self.pair.orig
 
     @property
-    def face_edges(self) -> List[Edge]:
+    def face_edges(self) -> list[Edge]:
         """All edges around an edge.face."""
 
         def _get_next(edge: Edge) -> Edge:
@@ -344,12 +341,12 @@ class Edge(MeshElementBase):
         return _function_lap(_get_next, self)
 
     @property
-    def face_verts(self) -> List[Vert]:
+    def face_verts(self) -> list[Vert]:
         """All verts around an edge.vert."""
         return [edge.orig for edge in self.face_edges]
 
     @property
-    def vert_edges(self) -> List[Edge]:
+    def vert_edges(self) -> list[Edge]:
         """
         All half edges radiating from edge.orig.
 
@@ -359,28 +356,28 @@ class Edge(MeshElementBase):
         return _function_lap(lambda x: x.pair.next, self)
 
     @property
-    def vert_all_faces(self) -> List[Face]:
+    def vert_all_faces(self) -> list[Face]:
         """
         All faces and holes around the edge's vert
         """
         return [x.face for x in self.vert_edges]
 
     @property
-    def vert_faces(self) -> List[Face]:
+    def vert_faces(self) -> list[Face]:
         """
         All faces around the edge's vert
         """
         return [x for x in self.vert_all_faces if not x.is_hole]
 
     @property
-    def vert_holes(self) -> List[Face]:
+    def vert_holes(self) -> list[Face]:
         """
         All holes around the edge's vert
         """
         return [x for x in self.vert_all_faces if x.is_hole]
 
     @property
-    def vert_neighbors(self) -> List[Vert]:
+    def vert_neighbors(self) -> list[Vert]:
         """All verts connected to vert by one edge."""
         return [edge.dest for edge in self.vert_edges]
 
@@ -397,8 +394,8 @@ class Face(MeshElementBase):
     def __init__(
         self,
         *attributes: Attrib,
-        mesh: Optional[BlindHalfEdges] = None,
-        edge: Optional[Edge] = None,
+        mesh: BlindHalfEdges | None = None,
+        edge: Edge | None = None,
         is_hole: bool = False,
     ) -> None:
         if is_hole:
@@ -427,14 +424,14 @@ class Face(MeshElementBase):
         return hasattr(self, "IsHole")
 
     @property
-    def edges(self) -> List[Edge]:
+    def edges(self) -> list[Edge]:
         """Look up all edges around face."""
         if hasattr(self, "edge"):
             return self.edge.face_edges
         return []
 
     @property
-    def verts(self) -> List[Vert]:
+    def verts(self) -> list[Vert]:
         """Look up all verts around face."""
         if hasattr(self, "edge"):
             return [x.orig for x in self.edges]
