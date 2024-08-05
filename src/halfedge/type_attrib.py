@@ -51,7 +51,7 @@ _T = TypeVar("_T")
 
 
 class AttribHolder:
-    """Hold AttribBase instances and retrieve values"""
+    """Hold AttribBase instances and retrieve values."""
 
     def set_attrib(self: _TAttribHolder, *attribs: Attrib[Any]) -> _TAttribHolder:
         """Set attribute with an Attrib instance.
@@ -67,7 +67,7 @@ class AttribHolder:
         return self
 
     def _maybe_set_attrib(self, *attribs: Attrib[Any] | None) -> None:
-        """Set attribute if attrib is an Attrib. Pass silently if None"""
+        """Set attribute if attrib is an Attrib. Pass silently if None."""
         self.set_attrib(*[x for x in attribs if isinstance(x, Attrib)])
 
     def get_attrib(self, type_: type[_TAttrib]) -> _TAttrib:
@@ -92,7 +92,7 @@ class AttribHolder:
             return None
 
     def get_attrib_value(self, type_: type[Attrib[_T]]) -> _T:
-        """Get attrib value. Will fail if attrib is not set
+        """Get attrib value. Will fail if attrib is not set.
 
         :param type_: type of Attrib to seek in the attrib dictionary. This
             takes a type instead of a string to eliminate any possibility of getting
@@ -170,7 +170,7 @@ class Attrib(Generic[_TAttribValue]):
 
     @property
     def value(self) -> _TAttribValue:
-        """Return value if set, else try to infer a value"""
+        """Return value if set, else try to infer a value."""
         if not hasattr(self, "_value"):
             value = self._infer_value()
             if value is None:
@@ -184,7 +184,7 @@ class Attrib(Generic[_TAttribValue]):
     def merge(
         cls: type[_TElemAttrib], *merge_from: _TElemAttrib | None
     ) -> _TElemAttrib | None:
-        """Get value of self from self._merge_from
+        """Get value of self from self._merge_from.
 
         Use merge_from values to determine a value. If no value can be determined,
         return None. No element attribute will be set for a None return value.
@@ -215,7 +215,7 @@ class Attrib(Generic[_TAttribValue]):
         return None
 
     def _infer_value(self) -> _TAttribValue | None:
-        """Get value of self from self._element
+        """Get value of self from self._element.
 
         Use the containing element to determine a value for self. If no value can be
         determined, return None.
@@ -288,7 +288,7 @@ class ContagionAttrib(Attrib[_TSupportsEqual]):
             return cls()
         return None
 
-    def _infer_value(self):
+    def _infer_value(self) -> _TSupportsEqual:
         raise RuntimeError(
             "This will only be called if self._value is None, "
             + "which should not happen."
@@ -296,7 +296,7 @@ class ContagionAttrib(Attrib[_TSupportsEqual]):
 
 
 class IncompatibleAttrib(Attrib[_TSupportsEqual]):
-    """Keep value when all merge_from values are the same
+    """Keep value when all merge_from values are the same.
 
     This class in intended for flags like IsEdge or Hardness.
     """
@@ -331,11 +331,11 @@ class IncompatibleAttrib(Attrib[_TSupportsEqual]):
 
 
 class NumericAttrib(Attrib[_TSupportsAverage]):
-    """Average merge_from values"""
+    """Average merge_from values."""
 
     @classmethod
     def merge(cls, *merge_from):
-        """Average values if every contributor has a value. Otherwise None"""
+        """Average values if every contributor has a value. Otherwise None."""
         with suppress(AttributeError):
             values = [x.value for x in merge_from]  # type: ignore
             return cls(sum(values) / len(values))

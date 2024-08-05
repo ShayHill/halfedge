@@ -86,7 +86,7 @@ class HalfEdges(StaticHalfEdges):
     def _infer_wing(
         self, elem: Edge | Vert, face: Face, default: Edge
     ) -> tuple[Vert, Edge]:
-        """Given a vert or edge, try to retrn vert and edge such that edge.dest == vert
+        """Given a vert or edge, try to ret vert and edge such that edge.dest == vert.
 
         :param elem: vert or edge in the mesh
         :param face: face on which vert or edge lies
@@ -492,6 +492,7 @@ class HalfEdges(StaticHalfEdges):
 
     def _is_stitchable(self, edge: Edge) -> bool:
         """Return True if two edges be stitched (middle 2-side face removed).
+
         TODO: revisit docstring
 
         :param edge_a:

@@ -49,7 +49,7 @@ class StaticHalfEdges(BlindHalfEdges):
 
     @property
     def all_faces(self) -> set[Face]:
-        """Look up all faces and holes in mesh"""
+        """Look up all faces and holes in mesh."""
         return {x.face for x in self.edges}
 
     @property
@@ -57,6 +57,8 @@ class StaticHalfEdges(BlindHalfEdges):
         """All elements in mesh.
 
         The redundant set comprehension is to satisfy the linter.
+
+        TODO: see if redundant set comprehension can be removed.
         """
         return {x for x in self.verts | self.edges | self.faces}
 
@@ -82,7 +84,7 @@ class StaticHalfEdges(BlindHalfEdges):
 
     @property
     def vl(self) -> list[Vert]:
-        """vertex list - Sorted list of verts"""
+        """vertex list - Sorted list of verts."""
         return sorted(self.verts)
 
     @property

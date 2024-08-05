@@ -76,7 +76,7 @@ class BlindHalfEdges(AttribHolder):
             new_edges[idx - 1].next = edge
         return new_edges
 
-    def _find_pairs(self) -> None:
+    def find_pairs(self) -> None:
         """Match edge pairs, where possible."""
         endpoints2edge = {(edge.orig, edge.dest): edge for edge in self.edges}
         for edge in self.edges:
@@ -174,6 +174,6 @@ class BlindHalfEdges(AttribHolder):
             mesh.edges.update(mesh._create_face_edges(face_verts, mesh.new_face()))
         for face_verts in hr:
             mesh.edges.update(mesh._create_face_edges(face_verts, mesh.new_hole()))
-        mesh._find_pairs()
+        mesh.find_pairs()
         mesh._infer_holes()
         return mesh

@@ -1,4 +1,4 @@
-"""Take a picture of mesh elements for debugging
+"""Take a picture of mesh elements for debugging.
 
 :author: Shay Hill
 :created: 11/1/2020

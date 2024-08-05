@@ -17,12 +17,12 @@ T = TypeVar("T")
 
 
 def _faces_neighboring_face(face: Face) -> Iterator[Face]:
-    """All faces surrounding :face:"""
+    """All faces surrounding :face:."""
     return (edge.pair.face for edge in face.edges)
 
 
 def _does_reach_all(set_: Set[Any], f_next: Callable[[T], Iterator[T]]) -> bool:
-    """Can f_next(itm) reach entire set for each itm in set?"""
+    """Return True if f_next(itm) can reach entire set for each itm in set."""
     found = set()
     for itm in set_:
         found, new = {itm}, {itm}

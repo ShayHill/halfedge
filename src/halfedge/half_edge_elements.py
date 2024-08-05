@@ -42,7 +42,7 @@ _TMeshElem = TypeVar("_TMeshElem", bound="MeshElementBase")
 
 
 class IsHole(ContagionAttrib):
-    """Flag a Face instance as a hole"""
+    """Flag a Face instance as a hole."""
 
 
 class ManifoldMeshError(ValueError):
@@ -56,7 +56,7 @@ class ManifoldMeshError(ValueError):
 
 
 def _all_is(*args: Any) -> bool:
-    """Return True if all arguments are `a is b`"""
+    """Return True if all arguments are `a is b`."""
     return bool(args) and all(args[0] is x for x in args[1:])
 
 
@@ -101,7 +101,7 @@ class MeshElementBase(AttribHolder):
         self._mesh = mesh_
 
     def __setattr__(self, key: str, value: Any) -> None:
-        """To prevent any mistyped attributes, which would clobber fill_from
+        """To prevent any mistyped attributes, which would clobber fill_from.
 
         This is here to help refactoring, but isn't necessary or necessarily
         Pythonic. Basically, you can only set public attributes which are defined in
@@ -149,7 +149,7 @@ class MeshElementBase(AttribHolder):
         return self
 
     def __lt__(self: _TMeshElem, other: _TMeshElem) -> bool:
-        """Sort by id
+        """Sort by id.
 
         You'll want to be able to sort Verts at least to make a vlvi (vertex list,
         vertex index) format.
@@ -217,19 +217,19 @@ class Vert(MeshElementBase):
 
     @property
     def all_faces(self) -> list[Face]:
-        """Faces radiating from vert"""
+        """Faces radiating from vert."""
         if hasattr(self, "edge"):
             return self.edge.vert_all_faces
         return []
 
     @property
     def faces(self) -> list[Face]:
-        """Faces radiating from vert"""
+        """Faces radiating from vert."""
         return [x for x in self.all_faces if not x.is_hole]
 
     @property
     def holes(self) -> list[Face]:
-        """Faces radiating from vert"""
+        """Faces radiating from vert."""
         return [x for x in self.all_faces if x.is_hole]
 
     @property
@@ -404,7 +404,7 @@ class Face(MeshElementBase):
 
     @property
     def edge(self) -> Edge:
-        """One edge on the face"""
+        """One edge on the face."""
         return self._edge
 
     @edge.setter
@@ -415,7 +415,7 @@ class Face(MeshElementBase):
 
     @property
     def is_hole(self) -> bool:
-        """Is this face a hole?
+        """Return True if this face a hole.
 
         "hole-ness" is assigned at instance creation by passing ``is_hole=True`` to
         ``__init__``
@@ -438,5 +438,8 @@ class Face(MeshElementBase):
 
     @property
     def sides(self) -> int:
-        """The equivalent of valence for faces. How many sides does the face have?"""
+        """Return how many sides the face has.
+
+        This is the equivalent of valence for faces.
+        """
         return len(self.verts)
