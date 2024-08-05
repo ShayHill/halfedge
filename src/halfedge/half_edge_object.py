@@ -80,7 +80,8 @@ class HalfEdges(StaticHalfEdges):
         dest_faces = self._get_edge_or_vert_faces(dest)
         with suppress(ValueError):
             return _get_singleton_item(orig_faces & dest_faces)
-        raise ValueError("face cannot be determined from orig and dest")
+        msg = "face cannot be determined from orig and dest"
+        raise ValueError(msg)
 
     def _infer_wing(
         self, elem: Edge | Vert, face: Face, default: Edge
@@ -115,7 +116,8 @@ class HalfEdges(StaticHalfEdges):
         with suppress(ValueError):
             prev_edge = _get_singleton_item({x for x in face.edges if x.dest is elem})
             return elem, prev_edge
-        raise ValueError("edge cannot be inferred from orig and face")
+        msg = "edge cannot be inferred from orig and face"
+        raise ValueError(msg)
 
     def _point_away_from_edge(self, edge: Edge) -> None:
         """Prepare edge to be removed. Remove vert and face pointers to edge.
@@ -217,18 +219,22 @@ class HalfEdges(StaticHalfEdges):
         edge_next, pair_next = edge_prev.next, pair_prev.next
 
         if getattr(edge_orig, "edge", None) and edge_dest in edge_orig.neighbors:
-            raise ManifoldMeshError("overwriting existing edge")
+            msg = "overwriting existing edge"
+            raise ManifoldMeshError(msg)
 
         edge_points_in_face = set(face.verts) & {edge_orig, edge_dest}
         edge_points_in_mesh = set(self.verts) & {edge_orig, edge_dest}
         if edge_points_in_face != edge_points_in_mesh:
-            raise ManifoldMeshError("orig or dest in mesh but not on given face")
+            msg = "orig or dest in mesh but not on given face"
+            raise ManifoldMeshError(msg)
 
         if edge_orig == edge_dest:
-            raise ManifoldMeshError("orig and dest are the same")
+            msg = "orig and dest are the same"
+            raise ManifoldMeshError(msg)
 
         if not edge_points_in_face and face in self.faces:
-            raise ManifoldMeshError("adding floating edge to existing face")
+            msg = "adding floating edge to existing face"
+            raise ManifoldMeshError(msg)
 
         edge.orig = edge_orig
         edge.prev = edge_prev
@@ -309,12 +315,14 @@ class HalfEdges(StaticHalfEdges):
         # TODO: new hole every time
         # TODO: make this ManifoldMeshError a ValueError
         if edge not in self.edges:
-            raise ManifoldMeshError(f"edge {id(edge)} does not exist in mesh")
+            msg = f"edge {id(edge)} does not exist in mesh"
+            raise ManifoldMeshError(msg)
 
         pair = edge.pair
 
         if edge.orig.valence > 1 and edge.dest.valence > 1 and edge.face == pair.face:
-            raise ValueError("would create non-manifold mesh")
+            msg = "would create non-manifold mesh"
+            raise ValueError(msg)
 
         self._point_away_from_edge(edge)
 
@@ -377,7 +385,8 @@ class HalfEdges(StaticHalfEdges):
             * shared face attributes passed to new face
         """
         if vert.edge not in self.edges or vert.edge.orig != vert:
-            raise ValueError("vert is not in mesh. cannot remove")
+            msg = "vert is not in mesh. cannot remove"
+            raise ValueError(msg)
 
         # TODO: review why peninsulas need to be removed.
         peninsulas = {x for x in vert.edges if x.dest.valence == 1}
@@ -385,7 +394,8 @@ class HalfEdges(StaticHalfEdges):
         vert_faces = {x.face for x in true_edges}
         if len(true_edges) != len(vert_faces):
             # TODO: make this into a ValueError
-            raise ManifoldMeshError("removing vert would create non-manifold mesh")
+            msg = "removing vert would create non-manifold mesh"
+            raise ManifoldMeshError(msg)
 
         # TODO: this needs a better test to ensure mixed with peninsulas works
         for edge in peninsulas:
@@ -416,10 +426,11 @@ class HalfEdges(StaticHalfEdges):
         edges = tuple(face.edges)
         potential_bridges = [x for x in edges if x.orig.valence > 2]
         if len({x.pair.face for x in edges}) < len(potential_bridges):
-            raise ManifoldMeshError(
-                "Removing this face would create non-manifold mesh."
-                " One of this faces's edges is a bridge edge."
+            msg = (
+                "Removing this face would create non-manifold mesh. "
+                + "One of this faces's edges is a bridge edge."
             )
+            raise ManifoldMeshError(msg)
 
         try:
             for edge in edges:
@@ -471,7 +482,8 @@ class HalfEdges(StaticHalfEdges):
         """
         pair = edge.pair
         if len(edge.face_edges) != 3 or len(pair.face_edges) != 3:
-            raise ValueError("can only flip an edge between two triangles")
+            msg = "can only flip an edge between two triangles"
+            raise ValueError(msg)
         new_orig = edge.next.dest
         new_dest = pair.next.dest
         face = self.remove_edge(edge)
@@ -519,9 +531,11 @@ class HalfEdges(StaticHalfEdges):
         carefully. Can flip faces and create linear faces.
         """
         if edge not in self.edges:
-            raise ValueError("edge is not in mesh")
+            msg = "edge is not in mesh"
+            raise ValueError(msg)
         if not self._is_stitchable(edge):
-            raise ValueError("edge collapse would create non-manifold mesh")
+            msg = "edge collapse would create non-manifold mesh"
+            raise ValueError(msg)
 
         new_vert = self.new_vert().merge_from(*{edge.orig, edge.dest})
         for edge_ in set(edge.orig.edges) | set(edge.dest.edges):

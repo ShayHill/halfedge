@@ -121,7 +121,8 @@ class MeshElementBase(AttribHolder):
         if allow:
             super().__setattr__(key, value)
             return
-        raise AttributeError(f"'{type(self).__name__}' has no attribute '{key}'")
+        msg = f"'{type(self).__name__}' has no attribute '{key}'"
+        raise AttributeError(msg)
 
     def merge_from(self: _TMeshElem, *elements: _TMeshElem) -> _TMeshElem:
         """Fill in missing references from other elements."""
@@ -175,7 +176,8 @@ def _function_lap(
         if lap[-1] == lap[0]:
             return lap[:-1]
         if lap[-1] in lap[1:-1]:
-            raise ManifoldMeshError(f"infinite function lap {[id(x) for x in lap]}")
+            msg = f"function lap {[id(x) for x in lap]} repeats"
+            raise ManifoldMeshError(msg)
 
 
 class Vert(MeshElementBase):

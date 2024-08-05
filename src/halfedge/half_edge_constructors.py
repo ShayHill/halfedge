@@ -109,10 +109,11 @@ class BlindHalfEdges(AttribHolder):
         orig2hole_edge = {x.orig: x for x in hole_edges}
 
         if len(orig2hole_edge) < len(hole_edges):
-            raise ManifoldMeshError(
-                "Ambiguous 'next' in inferred pair edge."
-                " Inferred holes probably meet at corner."
+            msg = (
+                "Ambiguous 'next' in inferred pair edge. "
+                + "Inferred holes probably meet at corner."
             )
+            raise ManifoldMeshError(msg)
 
         while orig2hole_edge:
             _, edge = next(iter(orig2hole_edge.items()))

@@ -44,38 +44,47 @@ def validate_mesh(mesh: StaticHalfEdges) -> None:
         try:
             assert vert.edge in mesh.edges
         except:
-            raise ManifoldMeshError("vert points to missing edge")
+            msg = "vert points to missing edge"
+            raise ManifoldMeshError(msg)
         try:
             _ = vert.valence
         except:
-            raise ManifoldMeshError("cannot loop vert")
+            msg = "cannot loop vert"
+            raise ManifoldMeshError(msg)
 
     for edge in mesh.edges:
 
         if edge.next.orig is not edge.pair.orig:
-            raise ManifoldMeshError("next or pair error")
+            msg = "next or pair error"
+            raise ManifoldMeshError(msg)
 
         if edge.orig is edge.dest:
-            raise ManifoldMeshError("loop edge")
+            msg = "loop edge"
+            raise ManifoldMeshError(msg)
 
     for face in mesh.faces | mesh.holes:
         try:
             _ = mesh.edges
         except:
-            raise ManifoldMeshError("cannot complete edge lap")
+            msg = "cannot complete edge lap"
+            raise ManifoldMeshError(msg)
 
         if any(edge.face != face for edge in face.edges):
-            raise ManifoldMeshError("edge pointing to wrong face")
+            msg = "edge pointing to wrong face"
+            raise ManifoldMeshError(msg)
 
         try:
             assert face.edge in mesh.edges
         except:
-            raise ManifoldMeshError("face points to missing edge")
+            msg = "face points to missing edge"
+            raise ManifoldMeshError(msg)
 
     if not _does_reach_all(mesh.faces | mesh.holes, _faces_neighboring_face):
-        raise ManifoldMeshError("not all faces can be reached by jumping over edges")
+        msg = "not all faces can be reached by jumping over edges"
+        raise ManifoldMeshError(msg)
 
     # TODO: remove this or make it a warning
     edge_tuples = {(x.orig, x.dest) for x in mesh.edges}
     if len(edge_tuples) < len(mesh.edges):
-        raise ManifoldMeshError("overlapping edges")
+        msg = "overlapping edges"
+        raise ManifoldMeshError(msg)

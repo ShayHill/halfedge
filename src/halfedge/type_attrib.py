@@ -76,7 +76,8 @@ class AttribHolder:
         try:
             return getattr(self, name)
         except AttributeError:
-            raise AttributeError(f"'{type(self).__name__}' has no Attrib '{name}'")
+            msg = f"'{type(self).__name__}' has no Attrib '{name}'"
+            raise AttributeError(msg)
 
     def try_attrib(self, type_: type[_TAttrib]) -> _TAttrib | None:
         """Try to get an attribute, None if attrib is not set.
@@ -173,7 +174,8 @@ class Attrib(Generic[_TAttribValue]):
         if not hasattr(self, "_value"):
             value = self._infer_value()
             if value is None:
-                raise TypeError(f"no value set and failed to infer from {self.element}")
+                msg = f"no value set and failed to infer from {self.element}"
+                raise TypeError(msg)
             else:
                 self._value = value
         return self._value
