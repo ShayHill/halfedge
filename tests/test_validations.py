@@ -1,5 +1,4 @@
 # Last modified: 181126 16:46:28
-# _*_ coding: utf-8 _*_
 """Test functions in classes.py.
 
 created: 170204 14:22:23
@@ -7,9 +6,9 @@ created: 170204 14:22:23
 
 import pytest
 
-from halfedge.type_attrib import IncompatibleAttrib
 from halfedge.half_edge_elements import ManifoldMeshError, Vert
 from halfedge.half_edge_querries import StaticHalfEdges
+from halfedge.type_attrib import IncompatibleAttrib
 from halfedge.validations import validate_mesh
 
 

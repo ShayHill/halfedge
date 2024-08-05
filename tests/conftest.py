@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """ simple HalfEdges instances for testing
 
 created: 181121 13:14:06
@@ -12,8 +11,7 @@ import pytest
 from halfedge import half_edge_elements
 from halfedge.half_edge_elements import Edge, Face, Vert
 from halfedge.half_edge_object import HalfEdges
-from halfedge.type_attrib import NumericAttrib, IncompatibleAttrib
-
+from halfedge.type_attrib import IncompatibleAttrib, NumericAttrib
 
 
 class Coordinate(IncompatibleAttrib):
@@ -76,13 +74,13 @@ def meshes_vlvi() -> Dict[str, Any]:
 
 @pytest.fixture(scope="function")
 def he_cube(meshes_vlvi: Dict[str, Any]) -> HalfEdges:
-    vl = [Vert(Coordinate(x)) for x in meshes_vlvi['cube_vl']]
+    vl = [Vert(Coordinate(x)) for x in meshes_vlvi["cube_vl"]]
     return HalfEdges.from_vlvi(vl, meshes_vlvi["cube_vi"])
 
 
 @pytest.fixture(scope="function")
 def he_grid(meshes_vlvi: Dict[str, Any]) -> HalfEdges:
-    vl = [Vert(Coordinate(x)) for x in meshes_vlvi['grid_vl']]
+    vl = [Vert(Coordinate(x)) for x in meshes_vlvi["grid_vl"]]
     return HalfEdges.from_vlvi(vl, meshes_vlvi["grid_vi"])
 
 

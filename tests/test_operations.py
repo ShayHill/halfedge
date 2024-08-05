@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-# Last modified: 220803 08:33:17
 """ test halfedge.operations
 
 created: 181121 13:38:46
@@ -13,16 +11,13 @@ from operator import attrgetter
 from typing import Any, Dict
 
 import pytest
-import random
+
+from halfedge.half_edge_elements import Edge, Face, ManifoldMeshError, Vert
+from halfedge.half_edge_object import HalfEdges
+from halfedge.type_attrib import IncompatibleAttrib, NumericAttrib
+from halfedge.validations import validate_mesh
 
 from .conftest import get_canonical_mesh
-from halfedge.half_edge_elements import Edge, ManifoldMeshError, Vert, Face
-from halfedge.half_edge_object import HalfEdges
-from halfedge.validations import validate_mesh
-from halfedge.type_attrib import (
-    IncompatibleAttrib,
-    NumericAttrib,
-)
 
 
 class NamedAttribute(IncompatibleAttrib):
@@ -480,7 +475,8 @@ class TestCollapseEdge:
         edge = next(
             x
             for x in mesh.edges
-            if x.orig.try_attrib_value(Coordinate) == 0 and x.dest.try_attrib_value(Coordinate) == 1
+            if x.orig.try_attrib_value(Coordinate) == 0
+            and x.dest.try_attrib_value(Coordinate) == 1
         )
         mesh.collapse_edge(edge)
         assert not mesh.verts

@@ -1,5 +1,4 @@
 # Last modified: 181126 16:46:28
-# _*_ coding: utf-8 _*_
 """Test functions in classes.py.
 
 created: 170204 14:22:23
@@ -11,21 +10,22 @@ from typing import Any, Dict
 
 import pytest
 
-# noinspection PyProtectedMember,PyProtectedMember
-from .conftest import get_canonical_mesh
-from halfedge.type_attrib import IncompatibleAttrib, \
-    NumericAttrib
 from halfedge.half_edge_elements import (
     ManifoldMeshError,
     MeshElementBase,
     _function_lap,
 )
 from halfedge.half_edge_querries import StaticHalfEdges
+from halfedge.type_attrib import IncompatibleAttrib, NumericAttrib
+
+# noinspection PyProtectedMember,PyProtectedMember
+from .conftest import get_canonical_mesh
 
 alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 identifiers = (
     "".join(random.choice(alphabet) for _ in range(10)) for _ in itertools.count()
 )
+
 
 class Coordinate(IncompatibleAttrib):
     pass
@@ -45,8 +45,13 @@ class TestMeshElementBase:
 
     def test_fill_attrs_from_fills_missing(self) -> None:
         """Fills attrs if not present."""
-        class Flag1(NumericAttrib):pass
-        class Flag2(NumericAttrib):pass
+
+        class Flag1(NumericAttrib):
+            pass
+
+        class Flag2(NumericAttrib):
+            pass
+
         flag1_defined = MeshElementBase(Flag1(2))
         flag2_defined_a = MeshElementBase(Flag2(3))
         flag2_defined_b = MeshElementBase(Flag2(5))
@@ -147,14 +152,18 @@ class TestHalfEdges:
         for mesh, key in ((he_grid, "grid"), (he_cube, "cube")):
             input_vl, input_vi = meshes_vlvi[key + "_vl"], meshes_vlvi[key + "_vi"]
             expect = get_canonical_mesh(input_vl, input_vi)
-            result = get_canonical_mesh([x.try_attrib_value(Coordinate) for x in mesh.vl], mesh.fi)
+            result = get_canonical_mesh(
+                [x.try_attrib_value(Coordinate) for x in mesh.vl], mesh.fi
+            )
             assert expect == result
 
     def test_hi(self, meshes_vlvi: Dict[str, Any], he_grid) -> None:
         """Convert unaltered mesh holes back to input holes."""
         input_vl, input_hi = meshes_vlvi["grid_vl"], meshes_vlvi["grid_hi"]
         expect = get_canonical_mesh(input_vl, input_hi)
-        result = get_canonical_mesh([x.try_attrib_value(Coordinate) for x in he_grid.vl], he_grid.hi)
+        result = get_canonical_mesh(
+            [x.try_attrib_value(Coordinate) for x in he_grid.vl], he_grid.hi
+        )
         assert expect == result
 
 

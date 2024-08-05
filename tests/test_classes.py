@@ -1,5 +1,4 @@
 # Last modified: 220626 22:40:26
-# _*_ coding: utf-8 _*_
 """Test functions in classes.py.
 
 created: 170204 14:22:23
@@ -8,27 +7,23 @@ import itertools
 import random
 from keyword import iskeyword
 from typing import Any, Callable, Dict, Tuple
-from .conftest import get_canonical_mesh
 
 import pytest
 
-from .conftest import compare_circular_2
-
-# noinspection PyProtectedMember,PyProtectedMember
-from halfedge.type_attrib import (
-    IncompatibleAttrib,
-    NumericAttrib,
-    Attrib
-)
 from halfedge.half_edge_elements import (
     Edge,
     Face,
     ManifoldMeshError,
-    Vert,
     MeshElementBase,
+    Vert,
     _function_lap,
 )
 from halfedge.half_edge_querries import StaticHalfEdges
+
+# noinspection PyProtectedMember,PyProtectedMember
+from halfedge.type_attrib import Attrib, IncompatibleAttrib, NumericAttrib
+
+from .conftest import compare_circular_2, get_canonical_mesh
 
 alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 identifiers = (
@@ -68,12 +63,15 @@ class TestElemAttribs:
 
     def test_lazy(self) -> None:
         """Given no value, LazyAttrib will try to infer a value from self.element"""
+
         class LazyAttrib(Attrib):
             @classmethod
             def merge(cls, *merge_from):
                 raise NotImplementedError()
+
             def _infer_value(self):
                 return self.element.sn
+
         elem = MeshElementBase()
         elem.set_attrib(LazyAttrib())
         assert elem.try_attrib_value(LazyAttrib) == elem.sn
@@ -96,9 +94,7 @@ class TestMeshElementBase:
 
     def test_attribs_through_init(self) -> None:
         """MeshElement attributes are captured when passed to init"""
-        base_with_attrib = MeshElementBase(
-            IncompatibleAttrib(7), NumericAttrib(8)
-        )
+        base_with_attrib = MeshElementBase(IncompatibleAttrib(7), NumericAttrib(8))
         assert base_with_attrib.try_attrib_value(IncompatibleAttrib) == 7
         assert base_with_attrib.try_attrib_value(NumericAttrib) == 8
 
@@ -153,7 +149,6 @@ class TestInitVert:
         vert.merge_from(filler)
         assert vert.edge is edge
 
-
     def test_coordinate_is_attribute(self):
         """Coordinate has been captured as an attribute"""
         assert self.vert.Coordinate is self.coordinate
@@ -174,6 +169,7 @@ class TestInitVert:
         """vert.edge assignment mirrored in edge.orig"""
         assert self.vert.edge.orig is self.vert
 
+
 class TestInitEdge:
     def setup_method(self):
         self.coordinate = Coordinate((1, 2, 3))
@@ -182,7 +178,13 @@ class TestInitEdge:
         self.pair = Edge()
         self.face = Face()
         self.next = Edge()
-        self.edge = Edge(self.coordinate, orig=self.orig, pair=self.pair, face=self.face, next=self.next)
+        self.edge = Edge(
+            self.coordinate,
+            orig=self.orig,
+            pair=self.pair,
+            face=self.face,
+            next=self.next,
+        )
 
     def test_coordinate_is_attribute(self):
         """Coordinate has been captured as an attribute"""
@@ -223,6 +225,7 @@ class TestInitEdge:
     def test_points_to_next(self):
         """edge.next points to input edge"""
         assert self.edge.next is self.next
+
 
 class TestInitFace:
     def setup_method(self):
@@ -336,8 +339,12 @@ class TestHalfEdges:
 
     def test_vl(self, meshes_vlvi: Dict[str, Any], he_cube, he_grid) -> None:
         """Converts unaltered mesh verts back to input vl."""
-        assert {x.try_attrib_value(Coordinate) for x in he_cube.vl} == set(meshes_vlvi["cube_vl"])
-        assert {x.try_attrib_value(Coordinate) for x in he_grid.vl} == set(meshes_vlvi["grid_vl"])
+        assert {x.try_attrib_value(Coordinate) for x in he_cube.vl} == set(
+            meshes_vlvi["cube_vl"]
+        )
+        assert {x.try_attrib_value(Coordinate) for x in he_grid.vl} == set(
+            meshes_vlvi["grid_vl"]
+        )
 
     def test_vi(self, meshes_vlvi: Dict[str, Any], he_cube, he_grid) -> None:
         """Convert unaltered mesh faces back to input vi.
@@ -348,7 +355,9 @@ class TestHalfEdges:
     def test_hi(self, meshes_vlvi: Dict[str, Any], he_grid) -> None:
         """Convert unaltered mesh holes back to input holes."""
         expect = get_canonical_mesh(meshes_vlvi["grid_vl"], meshes_vlvi["grid_hi"])
-        result = get_canonical_mesh([x.try_attrib_value(Coordinate) for x in he_grid.vl], he_grid.hi)
+        result = get_canonical_mesh(
+            [x.try_attrib_value(Coordinate) for x in he_grid.vl], he_grid.hi
+        )
         assert expect == result
 
 
