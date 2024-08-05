@@ -114,6 +114,8 @@ repos:
   # D203 1 blank line required before class docstring (incompatible with D211)
   # D213 multi line summary second line (incompatible with D212):
   # ISC003 Explicitly concatenated string should be implicitly concatenated
+  #
+  # PYI019 Use typing.Self instead of custom TypeVar (useless py < 3.10)
   rev: 'v0.5.6'
   hooks:
     - id: ruff
@@ -121,7 +123,7 @@ repos:
       args:
       - --target-version=py38
       - --select=ALL
-      - --ignore=COM812,D203,D213,ISC003
+      - --ignore=COM812,D203,D213,ISC003,PYI019
       # - --fix
 
 # reads pyproject.toml for additional config

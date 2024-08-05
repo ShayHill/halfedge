@@ -46,7 +46,7 @@ class BlindHalfEdges(AttribHolder):
         face: Face | None = None,
         next: Edge | None = None,
         prev: Edge | None = None,
-    ):
+    ) -> Edge:
         """Create a new Edge instance.
 
         The Edge instance will not be inserted into the mesh.

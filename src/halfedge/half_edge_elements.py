@@ -31,14 +31,15 @@ This module is all the base elements (Vert, Edge, and Face).
 from __future__ import annotations
 
 from itertools import count
-from typing import TYPE_CHECKING, Any, Callable, TypeVar
+from typing import TYPE_CHECKING, Any, Callable, Protocol, TypeVar
 
-from .type_attrib import Attrib, AttribHolder, ContagionAttrib
+from halfedge.type_attrib import Attrib, AttribHolder, ContagionAttrib
 
 if TYPE_CHECKING:
     from .half_edge_constructors import BlindHalfEdges
 
 _TMeshElem = TypeVar("_TMeshElem", bound="MeshElementBase")
+_T = TypeVar("_T")
 
 
 class IsHole(ContagionAttrib):
@@ -55,7 +56,13 @@ class ManifoldMeshError(ValueError):
     """
 
 
-def _all_is(*args: Any) -> bool:
+class _SupportsIs(Protocol):
+    """Supports the 'is' operator."""
+
+    def __is__(self: _T, other: _T) -> bool: ...
+
+
+def _all_is(*args: _SupportsIs) -> bool:
     """Return True if all arguments are `a is b`."""
     return bool(args) and all(args[0] is x for x in args[1:])
 

@@ -68,7 +68,7 @@ class AttribHolder:
 
     def _maybe_set_attrib(self, *attribs: Attrib[Any] | None) -> None:
         """Set attribute if attrib is an Attrib. Pass silently if None."""
-        self.set_attrib(*[x for x in attribs if isinstance(x, Attrib)])
+        _ = self.set_attrib(*[x for x in attribs if isinstance(x, Attrib)])
 
     def get_attrib(self, type_: type[_TAttrib]) -> _TAttrib:
         """Get an attribute by type."""
@@ -121,16 +121,13 @@ class AttribHolder:
 
 
 class _SupportsEqual(Protocol):
-    def __eq__(self: _T, other: _T) -> bool:
-        pass
+    def __eq__(self: _T, other: _T) -> bool: ...
 
 
 class _SupportsAverage(Protocol):
-    def __add__(self, other):
-        pass
+    def __add__(self: _T, other: _T) -> _T: ...
 
-    def __div__(self, other):
-        pass
+    def __div__(self: _T, other: _T) -> _T: ...
 
 
 _TSupportsAverage = TypeVar("_TSupportsAverage", bound=_SupportsAverage)
@@ -302,12 +299,14 @@ class IncompatibleAttrib(Attrib[_TSupportsEqual]):
     """
 
     @classmethod
-    def merge(cls, *merge_from):
+    def merge(cls: type[_TAttrib], *merge_from: _TAttrib | None) -> _TAttrib | None:
         """If all values match and every contributing element has an analog, return
         a new instance with that value. Otherwise None.
         """
+        if not all(merge_from):
+            return None
         with suppress(AttributeError):
-            values = [x.value for x in merge_from]  # type: ignore
+            values = [x.value for x in merge_from]
             if values and all(values[0] == x for x in values[1:]):
                 return cls(values[0], None)
         return None
