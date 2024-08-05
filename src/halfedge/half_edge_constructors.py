@@ -164,7 +164,6 @@ class BlindHalfEdges(AttribHolder):
         Will silently remove unused verts
         """
         hi = hi or set()
-        # vl = [Vert(attrib_type(x)) for x in vl]
         vr = [tuple(vl[x] for x in y) for y in fi]
         hr = [tuple(vl[x] for x in y) for y in hi]
 

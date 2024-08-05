@@ -23,19 +23,6 @@ class Snapshot:
         self.edges = []
         self.faces = []
 
-        # geo_width = max(maxx - minx, 1)
-        # geo_height = max(maxy - miny, 1)
-        # scale = min(1000 / geo_width, 1000 / geo_height)
-        #
-        # self.screen = new_svg_root(
-        #     minx, miny, geo_width, geo_height, pad_=15 / scale, dpu_=scale
-        # )
-        #
-        # self.vert_rad = 3 / 1000 / scale
-        # self.edge_stroke = 1 / 1000 / scale
-        #
-        # self.add_svg_elements(verts, edges, faces)
-
     def segregate_elements(self, elements):
         """TODO: Docstring for segregate_elements."""
         verts = {x for x in elements if isinstance(x, Vert)}
