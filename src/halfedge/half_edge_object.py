@@ -1,3 +1,9 @@
+"""The HalfEdges data structure and operations on it.
+
+:author: Shay Hill
+:created: 2024-08-05
+"""
+
 from __future__ import annotations
 
 from contextlib import suppress
@@ -8,8 +14,7 @@ from .half_edge_querries import StaticHalfEdges
 
 
 def _update_face_edges(face: Face, edge: Edge) -> None:
-    """
-    Add or update face attribute for each edge in edge.face_edges
+    """Add or update face attribute for each edge in edge.face_edges.
 
     :param face: each edge will point to this face
     :param edge: one edge on the face (even if the edge doesn't point to the face yet)
@@ -22,8 +27,7 @@ def _update_face_edges(face: Face, edge: Edge) -> None:
 
 
 def _get_singleton_item(one: set) -> Any:
-    """
-    If a set has exactly one item, return that item.
+    """If a set has exactly one item, return that item.
 
     :param one: A set with presumably one item
     :return:
@@ -33,8 +37,7 @@ def _get_singleton_item(one: set) -> Any:
 
 
 class UnrecoverableManifoldMeshError(ValueError):
-    """
-    Found a problem with an operation AFTER mesh was potentially altered.
+    """Found a problem with an operation AFTER mesh was potentially altered.
 
     Unexpected error. This should have been caught earlier. We found a something that
     couldn't be added or couldn't be removed, but we didn't find it in time. The mesh
@@ -42,13 +45,15 @@ class UnrecoverableManifoldMeshError(ValueError):
     """
 
     def __init__(self, message: str):
+        """Pass message to ValueError."""
         super().__init__(self, message)
 
 
 class HalfEdges(StaticHalfEdges):
+    """HalfEdges data structure and operations on it."""
+
     def _get_edge_or_vert_faces(self, elem: Edge | Vert) -> set[Face]:
-        """
-        Get faces (unordered) adjacent to a vert or edge
+        """Get faces (unordered) adjacent to a vert or edge.
 
         :param elem: Vert or Edge instance
         :return: Face instances adjacent
@@ -60,8 +65,7 @@ class HalfEdges(StaticHalfEdges):
         return set(elem.faces)
 
     def _infer_face(self, orig: Edge | Vert, dest: Edge | Vert) -> Face:
-        """
-        Infer which face two verts lie on.
+        """Infer which face two verts lie on.
 
         :elem: vert or edge (presumably on the face)
         :return: face (if unambiguous) on which vert or edge lies
@@ -81,8 +85,7 @@ class HalfEdges(StaticHalfEdges):
     def _infer_wing(
         self, elem: Edge | Vert, face: Face, default: Edge
     ) -> tuple[Vert, Edge]:
-        """
-        Given a vert or edge, try to return vert and edge such that edge.dest == vert
+        """Given a vert or edge, try to retrn vert and edge such that edge.dest == vert
 
         :param elem: vert or edge in the mesh
         :param face: face on which vert or edge lies
@@ -115,8 +118,7 @@ class HalfEdges(StaticHalfEdges):
         raise ValueError("edge cannot be inferred from orig and face")
 
     def _point_away_from_edge(self, edge: Edge) -> None:
-        """
-        Prepare edge to be removed. Remove vert and face pointers to edge.
+        """Prepare edge to be removed. Remove vert and face pointers to edge.
 
         :param edge: any edge in mesh
         :effects: points edge.orig and edge.face to another edge
@@ -143,8 +145,7 @@ class HalfEdges(StaticHalfEdges):
 
     # TODO: replace original with this
     def _point_away_from_edge2(self, *edges: Edge) -> None:
-        """
-        Prepare edge to be removed. Remove vert and face pointers to edge.
+        """Prepare edge to be removed. Remove vert and face pointers to edge.
 
         :param edge: any edge in mesh
         :effects: points edge.orig and edge.face to another edge
@@ -170,13 +171,9 @@ class HalfEdges(StaticHalfEdges):
             edge_.face.edge = next(iter(safe_face_edges), edge_)
 
     def insert_edge(
-        self,
-        orig: Edge | Vert,
-        dest: Edge | Vert,
-        face: Face | None = None,
+        self, orig: Edge | Vert, dest: Edge | Vert, face: Face | None = None
     ) -> Edge:
-        """
-        Insert a new edge between two verts.
+        """Insert a new edge between two verts.
 
         :param orig: origin of new edge (vert or edge such that edge.dest == vert)
         :param dest: destination of new edge (vert or edge as above)
@@ -255,8 +252,7 @@ class HalfEdges(StaticHalfEdges):
         return edge
 
     def insert_vert(self, face: Face) -> Vert:
-        """
-        Insert a new vert into face then triangulate face.
+        """Insert a new vert into face then triangulate face.
 
         :param face: face to triangulate
         :returns: newly inserted vert
@@ -273,7 +269,6 @@ class HalfEdges(StaticHalfEdges):
             * shared face.edges attributes passed to new edges
             * shared face.verts attributes passed to new vert
         """
-
         new_vert = self.new_vert().merge_from(*face.verts)
         try:
             for vert in face.verts:
@@ -283,8 +278,7 @@ class HalfEdges(StaticHalfEdges):
         return new_vert
 
     def remove_edge(self, edge: Edge) -> Face:
-        """
-        Cut an edge out of the mesh.
+        """Cut an edge out of the mesh.
 
         :param edge: edge to remove
         :returns: Newly joined (if edge split face) face, else new face that replaces
@@ -340,8 +334,7 @@ class HalfEdges(StaticHalfEdges):
         return new_face
 
     def _recursively_remove_vert_peninsulas(self, vert: Vert) -> Vert:
-        """
-        Remove (chains of) peninsula edges from around a vert.
+        """Remove (chains of) peninsula edges from around a vert.
 
         If peninsula's (edge and pair share the same face
         """
@@ -349,8 +342,7 @@ class HalfEdges(StaticHalfEdges):
         return vert
 
     def remove_vert(self, vert: Vert, **face_kwargs: Any) -> Face:
-        """
-        Remove all edges around a vert.
+        """Remove all edges around a vert.
 
         :raises: ManifoldMeshError if the error was caught before any edges were removed
             (this SHOULD always be the case).
@@ -406,8 +398,7 @@ class HalfEdges(StaticHalfEdges):
         return face
 
     def remove_face(self, face: Face) -> Face:
-        """
-        Remove all edges around a face.
+        """Remove all edges around a face.
 
         :returns: face or hole remaining
         :raises: ManifoldMeshError if the error was caught before any edges were removed
@@ -438,8 +429,7 @@ class HalfEdges(StaticHalfEdges):
         return face
 
     def split_edge(self, edge: Edge) -> Vert:
-        """
-        Add a vert to the middle of an edge.
+        """Add a vert to the middle of an edge.
 
         :param edge: edge to be split
         :param vert_kwargs: attributes for new vert
@@ -466,8 +456,7 @@ class HalfEdges(StaticHalfEdges):
         return new_vert
 
     def flip_edge(self, edge: Edge) -> Edge:
-        """
-        Flip an edge between two triangles.
+        """Flip an edge between two triangles.
 
         :param edge: Edge instance in self
         :return: None
@@ -490,9 +479,8 @@ class HalfEdges(StaticHalfEdges):
         return new_edge
 
     def _is_stitchable(self, edge: Edge) -> bool:
-        """
+        """Return True if two edges be stitched (middle 2-side face removed).
         TODO: revisit docstring
-        Can two edges be stitched (middle 2-side face removed)?
 
         :param edge_a:
         :param edge_b:
@@ -516,8 +504,7 @@ class HalfEdges(StaticHalfEdges):
         return False
 
     def collapse_edge(self, edge: Edge) -> Vert:
-        """
-        Collapse an Edge into a Vert.
+        """Collapse an Edge into a Vert.
 
         :param edge: Edge instance in self
         :param vert_kwargs: attribute/s for the new Vert

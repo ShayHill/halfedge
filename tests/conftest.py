@@ -2,6 +2,7 @@
 
 created: 181121 13:14:06
 """
+
 from copy import deepcopy
 from itertools import product
 from typing import Any, Dict, Hashable, Iterable, List, Sequence, Set, Tuple, TypeVar

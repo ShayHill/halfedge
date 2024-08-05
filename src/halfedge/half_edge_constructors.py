@@ -14,7 +14,6 @@ then passing that raw data to mesh_from_vr would create a mesh with 6 faces and
 24 (not 8!) Vert instances.
 """
 
-
 from __future__ import annotations
 
 from typing import Iterable, List, Optional, Set, Tuple, Type, TypeVar
@@ -26,13 +25,17 @@ _TBlindHalfEdges = TypeVar("_TBlindHalfEdges", bound="BlindHalfEdges")
 
 
 class BlindHalfEdges(AttribHolder):
+    """Half-edge structure with no lookups."""
+
     def __init__(self, edges: set[Edge] | None = None) -> None:
+        """Initialize edges with optionally provided Edge instances."""
         if edges is None:
             self.edges: set[Edge] = set()
         else:
             self.edges = edges
 
     def new_vert(self, *attributes: Attrib, edge: Edge | None = None) -> Vert:
+        """Create a new Vert instance."""
         return Vert(*attributes, mesh=self, edge=edge)
 
     def new_edge(
@@ -44,6 +47,10 @@ class BlindHalfEdges(AttribHolder):
         next: Edge | None = None,
         prev: Edge | None = None,
     ):
+        """Create a new Edge instance.
+
+        The Edge instance will not be inserted into the mesh.
+        """
         return Edge(
             *attributes,
             mesh=self,
@@ -55,9 +62,11 @@ class BlindHalfEdges(AttribHolder):
         )
 
     def new_face(self, *attributes: Attrib, edge: Edge | None = None) -> Face:
+        """Create a new Face instance."""
         return Face(*attributes, mesh=self, edge=edge)
 
     def new_hole(self, *attributes: Attrib, edge: Edge | None = None) -> Face:
+        """Create a new Face instance and mark it as a hole."""
         return Face(*attributes, mesh=self, edge=edge, is_hole=True)
 
     def _create_face_edges(self, face_verts: Iterable[Vert], face: Face) -> list[Edge]:
@@ -77,8 +86,7 @@ class BlindHalfEdges(AttribHolder):
                 continue
 
     def _infer_holes(self) -> None:
-        """
-        Fill in missing hole faces where unambiguous.
+        """Fill in missing hole faces where unambiguous.
 
         :raises: Manifold mesh error if holes touch at corners. If this happens, holes
         are ambiguous.
@@ -122,7 +130,7 @@ class BlindHalfEdges(AttribHolder):
         fi: set[tuple[int, ...]],
         hi: set[tuple[int, ...]] | None = None,
     ) -> _TBlindHalfEdges:
-        """A set of half edges from a vertex list and vertex index.
+        """Create a set of half edges from a vertex list and vertex index.
 
         :param vl: (vertex list) a seq of vertices
         [(12.3, 42.02, 4.2), (23.1, 3.55, 3.2) ...]

@@ -46,8 +46,7 @@ class IsHole(ContagionAttrib):
 
 
 class ManifoldMeshError(ValueError):
-    """
-    Incorrect arguments passed to HalfEdges init.
+    """Incorrect arguments passed to HalfEdges init.
 
     ... or something broken along the way. List of edges do not represent a valid
     (manifold) half edge data structure. Some properties will still be available,
@@ -57,11 +56,13 @@ class ManifoldMeshError(ValueError):
 
 
 def _all_is(*args: Any) -> bool:
-    """True if all arguments are `a is b`"""
+    """Return True if all arguments are `a is b`"""
     return bool(args) and all(args[0] is x for x in args[1:])
 
 
 class MeshElementBase(AttribHolder):
+    """Base class for Vert, Edge, and Face."""
+
     _sn_generator = count()
     _pointers = {"mesh"}
 
@@ -71,8 +72,7 @@ class MeshElementBase(AttribHolder):
         mesh: BlindHalfEdges | None = None,
         **pointers: MeshElementBase | None,
     ) -> None:
-        """
-        Create an instance (and copy attrs from fill_from).
+        """Create an instance (and copy attrs from fill_from).
 
         :param attributes: ElemAttribBase instances
         :param pointers: pointers to other mesh elements
@@ -93,6 +93,7 @@ class MeshElementBase(AttribHolder):
 
     @property
     def mesh(self) -> BlindHalfEdges:
+        """Return the mesh instance."""
         return self._mesh
 
     @mesh.setter
@@ -123,9 +124,7 @@ class MeshElementBase(AttribHolder):
         raise AttributeError(f"'{type(self).__name__}' has no attribute '{key}'")
 
     def merge_from(self: _TMeshElem, *elements: _TMeshElem) -> _TMeshElem:
-        """
-        Fill in missing references from other elements.
-        """
+        """Fill in missing references from other elements."""
         keys_seen = {k for k, v in self.__dict__.items() if v is not None}
         for element in elements:
             for key in (x for x in element.__dict__.keys() if x not in keys_seen):
@@ -139,8 +138,7 @@ class MeshElementBase(AttribHolder):
         return self
 
     def slice_from(self: _TMeshElem, element: _TMeshElem) -> _TMeshElem:
-        """
-        Pass attributes when dividing or altering elements.
+        """Pass attributes when dividing or altering elements.
 
         Do not pass any pointers. ElemAttribBase instances are passed as defined by
         their classes.
@@ -165,8 +163,7 @@ _TFLapArg = TypeVar("_TFLapArg")
 def _function_lap(
     func: Callable[[_TFLapArg], _TFLapArg], first_arg: _TFLapArg
 ) -> list[_TFLapArg]:
-    """
-    Repeatedly apply func till first_arg is reached again.
+    """Repeatedly apply func till first_arg is reached again.
 
     :param func: function takes one argument and returns a value of the same type
     :returns: [first_arg, func(first_arg), func(func(first_arg)) ... first_arg]
@@ -196,10 +193,12 @@ class Vert(MeshElementBase):
         mesh: BlindHalfEdges | None = None,
         edge: Edge | None = None,
     ):
+        """Create a vert instance."""
         super().__init__(*attributes, mesh=mesh, edge=edge)
 
     @property
     def edge(self) -> Edge:
+        """One edge originating at vert."""
         return self._edge
 
     @edge.setter
@@ -266,6 +265,7 @@ class Edge(MeshElementBase):
         next: Edge | None = None,
         prev: Edge | None = None,
     ):
+        """Create an edge instance."""
         super().__init__(
             *attributes,
             mesh=mesh,
@@ -278,6 +278,7 @@ class Edge(MeshElementBase):
 
     @property
     def orig(self) -> Vert:
+        """Vert at which edge originates."""
         return self._orig
 
     @orig.setter
@@ -287,6 +288,7 @@ class Edge(MeshElementBase):
 
     @property
     def pair(self) -> Edge:
+        """Edge running opposite direction over same verts."""
         return self._pair
 
     @pair.setter
@@ -296,6 +298,7 @@ class Edge(MeshElementBase):
 
     @property
     def face(self) -> Face:
+        """Face to which edge belongs."""
         return self._face
 
     @face.setter
@@ -305,6 +308,7 @@ class Edge(MeshElementBase):
 
     @property
     def next(self: Edge) -> Edge:
+        """Next edge along face."""
         return self._next
 
     @next.setter
@@ -347,8 +351,7 @@ class Edge(MeshElementBase):
 
     @property
     def vert_edges(self) -> list[Edge]:
-        """
-        All half edges radiating from edge.orig.
+        """All half edges radiating from edge.orig.
 
         These will be returned in the opposite "handedness" of the faces. IOW,
         if the faces are defined ccw, the vert_edges will be returned cw.
@@ -357,23 +360,17 @@ class Edge(MeshElementBase):
 
     @property
     def vert_all_faces(self) -> list[Face]:
-        """
-        All faces and holes around the edge's vert
-        """
+        """Return all faces and holes around the edge's vert."""
         return [x.face for x in self.vert_edges]
 
     @property
     def vert_faces(self) -> list[Face]:
-        """
-        All faces around the edge's vert
-        """
+        """Return all faces around the edge's vert."""
         return [x for x in self.vert_all_faces if not x.is_hole]
 
     @property
     def vert_holes(self) -> list[Face]:
-        """
-        All holes around the edge's vert
-        """
+        """Return all holes around the edge's vert."""
         return [x for x in self.vert_all_faces if x.is_hole]
 
     @property
@@ -398,6 +395,7 @@ class Face(MeshElementBase):
         edge: Edge | None = None,
         is_hole: bool = False,
     ) -> None:
+        """Create a face instance."""
         if is_hole:
             attributes += (IsHole(),)
         super().__init__(*attributes, mesh=mesh, edge=edge)
@@ -415,8 +413,7 @@ class Face(MeshElementBase):
 
     @property
     def is_hole(self) -> bool:
-        """
-        Is this face a hole?
+        """Is this face a hole?
 
         "hole-ness" is assigned at instance creation by passing ``is_hole=True`` to
         ``__init__``

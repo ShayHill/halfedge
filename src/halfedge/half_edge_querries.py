@@ -8,6 +8,7 @@ This module is all the lookups. Transformations elsewhere.
 # 2006 June 05
 # 2012 September 30
 """
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Dict, List, Optional, Set, Tuple, Union
@@ -19,8 +20,7 @@ if TYPE_CHECKING:
 
 
 class StaticHalfEdges(BlindHalfEdges):
-    """
-    Basic half edge lookups.
+    """Basic half edge lookups.
 
     Some properties require a manifold mesh, but the Edge type does support
     explicitly defined holes. These hole (Face(is_hole=True) provide enough
@@ -29,6 +29,7 @@ class StaticHalfEdges(BlindHalfEdges):
     """
 
     def __init__(self, edges: set[Edge] | None = None) -> None:
+        """Initialize the half edge mesh."""
         super().__init__(edges)
 
     @property
@@ -53,9 +54,10 @@ class StaticHalfEdges(BlindHalfEdges):
 
     @property
     def elements(self) -> set[Vert | Edge | Face]:
-        """All elements in mesh
+        """All elements in mesh.
 
-        The redundant set comprehension is to satisfy the linter"""
+        The redundant set comprehension is to satisfy the linter.
+        """
         return {x for x in self.verts | self.edges | self.faces}
 
     @property
@@ -80,7 +82,7 @@ class StaticHalfEdges(BlindHalfEdges):
 
     @property
     def vl(self) -> list[Vert]:
-        """ "vertex list" - Sorted list of verts"""
+        """vertex list - Sorted list of verts"""
         return sorted(self.verts)
 
     @property
@@ -90,8 +92,7 @@ class StaticHalfEdges(BlindHalfEdges):
 
     @property
     def ei(self) -> set[tuple[int, int]]:
-        """
-        "edge indices" - Edges as a set of paired vert indices.
+        """edge indices - Edges as a set of paired vert indices.
 
         :returns: {(0, 1), (2, 3), (1, 4), ...}
         """
@@ -100,8 +101,7 @@ class StaticHalfEdges(BlindHalfEdges):
 
     @property
     def fi(self) -> set[tuple[int, ...]]:
-        """
-        "face indices" - Faces as a set of tuples of vl indices.
+        """face indices - Faces as a set of tuples of vl indices.
 
         :returns: {(0, 1, 2, 3), (1, 0, 4, 5) ...}
         """
@@ -110,8 +110,7 @@ class StaticHalfEdges(BlindHalfEdges):
 
     @property
     def hi(self) -> set[tuple[int, ...]]:
-        """
-        "hole indices" - holes as a set of tuples of vl indices.
+        """hole indices - holes as a set of tuples of vl indices.
 
         :returns: {(0, 1, 2, 3), (1, 0, 4, 5) ...}
         """

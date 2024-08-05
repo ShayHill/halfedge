@@ -14,7 +14,10 @@ from .half_edge_elements import Edge, Face, Vert
 
 
 class Snapshot:
+    """A picture of the mesh elements for debugging."""
+
     def __init__(self):
+        """Create a snapshot."""
         self.bbox = [0, 0, 1, 1]
         self.verts = []
         self.edges = []
@@ -34,6 +37,7 @@ class Snapshot:
         # self.add_svg_elements(verts, edges, faces)
 
     def segregate_elements(self, elements):
+        """TODO: Docstring for segregate_elements."""
         verts = {x for x in elements if isinstance(x, Vert)}
         edges = {x for x in elements if isinstance(x, Edge)}
         faces = {x for x in elements if isinstance(x, Face)}
@@ -44,6 +48,7 @@ class Snapshot:
         return verts, edges, faces
 
     def add_svg_elements(self, elements, color=None):
+        """TODO: Docstring for add_svg_elements."""
         verts, edges, faces = self.segregate_elements(elements)
         coordinates = [x.coordinate for x in verts]
 
@@ -66,6 +71,7 @@ class Snapshot:
             self.faces.append((coords, color_))
 
     def draw(self, filename="snapshot"):
+        """TODO: Docstring for draw."""
         coordinates = {tuple(x[0]) for x in self.verts}
         bbox = [
             min(x for x, y in coordinates),

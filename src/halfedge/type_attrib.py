@@ -71,6 +71,7 @@ class AttribHolder:
         self.set_attrib(*[x for x in attribs if isinstance(x, Attrib)])
 
     def get_attrib(self, type_: type[_TAttrib]) -> _TAttrib:
+        """Get an attribute by type."""
         name = type_.__name__
         try:
             return getattr(self, name)
@@ -111,7 +112,7 @@ class AttribHolder:
             return None
 
     def cached_attrib_value(self, type_: type[Attrib[_T]]) -> _T | None:
-        # TODO: docstring
+        """TODO: docstring."""
         attrib = self.try_attrib(type_)
         if attrib is not None and hasattr(attrib, "_value"):
             return attrib.value
@@ -156,10 +157,9 @@ class Attrib(Generic[_TAttribValue]):
     __slots__ = ("_value", "element")
 
     def __init__(
-        self,
-        value: _TAttribValue | None = None,
-        element: AttribHolder | None = None,
+        self, value: _TAttribValue | None = None, element: AttribHolder | None = None
     ) -> None:
+        """Set value and element."""
         self._value: _TAttribValue
         self.element: AttribHolder
         if value is not None:
@@ -197,9 +197,7 @@ class Attrib(Generic[_TAttribValue]):
         return None
 
     @classmethod
-    def slice(
-        cls: type[_TElemAttrib], slice_from: _TElemAttrib
-    ) -> _TElemAttrib | None:
+    def slice(cls: type[_TElemAttrib], slice_from: _TElemAttrib) -> _TElemAttrib | None:
         """Define how attribute will be passed when dividing self.element.
 
         When an element is divided (face divided by an edge, edge divided by a vert,
@@ -263,12 +261,11 @@ class ContagionAttrib(Attrib[_TSupportsEqual]):
         value: _TSupportsEqual | None = None,
         element: MeshElementBase | None = None,
     ) -> None:
+        """Set value and element."""
         super().__init__(cast("_TSupportsEqual", True), element)
 
     @classmethod
-    def merge(
-        cls: type[_TAttrib], *merge_from: _TAttrib | None
-    ) -> _TAttrib | None:
+    def merge(cls: type[_TAttrib], *merge_from: _TAttrib | None) -> _TAttrib | None:
         """If any element has a ContagionAttributeBase attribute, return a new
         instance with that attribute. Otherwise None.
         """
@@ -321,8 +318,13 @@ class IncompatibleAttrib(Attrib[_TSupportsEqual]):
         return None
 
     def _infer_value(self) -> _TSupportsEqual | None:
-        """No way to infer a value. If value is not set in init or merged from init
-        arg merge_from, fail (i.e., return None). This should never happen."""
+        """No way to infer a value.
+
+        TODO: clarify what's going on here by improving the docstring.
+
+        If value is not set in init or merged from init arg merge_from, fail (i.e.,
+        return None). This should never happen.
+        """
         return None
 
 
@@ -338,6 +340,9 @@ class NumericAttrib(Attrib[_TSupportsAverage]):
         return None
 
     def _infer_value(self) -> _TSupportsAverage | None:
-        """No way to infer a value. If value is not set in init or merged from init
-        arg merge_from, fail (i.e., return None). This should never happen."""
+        """TODO: see where merge value will ever be called.
+
+        No way to infer a value. If value is not set in init or merged from init
+        arg merge_from, fail (i.e., return None). This should never happen.
+        """
         return None
