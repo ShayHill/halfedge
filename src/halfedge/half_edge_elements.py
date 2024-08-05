@@ -31,7 +31,7 @@ This module is all the base elements (Vert, Edge, and Face).
 from __future__ import annotations
 
 from itertools import count
-from typing import TYPE_CHECKING, Any, Callable, List, Optional, TypeVar
+from typing import TYPE_CHECKING, Any, Callable, TypeVar
 
 from .type_attrib import Attrib, AttribHolder, ContagionAttrib
 
@@ -176,7 +176,7 @@ def _function_lap(
         if lap[-1] == lap[0]:
             return lap[:-1]
         if lap[-1] in lap[1:-1]:
-            msg = f"function lap {[id(x) for x in lap]} repeats"
+            msg = f"infinite loop in {_function_lap.__name__}"
             raise ManifoldMeshError(msg)
 
 

@@ -16,7 +16,7 @@ then passing that raw data to mesh_from_vr would create a mesh with 6 faces and
 
 from __future__ import annotations
 
-from typing import Iterable, List, Optional, Set, Tuple, Type, TypeVar
+from typing import Iterable, TypeVar
 
 from .half_edge_elements import Edge, Face, ManifoldMeshError, Vert
 from .type_attrib import Attrib, AttribHolder

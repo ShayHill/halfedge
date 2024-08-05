@@ -4,10 +4,8 @@
 :created: 11/1/2020
 """
 
-import decimal
-
 from svg_ultralight import new_svg_root, write_svg
-from svg_ultralight.constructors import new_element, new_sub_element
+from svg_ultralight.constructors import new_sub_element
 from svg_ultralight.strings import svg_color_tuple, svg_float_tuples
 
 from .half_edge_elements import Edge, Face, Vert

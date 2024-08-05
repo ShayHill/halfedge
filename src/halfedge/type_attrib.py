@@ -40,7 +40,7 @@ themselves.
 from __future__ import annotations
 
 from contextlib import suppress
-from typing import TYPE_CHECKING, Any, Generic, Optional, Protocol, Type, TypeVar, cast
+from typing import TYPE_CHECKING, Any, Generic, Protocol, TypeVar, cast
 
 if TYPE_CHECKING:
     from halfedge.half_edge_elements import MeshElementBase

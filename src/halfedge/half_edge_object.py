@@ -7,7 +7,7 @@
 from __future__ import annotations
 
 from contextlib import suppress
-from typing import Any, Optional, Set, Tuple, Union
+from typing import Any
 
 from .half_edge_elements import Edge, Face, ManifoldMeshError, Vert
 from .half_edge_querries import StaticHalfEdges

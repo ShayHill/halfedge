@@ -11,7 +11,7 @@ This module is all the lookups. Transformations elsewhere.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Dict, List, Optional, Set, Tuple, Union
+from typing import TYPE_CHECKING
 
 from .half_edge_constructors import BlindHalfEdges
 
