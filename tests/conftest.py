@@ -5,7 +5,7 @@ created: 181121 13:14:06
 
 from copy import deepcopy
 from itertools import product
-from typing import Any, Dict, Hashable, Iterable, List, Sequence, Set, Tuple, TypeVar
+from typing import Any, Dict, Hashable, Iterable, List, Sequence, Set, Tuple, TypeVar, Protocol
 
 import pytest
 
@@ -139,7 +139,7 @@ def compare_circular(seq_a: Sequence[Any], seq_b: Sequence[Any]) -> bool:
     To help compare circular sequences
     """
     if not seq_a:
-        return ~bool(seq_b)
+        return bool(seq_b)
     beg = seq_a[0]
     if beg not in seq_b:
         return False
@@ -163,29 +163,33 @@ def compare_circular_2(seq_a: List[List[Any]], seq_b: List[List[Any]]) -> bool:
         return False
     return True
 
+class _HasLT(Protocol):
+    def __lt__(self, other: Any) -> bool:
+        ...
 
-_TVert = TypeVar("_TVert", bound=Hashable)
+_TAxis = TypeVar("_TAxis", bound=_HasLT)
 
 
-def get_canonical_vr(vr: Set[Tuple[Tuple[_TVert]]]) -> Set[Tuple[Tuple[_TVert]]]:
-    """
-    Rotate each tuple in a set to start with its min item.
+def get_canonical_vr(
+    vr: Set[Tuple[Tuple[_TAxis, ...], ...]]
+) -> Set[Tuple[Tuple[_TAxis, ...], ...]]:
+    """Rotate each tuple in a set to start with its min item.
 
     See docstring for canonical_mesh.
+
+    #TODO: grep for noinspection
     """
-    vr_aligned = set()
-    for tuple_ in vr:
-        min_item_idx = tuple_.index(min(tuple_))
-        vr_aligned.add(tuple_[min_item_idx:] + tuple_[:min_item_idx])
-    # noinspection PyTypeChecker
+    vr_aligned: Set[Tuple[Tuple[_TAxis, ...], ...]] = set()
+    for face_verts in vr:
+        min_item_idx = face_verts.index(min(face_verts))
+        vr_aligned.add(face_verts[min_item_idx:] + face_verts[:min_item_idx])
     return vr_aligned
 
 
 def get_canonical_mesh(
-    vl: Sequence[_TVert], vi: Iterable[Tuple[int]]
-) -> Set[Tuple[Tuple[_TVert]]]:
-    """
-    A canonical mesh representation.
+    vl: Sequence[Tuple[_TAxis, ...]], vi: Iterable[Tuple[int, ...]]
+    ) -> Set[Tuple[Tuple[_TAxis, ...], ...]]:
+    """Return a canonical mesh representation.
 
     Methods in this library represent meshes as
 
@@ -193,7 +197,7 @@ def get_canonical_mesh(
         * vertex index (fi) - unordered set of tuples of indices to the vertex list
 
     The vertex list holds the vertices of the mesh, and the vertex index holds a
-    tuple of vertex-list indices for each face. So, a triangle would be
+    set of vertex-list indices for each face. So, a triangle would be
 
         vl = [point_a, point_b, point_c]
         fi = {(0, 1, 2)}
@@ -229,4 +233,7 @@ def get_canonical_mesh(
     This function produces an unambiguous representation so that such methods can be
     tested.
     """
-    return get_canonical_vr({tuple(vl[x] for x in y) for y in vi})
+    vr: Set[Tuple[Tuple[_TAxis, ...], ...]] = set()
+    for face_indices in vi:
+        vr.add(tuple(vl[x] for x in face_indices))
+    return get_canonical_vr(vr)

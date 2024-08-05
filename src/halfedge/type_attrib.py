@@ -303,13 +303,16 @@ class IncompatibleAttrib(Attrib[_TSupportsEqual]):
         """If all values match and every contributing element has an analog, return
         a new instance with that value. Otherwise None.
         """
-        if not all(merge_from):
+        if not merge_from or merge_from[0] is None:
             return None
-        with suppress(AttributeError):
-            values = [x.value for x in merge_from]
-            if values and all(values[0] == x for x in values[1:]):
-                return cls(values[0], None)
-        return None
+
+        first_value = merge_from[0].value
+        if first_value is None:
+            return None
+        for x in merge_from[1:]:
+            if x is None or x.value != first_value:
+                return None
+        return cls(first_value)
 
     @classmethod
     def slice(cls, split_from):
