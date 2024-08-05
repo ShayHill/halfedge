@@ -116,6 +116,10 @@ repos:
   # ISC003 Explicitly concatenated string should be implicitly concatenated
   #
   # PYI019 Use typing.Self instead of custom TypeVar (useless py < 3.10)
+  # SLF001 Private member accessed (TODO: disable this disabler)
+  # FIX002 TODO: disable this disabler
+  # TD003 TODO: disable this disabler
+  # TD002 TODO: disable this disabler
   rev: 'v0.5.6'
   hooks:
     - id: ruff
@@ -123,7 +127,7 @@ repos:
       args:
       - --target-version=py38
       - --select=ALL
-      - --ignore=COM812,D203,D213,ISC003,PYI019
+      - --ignore=COM812,D203,D213,ISC003,PYI019,SLF001,FIX002,TD003,TD002
       # - --fix
 
 # reads pyproject.toml for additional config

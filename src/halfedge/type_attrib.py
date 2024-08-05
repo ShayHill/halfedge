@@ -165,9 +165,7 @@ class Attrib(Generic[_T]):
         return self._value
 
     @classmethod
-    def merge(
-        cls: type[_TElemAttrib], *merge_from: _TElemAttrib | None
-    ) -> _TElemAttrib | None:
+    def merge(cls, *merge_from: _TElemAttrib | None) -> _TElemAttrib | None:
         """Get value of self from self._merge_from.
 
         Use merge_from values to determine a value. If no value can be determined,
@@ -243,15 +241,13 @@ class ContagionAttrib(Attrib[_T]):
     """
 
     def __init__(
-        self,
-        value: _T | None = None,
-        element: MeshElementBase | None = None,
+        self, value: _T | None = None, element: MeshElementBase | None = None
     ) -> None:
         """Set value and element."""
-        super().__init__(cast("_TAttribValue", True), element)
+        super().__init__(cast(_T, True), element)
 
     @classmethod
-    def merge(cls: type[_TAttrib], *merge_from: _TAttrib | None) -> _TAttrib | None:
+    def merge(cls, *merge_from: _TAttrib | None) -> _TAttrib | None:
         """If any element has a ContagionAttributeBase attribute, return a new
         instance with that attribute. Otherwise None.
         """
@@ -286,9 +282,11 @@ class IncompatibleAttrib(Attrib[_T]):
     """
 
     @classmethod
-    def merge(cls: type[_TAttrib], *merge_from: _TAttrib | None) -> _TAttrib | None:
+    def merge(cls, *merge_from: _TAttrib | None) -> _TAttrib | None:
         """If all values match and every contributing element has an analog, return
         a new instance with that value. Otherwise None.
+
+        #TODO: verify that merge_from[0] should never be None.
         """
         if not merge_from or merge_from[0] is None:
             return None
@@ -299,7 +297,7 @@ class IncompatibleAttrib(Attrib[_T]):
         for x in merge_from[1:]:
             if x is None or x.value != first_value:
                 return None
-        return cls(first_value)
+        return type(merge_from[0])(first_value)
 
     @classmethod
     def slice(cls, split_from):
@@ -323,12 +321,13 @@ class NumericAttrib(Attrib[_T]):
     """Average merge_from values."""
 
     @classmethod
-    def merge(cls, *merge_from):
+    def merge(cls, *merge_from: _TAttrib | None) -> _TAttrib | None:
         """Average values if every contributor has a value. Otherwise None."""
-        with suppress(AttributeError):
-            values = [x.value for x in merge_from]  # type: ignore
-            return cls(sum(values) / len(values))
-        return None
+        have_values = [x for x in merge_from if x is not None and x.value is not None]
+        if not have_values:
+            return None
+        values = [x.value for x in have_values]
+        return type(have_values[0])(sum(values) / len(values))
 
     def _infer_value(self) -> _T | None:
         """TODO: see where merge value will ever be called.

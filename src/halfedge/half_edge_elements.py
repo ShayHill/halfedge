@@ -31,7 +31,7 @@ This module is all the base elements (Vert, Edge, and Face).
 from __future__ import annotations
 
 from itertools import count
-from typing import TYPE_CHECKING, Any, Callable, Protocol, TypeVar
+from typing import TYPE_CHECKING, Any, Callable, TypeVar
 
 from halfedge.type_attrib import Attrib, AttribHolder, ContagionAttrib
 
@@ -39,7 +39,6 @@ if TYPE_CHECKING:
     from .half_edge_constructors import BlindHalfEdges
 
 _TMeshElem = TypeVar("_TMeshElem", bound="MeshElementBase")
-_T = TypeVar("_T")
 
 
 class IsHole(ContagionAttrib):
@@ -56,13 +55,7 @@ class ManifoldMeshError(ValueError):
     """
 
 
-class _SupportsIs(Protocol):
-    """Supports the 'is' operator."""
-
-    def __is__(self: _T, other: _T) -> bool: ...
-
-
-def _all_is(*args: _SupportsIs) -> bool:
+def _all_is(*args: Any) -> bool:
     """Return True if all arguments are `a is b`."""
     return bool(args) and all(args[0] is x for x in args[1:])
 
@@ -75,7 +68,7 @@ class MeshElementBase(AttribHolder):
 
     def __init__(
         self,
-        *attributes: Attrib,
+        *attributes: Attrib[Any],
         mesh: BlindHalfEdges | None = None,
         **pointers: MeshElementBase | None,
     ) -> None:
@@ -91,9 +84,9 @@ class MeshElementBase(AttribHolder):
         """
         self.sn = next(self._sn_generator)
         for attribute in attributes:
-            self.set_attrib(attribute)
+            _ = self.set_attrib(attribute)
         if mesh is not None:
-            self.mesh = mesh
+            self._mesh = mesh
         for k, v in pointers.items():
             if v is not None:
                 setattr(self, k, v)
@@ -135,7 +128,7 @@ class MeshElementBase(AttribHolder):
         """Fill in missing references from other elements."""
         keys_seen = {k for k, v in self.__dict__.items() if v is not None}
         for element in elements:
-            for key in (x for x in element.__dict__.keys() if x not in keys_seen):
+            for key in (x for x in element.__dict__ if x not in keys_seen):
                 keys_seen.add(key)
                 vals = [getattr(x, key, None) for x in elements]
                 if isinstance(getattr(element, key), Attrib):
@@ -198,10 +191,10 @@ class Vert(MeshElementBase):
 
     def __init__(
         self,
-        *attributes: Attrib,
+        *attributes: Attrib[Any],
         mesh: BlindHalfEdges | None = None,
         edge: Edge | None = None,
-    ):
+    ) -> None:
         """Create a vert instance."""
         super().__init__(*attributes, mesh=mesh, edge=edge)
 
@@ -273,7 +266,7 @@ class Edge(MeshElementBase):
         face: Face | None = None,
         next: Edge | None = None,
         prev: Edge | None = None,
-    ):
+    ) -> None:
         """Create an edge instance."""
         super().__init__(
             *attributes,
@@ -333,7 +326,7 @@ class Edge(MeshElementBase):
             return self.vert_edges[-1].pair
 
     @prev.setter
-    def prev(self, prev) -> None:
+    def prev(self, prev: Edge) -> None:
         super(Edge, prev).__setattr__("next", self)
 
     @property

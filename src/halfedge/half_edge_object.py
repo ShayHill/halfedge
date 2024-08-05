@@ -248,8 +248,8 @@ class HalfEdges(StaticHalfEdges):
         _update_face_edges(self.new_face().slice_from(face), edge)
         _update_face_edges(face, edge.pair)
 
-        edge.merge_from(*[x for x in edge.face_edges if x not in {edge, edge.pair}])
-        edge.pair.merge_from(
+        _ = edge.merge_from(*[x for x in edge.face_edges if x not in {edge, edge.pair}])
+        _ = edge.pair.merge_from(
             *[x for x in edge.pair.face_edges if x not in {edge, edge.pair}]
         )
 
@@ -278,9 +278,9 @@ class HalfEdges(StaticHalfEdges):
         new_vert = self.new_vert().merge_from(*face.verts)
         try:
             for vert in face.verts:
-                self.insert_edge(vert, new_vert, face)
+                _ = self.insert_edge(vert, new_vert, face)
         except ManifoldMeshError as exc:
-            raise UnrecoverableManifoldMeshError(str(exc))
+            raise UnrecoverableManifoldMeshError(str(exc)) from exc
         return new_vert
 
     def remove_edge(self, edge: Edge) -> Face:
@@ -346,7 +346,7 @@ class HalfEdges(StaticHalfEdges):
 
         If peninsula's (edge and pair share the same face
         """
-        # TODO move function_lap into a public place to identify these
+        # TODO: move function_lap into a public place to identify these
         return vert
 
     def remove_vert(self, vert: Vert, **face_kwargs: Any) -> Face:
@@ -404,7 +404,7 @@ class HalfEdges(StaticHalfEdges):
             for edge in true_edges:  # vert.edges:
                 face = self.remove_edge(edge)
         except ManifoldMeshError as exc:
-            raise UnrecoverableManifoldMeshError(str(exc))
+            raise UnrecoverableManifoldMeshError(str(exc)) from exc
         return face
 
     def remove_face(self, face: Face) -> Face:
@@ -436,7 +436,7 @@ class HalfEdges(StaticHalfEdges):
             for edge in edges:
                 self.remove_edge(edge)
         except ManifoldMeshError as exc:
-            raise UnrecoverableManifoldMeshError(str(exc))
+            raise UnrecoverableManifoldMeshError(str(exc)) from exc
         return face
 
     def split_edge(self, edge: Edge) -> Vert:
@@ -487,8 +487,7 @@ class HalfEdges(StaticHalfEdges):
         new_orig = edge.next.dest
         new_dest = pair.next.dest
         face = self.remove_edge(edge)
-        new_edge = self.insert_edge(new_orig, new_dest, face)
-        return new_edge
+        return self.insert_edge(new_orig, new_dest, face)
 
     def _is_stitchable(self, edge: Edge) -> bool:
         """Return True if two edges be stitched (middle 2-side face removed).
@@ -512,9 +511,7 @@ class HalfEdges(StaticHalfEdges):
         tris = sum(x.face.sides == 3 for x in (edge, pair))
         orig_verts = set(edge.orig.neighbors)
         dest_verts = set(edge.dest.neighbors)
-        if len(orig_verts & dest_verts) <= tris:
-            return True
-        return False
+        return len(orig_verts & dest_verts) <= tris
 
     def collapse_edge(self, edge: Edge) -> Vert:
         """Collapse an Edge into a Vert.
