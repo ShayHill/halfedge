@@ -40,7 +40,7 @@ themselves.
 from __future__ import annotations
 
 from contextlib import suppress
-from typing import TYPE_CHECKING, Any, Generic, Protocol, TypeVar, cast
+from typing import TYPE_CHECKING, Any, Generic, TypeVar, cast
 
 if TYPE_CHECKING:
     from halfedge.half_edge_elements import MeshElementBase
@@ -120,23 +120,10 @@ class AttribHolder:
         return None
 
 
-class _SupportsEqual(Protocol):
-    def __eq__(self: _T, other: _T) -> bool: ...
-
-
-class _SupportsAverage(Protocol):
-    def __add__(self: _T, other: _T) -> _T: ...
-
-    def __div__(self: _T, other: _T) -> _T: ...
-
-
-_TSupportsAverage = TypeVar("_TSupportsAverage", bound=_SupportsAverage)
-_TSupportsEqual = TypeVar("_TSupportsEqual", bound=_SupportsEqual)
-_TAttribValue = TypeVar("_TAttribValue")
 _TElemAttrib = TypeVar("_TElemAttrib", bound="Attrib[Any]")
 
 
-class Attrib(Generic[_TAttribValue]):
+class Attrib(Generic[_T]):
     """Base class for element attributes.
 
     MeshElementBase has methods set_attrib and get_attrib that will store
@@ -155,10 +142,10 @@ class Attrib(Generic[_TAttribValue]):
     __slots__ = ("_value", "element")
 
     def __init__(
-        self, value: _TAttribValue | None = None, element: AttribHolder | None = None
+        self, value: _T | None = None, element: AttribHolder | None = None
     ) -> None:
         """Set value and element."""
-        self._value: _TAttribValue
+        self._value: _T
         self.element: AttribHolder
         if value is not None:
             self._value = value
@@ -166,7 +153,7 @@ class Attrib(Generic[_TAttribValue]):
             self.element = element
 
     @property
-    def value(self) -> _TAttribValue:
+    def value(self) -> _T:
         """Return value if set, else try to infer a value."""
         if not hasattr(self, "_value"):
             value = self._infer_value()
@@ -211,7 +198,7 @@ class Attrib(Generic[_TAttribValue]):
         _ = slice_from
         return None
 
-    def _infer_value(self) -> _TAttribValue | None:
+    def _infer_value(self) -> _T | None:
         """Get value of self from self._element.
 
         Use the containing element to determine a value for self. If no value can be
@@ -246,7 +233,7 @@ class Attrib(Generic[_TAttribValue]):
         )
 
 
-class ContagionAttrib(Attrib[_TSupportsEqual]):
+class ContagionAttrib(Attrib[_T]):
     """Spread value when combining with anything.
 
     This is for element properties like 'IsHole' that are always passed when combining
@@ -257,11 +244,11 @@ class ContagionAttrib(Attrib[_TSupportsEqual]):
 
     def __init__(
         self,
-        value: _TSupportsEqual | None = None,
+        value: _T | None = None,
         element: MeshElementBase | None = None,
     ) -> None:
         """Set value and element."""
-        super().__init__(cast("_TSupportsEqual", True), element)
+        super().__init__(cast("_TAttribValue", True), element)
 
     @classmethod
     def merge(cls: type[_TAttrib], *merge_from: _TAttrib | None) -> _TAttrib | None:
@@ -285,14 +272,14 @@ class ContagionAttrib(Attrib[_TSupportsEqual]):
             return cls()
         return None
 
-    def _infer_value(self) -> _TSupportsEqual:
+    def _infer_value(self) -> _T:
         raise RuntimeError(
             "This will only be called if self._value is None, "
             + "which should not happen."
         )
 
 
-class IncompatibleAttrib(Attrib[_TSupportsEqual]):
+class IncompatibleAttrib(Attrib[_T]):
     """Keep value when all merge_from values are the same.
 
     This class in intended for flags like IsEdge or Hardness.
@@ -321,7 +308,7 @@ class IncompatibleAttrib(Attrib[_TSupportsEqual]):
             return cls(value)
         return None
 
-    def _infer_value(self) -> _TSupportsEqual | None:
+    def _infer_value(self) -> _T | None:
         """No way to infer a value.
 
         TODO: clarify what's going on here by improving the docstring.
@@ -332,7 +319,7 @@ class IncompatibleAttrib(Attrib[_TSupportsEqual]):
         return None
 
 
-class NumericAttrib(Attrib[_TSupportsAverage]):
+class NumericAttrib(Attrib[_T]):
     """Average merge_from values."""
 
     @classmethod
@@ -343,7 +330,7 @@ class NumericAttrib(Attrib[_TSupportsAverage]):
             return cls(sum(values) / len(values))
         return None
 
-    def _infer_value(self) -> _TSupportsAverage | None:
+    def _infer_value(self) -> _T | None:
         """TODO: see where merge value will ever be called.
 
         No way to infer a value. If value is not set in init or merged from init
