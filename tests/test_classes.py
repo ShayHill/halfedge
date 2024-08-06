@@ -5,10 +5,12 @@ created: 170204 14:22:23
 """
 # pyright: reportPrivateUsage=false
 
+from __future__ import annotations
+
 import itertools
 import random
 from keyword import iskeyword
-from typing import Any, Callable, Dict, Tuple
+from typing import Any, Dict, Tuple, TypeVar
 
 import pytest
 
@@ -27,6 +29,8 @@ from halfedge.half_edge_querries import StaticHalfEdges
 from halfedge.type_attrib import Attrib, IncompatibleAttrib, NumericAttrib
 
 from .conftest import compare_circular_2, get_canonical_mesh
+
+_TElemAttrib = TypeVar("_TElemAttrib", bound="Attrib[Any]")
 
 alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 identifiers = (
@@ -49,6 +53,7 @@ class TestElemAttribs:
         """Return a new attribute with same value if all values are equal"""
         attribs = [IncompatibleAttrib(7, None) for _ in range(3)]
         new_attrib = IncompatibleAttrib().merge(*attribs)
+        assert new_attrib is not None
         assert new_attrib.value == 7
 
     def test_incompatible_merge_mismatch(self) -> None:
@@ -62,14 +67,15 @@ class TestElemAttribs:
         """Return a new attribute with same value if all values are equal"""
         attribs = [NumericAttrib(x) for x in range(1, 6)]
         new_attrib = NumericAttrib().merge(*attribs)
+        assert new_attrib is not None
         assert new_attrib.value == 3
 
     def test_lazy(self) -> None:
         """Given no value, LazyAttrib will try to infer a value from self.element"""
 
-        class LazyAttrib(Attrib):
+        class LazyAttrib(Attrib[int]):
             @classmethod
-            def merge(cls, *merge_from):
+            def merge(cls, *merge_from: _TElemAttrib | None) -> _TElemAttrib | None:
                 raise NotImplementedError()
 
             def _infer_value(self):
@@ -116,7 +122,7 @@ class TestMeshElementBase:
         assert elem3.try_attrib_value(NumericAttrib) == 7  # filled
 
 
-def test_edge_lap_succeeds(he_triangle: Dict[str, Any]) -> None:
+def test_edge_lap_succeeds(he_triangle: dict[str, Any]) -> None:
     """Returns to self when (func(func(func(....func(self))))) == self."""
     for edge in he_triangle["edges"]:
         assert _function_lap(lambda x: x.next, edge) == [
@@ -126,7 +132,7 @@ def test_edge_lap_succeeds(he_triangle: Dict[str, Any]) -> None:
         ]
 
 
-def test_edge_lap_fails(he_triangle: Dict[str, Any]) -> None:
+def test_edge_lap_fails(he_triangle: dict[str, Any]) -> None:
     """Fails when self intersects."""
     edges = he_triangle["edges"]
     with pytest.raises(ManifoldMeshError) as err:
@@ -140,6 +146,9 @@ class Coordinate(IncompatibleAttrib[Tuple[int, int, int]]):
 
 class TestInitVert:
     def setup_method(self):
+        self.coordinate: Coordinate  # type: ignore
+        self.edge: Edge  # type: ignore
+        self.vert: Vert  # type: ignore
         self.coordinate = Coordinate((1, 2, 3))
         self.edge = Edge()
         self.vert = Vert(self.coordinate, edge=self.edge)
@@ -149,7 +158,7 @@ class TestInitVert:
         edge = Edge()
         vert = Vert(edge=edge)
         filler = Vert(edge=Edge())
-        vert.merge_from(filler)
+        _ = vert.merge_from(filler)
         assert vert.edge is edge
 
     def test_coordinate_is_attribute(self):
@@ -174,7 +183,14 @@ class TestInitVert:
 
 
 class TestInitEdge:
+
     def setup_method(self):
+        self.coordinate: Coordinate  # type: ignore
+        self.edge: Edge  # type: ignore
+        self.orig: Vert  # type: ignore
+        self.pair: Edge  # type: ignore
+        self.face: Face  # type: ignore
+        self.next: Edge  # type: ignore
         self.coordinate = Coordinate((1, 2, 3))
         self.edge = Edge()
         self.orig = Vert()
@@ -231,7 +247,11 @@ class TestInitEdge:
 
 
 class TestInitFace:
+
     def setup_method(self):
+        self.coordinate: Coordinate  # type: ignore
+        self.edge: Edge  # type: ignore
+        self.face: Face  # type: ignore
         self.coordinate = Coordinate((1, 2, 3))
         self.edge = Edge()
         self.face = Face(self.coordinate, edge=self.edge)
@@ -260,17 +280,17 @@ class TestInitFace:
 class TestElementSubclasses:
     """Test all three _MeshElementBase children."""
 
-    def test_edge_face_edges(self, he_triangle: Dict[str, Any]) -> None:
+    def test_edge_face_edges(self, he_triangle: dict[str, Any]) -> None:
         """Edge next around face."""
         for edge in he_triangle["edges"]:
             assert tuple(edge.face_edges) == (edge, edge.next, edge.next.next)
 
-    def test_face_edges(self, he_triangle: Dict[str, Any]) -> None:
+    def test_face_edges(self, he_triangle: dict[str, Any]) -> None:
         """Finds all edges, starting at face.edge."""
         for face in he_triangle["faces"]:
             assert tuple(face.edges) == tuple(face.edge.face_edges)
 
-    def test_edge_face_verts(self, he_triangle: Dict[str, Any]) -> None:
+    def test_edge_face_verts(self, he_triangle: dict[str, Any]) -> None:
         """Is equivalent to edge.pair.next around orig."""
         for edge in he_triangle["edges"]:
             assert tuple(edge.vert_edges) == (edge, edge.pair.next)
@@ -279,50 +299,50 @@ class TestElementSubclasses:
         """Find vert edge in mesh"""
         vert = Vert()
         edge = Edge(orig=vert)
-        mesh = StaticHalfEdges({edge})
+        _ = StaticHalfEdges({edge})
         assert vert.edge == edge
 
-    def test_vert_edges(self, he_triangle: Dict[str, Any]) -> None:
+    def test_vert_edges(self, he_triangle: dict[str, Any]) -> None:
         """Is equivalent to vert_edges for vert.edge."""
         for vert in he_triangle["verts"]:
             assert tuple(vert.edges) == tuple(vert.edge.vert_edges)
 
-    def test_vert_verts(self, he_triangle: Dict[str, Any]) -> None:
+    def test_vert_verts(self, he_triangle: dict[str, Any]) -> None:
         """Is equivalent to vert_edge.dest for vert.edge."""
         for vert in he_triangle["verts"]:
             assert vert.neighbors == [x.dest for x in vert.edge.vert_edges]
 
-    def test_vert_valence(self, he_triangle: Dict[str, Any]) -> None:
+    def test_vert_valence(self, he_triangle: dict[str, Any]) -> None:
         """Valence is two for every corner in a triangle."""
         for vert in he_triangle["verts"]:
             assert vert.valence == 2
 
-    def test_prev_by_face_edges(self, he_triangle: Dict[str, Any]) -> None:
+    def test_prev_by_face_edges(self, he_triangle: dict[str, Any]) -> None:
         """Previous edge will 'next' to self."""
         for edge in he_triangle["edges"]:
             assert edge.prev.next == edge
 
     @staticmethod
-    def test_dest_is_next_orig(he_triangle: Dict[str, Any]) -> None:
+    def test_dest_is_next_orig(he_triangle: dict[str, Any]) -> None:
         """Finds orig of next or pair edge."""
         for edge in he_triangle["edges"]:
             assert edge.dest is edge.next.orig
 
     @staticmethod
-    def test_dest_is_pair_orig(he_triangle: Dict[str, Any]) -> None:
+    def test_dest_is_pair_orig(he_triangle: dict[str, Any]) -> None:
         """Returns pair orig if next.orig fails."""
         edge = random.choice(he_triangle["edges"])
         edge.next = None
         assert edge.dest is edge.pair.orig
 
     @staticmethod
-    def test_face_verts(he_triangle: Dict[str, Any]) -> None:
+    def test_face_verts(he_triangle: dict[str, Any]) -> None:
         """Returns orig for every edge in face_verts."""
         for face in he_triangle["faces"]:
             assert tuple(face.verts) == tuple(face.edge.face_verts)
 
 
-def test_half_edges_init(he_triangle: Dict[str, Any]) -> None:
+def test_half_edges_init(he_triangle: dict[str, Any]) -> None:
     """Verts, edges, faces, and holes match hand-calculated coordinates."""
     verts = set(he_triangle["verts"])
     edges = set(he_triangle["edges"])
@@ -341,7 +361,7 @@ class TestHalfEdges:
     """Keep the linter happy."""
 
     def test_vl(
-        self, meshes_vlvi: Dict[str, Any], he_cube: HalfEdges, he_grid: HalfEdges
+        self, meshes_vlvi: dict[str, Any], he_cube: HalfEdges, he_grid: HalfEdges
     ) -> None:
         """Converts unaltered mesh verts back to input vl."""
         assert {x.try_attrib_value(Coordinate) for x in he_cube.vl} == set(
@@ -352,14 +372,14 @@ class TestHalfEdges:
         )
 
     def test_vi(
-        self, meshes_vlvi: Dict[str, Any], he_cube: HalfEdges, he_grid: HalfEdges
+        self, meshes_vlvi: dict[str, Any], he_cube: HalfEdges, he_grid: HalfEdges
     ) -> None:
         """Convert unaltered mesh faces back to input vi.
         Demonstrates preservation of face edge beginning point."""
         _ = compare_circular_2(he_cube.fi, meshes_vlvi["cube_vi"])
         _ = compare_circular_2(he_grid.fi, meshes_vlvi["grid_vi"])
 
-    def test_hi(self, meshes_vlvi: Dict[str, Any], he_grid: HalfEdges) -> None:
+    def test_hi(self, meshes_vlvi: dict[str, Any], he_grid: HalfEdges) -> None:
         """Convert unaltered mesh holes back to input holes."""
         expect = get_canonical_mesh(meshes_vlvi["grid_vl"], meshes_vlvi["grid_hi"])
         result = get_canonical_mesh(

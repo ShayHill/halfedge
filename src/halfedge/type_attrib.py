@@ -45,79 +45,79 @@ from typing import TYPE_CHECKING, Any, Generic, TypeVar, cast
 if TYPE_CHECKING:
     from halfedge.half_edge_elements import MeshElementBase
 
-_TAttribHolder = TypeVar("_TAttribHolder", bound="AttribHolder")
+# _TAttribHolder = TypeVar("_TAttribHolder", bound="AttribHolder")
 _TAttrib = TypeVar("_TAttrib", bound="Attrib[Any]")
 _T = TypeVar("_T")
 
 
-class AttribHolder:
-    """Hold AttribBase instances and retrieve values."""
+# class AttribHolder:
+#     """Hold AttribBase instances and retrieve values."""
 
-    def set_attrib(self: _TAttribHolder, *attribs: Attrib[Any]) -> _TAttribHolder:
-        """Set attribute with an Attrib instance.
+#     def set_attrib(self: _TAttribHolder, *attribs: Attrib[Any]) -> _TAttribHolder:
+#         """Set attribute with an Attrib instance.
 
-        type(attrib).__name__ : attrib
+#         type(attrib).__name__ : attrib
 
-        :param attribs: Attrib instances, presumably with a None element
-        attribute.
-        """
-        for attrib in attribs:
-            attrib.element = self
-            self.__dict__[type(attrib).__name__] = attrib
-        return self
+#         :param attribs: Attrib instances, presumably with a None element
+#         attribute.
+#         """
+#         for attrib in attribs:
+#             attrib.element = self
+#             self.__dict__[type(attrib).__name__] = attrib
+#         return self
 
-    def _maybe_set_attrib(self, *attribs: Attrib[Any] | None) -> None:
-        """Set attribute if attrib is an Attrib. Pass silently if None."""
-        _ = self.set_attrib(*[x for x in attribs if isinstance(x, Attrib)])
+#     def _maybe_set_attrib(self, *attribs: Attrib[Any] | None) -> None:
+#         """Set attribute if attrib is an Attrib. Pass silently if None."""
+#         _ = self.set_attrib(*[x for x in attribs if isinstance(x, Attrib)])
 
-    def get_attrib(self, type_: type[_TAttrib]) -> _TAttrib:
-        """Get an attribute by type."""
-        name = type_.__name__
-        try:
-            return getattr(self, name)
-        except AttributeError:
-            msg = f"'{type(self).__name__}' has no Attrib '{name}'"
-            raise AttributeError(msg)
+#     def get_attrib(self, type_: type[_TAttrib]) -> _TAttrib:
+#         """Get an attribute by type."""
+#         name = type_.__name__
+#         try:
+#             return getattr(self, name)
+#         except AttributeError:
+#             msg = f"'{type(self).__name__}' has no Attrib '{name}'"
+#             raise AttributeError(msg)
 
-    def try_attrib(self, type_: type[_TAttrib]) -> _TAttrib | None:
-        """Try to get an attribute, None if attrib is not set.
+#     def try_attrib(self, type_: type[_TAttrib]) -> _TAttrib | None:
+#         """Try to get an attribute, None if attrib is not set.
 
-        :param type_: type of Attrib to seek in the attrib dictionary. This
-            takes a type instead of a string to eliminate any possibility of getting
-            a None value just because an attrib dictionary key was mistyped.
-        """
-        try:
-            return self.get_attrib(type_)
-        except AttributeError:
-            return None
+#         :param type_: type of Attrib to seek in the attrib dictionary. This
+#             takes a type instead of a string to eliminate any possibility of getting
+#             a None value just because an attrib dictionary key was mistyped.
+#         """
+#         try:
+#             return self.get_attrib(type_)
+#         except AttributeError:
+#             return None
 
-    def get_attrib_value(self, type_: type[Attrib[_T]]) -> _T:
-        """Get attrib value. Will fail if attrib is not set.
+#     def get_attrib_value(self, type_: type[Attrib[_T]]) -> _T:
+#         """Get attrib value. Will fail if attrib is not set.
 
-        :param type_: type of Attrib to seek in the attrib dictionary. This
-            takes a type instead of a string to eliminate any possibility of getting
-            a None value just because an attrib dictionary key was mistyped.
-        """
-        return self.get_attrib(type_).value
+#         :param type_: type of Attrib to seek in the attrib dictionary. This
+#             takes a type instead of a string to eliminate any possibility of getting
+#             a None value just because an attrib dictionary key was mistyped.
+#         """
+#         return self.get_attrib(type_).value
 
-    def try_attrib_value(self, type_: type[Attrib[_T]]) -> _T | None:
-        """Try to get an attribute value, None if attrib is not set.
+#     def try_attrib_value(self, type_: type[Attrib[_T]]) -> _T | None:
+#         """Try to get an attribute value, None if attrib is not set.
 
-        :param type_: type of Attrib to seek in the attrib dictionary. This
-            takes a type instead of a string to eliminate any possibility of getting
-            a None value just because an attrib dictionary key was mistyped.
-        """
-        try:
-            return self.get_attrib_value(type_)
-        except AttributeError:
-            return None
+#         :param type_: type of Attrib to seek in the attrib dictionary. This
+#             takes a type instead of a string to eliminate any possibility of getting
+#             a None value just because an attrib dictionary key was mistyped.
+#         """
+#         try:
+#             return self.get_attrib_value(type_)
+#         except AttributeError:
+#             return None
 
-    def cached_attrib_value(self, type_: type[Attrib[_T]]) -> _T | None:
-        """TODO: docstring."""
-        attrib = self.try_attrib(type_)
-        if attrib is not None and hasattr(attrib, "_value"):
-            return attrib.value
-        return None
+#     def cached_attrib_value(self, type_: type[Attrib[_T]]) -> _T | None:
+#         """TODO: docstring."""
+#         attrib = self.try_attrib(type_)
+#         if attrib is not None and hasattr(attrib, "_value"):
+#             return attrib.value
+#         return None
 
 
 _TElemAttrib = TypeVar("_TElemAttrib", bound="Attrib[Any]")
@@ -253,7 +253,7 @@ class ContagionAttrib(Attrib[_T]):
         """
         with suppress(AttributeError):
             if any(getattr(x, "value", None) for x in merge_from):
-                return cls()
+                return type(merge_from[0])()
         return None
 
     @classmethod

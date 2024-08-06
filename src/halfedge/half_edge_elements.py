@@ -31,11 +31,10 @@ This module is all the base elements (Vert, Edge, and Face).
 from __future__ import annotations
 
 import itertools as it
-from contextlib import suppress
 from itertools import count
-from typing import TYPE_CHECKING, Any, Callable, Type, TypeVar
+from typing import TYPE_CHECKING, Any, Callable, TypeVar
 
-from halfedge.type_attrib import Attrib, AttribHolder, ContagionAttrib
+from halfedge.type_attrib import Attrib, ContagionAttrib
 
 if TYPE_CHECKING:
     from .half_edge_constructors import BlindHalfEdges
@@ -102,11 +101,11 @@ class MeshElementBase:
         attrib.element = self
         self.attrib[type(attrib).__name__] = attrib
 
-    def get_attrib(self, attrib: type[_TAttrib]) -> _TAttrib:
+    def get_attrib(self, attrib: type[Attrib[_T]]) -> Attrib[_T]:
         """Get an attribute."""
         return self.attrib[attrib.__name__]
 
-    def try_attrib(self, attrib: type[_TAttrib]) -> _TAttrib | None:
+    def try_attrib(self, attrib: type[Attrib[_T]]) -> Attrib[_T] | None:
         """Try to get an attribute."""
         try:
             return self.get_attrib(attrib)
@@ -125,39 +124,6 @@ class MeshElementBase:
         for attrib in attribs:
             if attrib is not None:
                 self.set_attrib(attrib)
-
-    # @property
-    # def mesh(self) -> BlindHalfEdges:
-    #     """Return the mesh instance."""
-    #     return self._mesh
-
-    # @mesh.setter
-    # def mesh(self, mesh_: BlindHalfEdges) -> None:
-    #     self._mesh = mesh_
-
-    # def __setattr__(self, key: str, value: Any) -> None:
-    #     """To prevent any mistyped attributes, which would clobber fill_from.
-
-    #     This is here to help refactoring, but isn't necessary or necessarily
-    #     Pythonic. Basically, you can only set public attributes which are defined in
-    #     init or have setters.
-
-    #     I started off allowing element attributes as simple properties, so I had a
-    #     lot of tests with code like `edge_instance.color = "purple"`. Overloading
-    #     setattr this way allowed me to find those quickly. I'm going to leave this in
-    #     for now because it prevents typos and it will help me remember later on that
-    #     I cannot set ElemAttribBase properties with `edge_instance.something =
-    #     ElemAttribBase_instance`.
-    #     """
-    #     allow = key == "sn"
-    #     allow = allow or key in self._pointers
-    #     allow = allow or key.lstrip("_") in self._pointers
-    #     allow = allow or isinstance(value, Attrib)
-    #     if allow:
-    #         super().__setattr__(key, value)
-    #         return
-    #     msg = f"'{type(self).__name__}' has no attribute '{key}'"
-    #     raise AttributeError(msg)
 
     def merge_from(self: _TMeshElem, *elements: _TMeshElem) -> _TMeshElem:
         """Fill in missing references from other elements."""

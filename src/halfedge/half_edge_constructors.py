@@ -19,12 +19,12 @@ from __future__ import annotations
 from typing import Iterable, TypeVar
 
 from .half_edge_elements import Edge, Face, ManifoldMeshError, Vert
-from .type_attrib import Attrib, AttribHolder
+from .type_attrib import Attrib
 
 _TBlindHalfEdges = TypeVar("_TBlindHalfEdges", bound="BlindHalfEdges")
 
 
-class BlindHalfEdges(AttribHolder):
+class BlindHalfEdges:
     """Half-edge structure with no lookups."""
 
     def __init__(self, edges: set[Edge] | None = None) -> None:

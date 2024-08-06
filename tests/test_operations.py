@@ -8,7 +8,7 @@ import random
 from contextlib import suppress
 from itertools import chain, combinations, permutations
 from operator import attrgetter
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, Set, Tuple
 
 import pytest
 
@@ -16,8 +16,6 @@ from halfedge.half_edge_elements import Edge, Face, ManifoldMeshError, Vert
 from halfedge.half_edge_object import HalfEdges
 from halfedge.type_attrib import IncompatibleAttrib, NumericAttrib
 from halfedge.validations import validate_mesh
-
-from .conftest import get_canonical_mesh
 
 
 class NamedAttribute(IncompatibleAttrib):
@@ -217,7 +215,7 @@ class TestInsertVert:
         for vert in face.verts:
             vert.set_attrib(NamedAttribute("purple"))
         new_vert = mesh.insert_vert(face)
-        assert new_vert.try_attrib_value(NamedAttribute) == "purple"  # type: ignore
+        assert new_vert.try_attrib_value(NamedAttribute) == "purple"
 
     def test_vert_kwargs_pass(self, mesh_faces: Tuple[HalfEdges, Face]) -> None:
         """vert_kwargs assigned to new vert"""
@@ -225,7 +223,7 @@ class TestInsertVert:
         for vert in face.verts:
             vert.set_attrib(NamedAttribute("purple"))
         new_vert = mesh.insert_vert(face)
-        assert new_vert.try_attrib_value(NamedAttribute) == "purple"  # type: ignore
+        assert new_vert.try_attrib_value(NamedAttribute) == "purple"
 
 
 class TestRemoveEdge:
@@ -430,7 +428,7 @@ class TestFlipEdge:
         # face = MyFace
 
         vl = [Vert(Coordinate(x)) for x in range(4)]
-        vi = {(0, 1, 2), (0, 2, 3)}
+        vi: Set[Tuple[Tuple[int, ...], ...]] = {(0, 1, 2), (0, 2, 3)}
         mesh = HalfEdges.from_vlvi(vl, vi)
         split = next(
             x for x in mesh.edges if x.orig.valence == 3 and x.pair.orig.valence == 3

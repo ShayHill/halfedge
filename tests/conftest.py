@@ -3,12 +3,10 @@
 created: 181121 13:14:06
 """
 
-from copy import deepcopy
 from itertools import product
 from typing import (
     Any,
     Dict,
-    Hashable,
     Iterable,
     List,
     Protocol,
@@ -24,10 +22,10 @@ import pytest
 from halfedge import half_edge_elements
 from halfedge.half_edge_elements import Edge, Face, Vert
 from halfedge.half_edge_object import HalfEdges
-from halfedge.type_attrib import IncompatibleAttrib, NumericAttrib
+from halfedge.type_attrib import IncompatibleAttrib
 
 
-class Coordinate(IncompatibleAttrib):
+class Coordinate(IncompatibleAttrib[Tuple[int, ...]]):
     pass
 
 
@@ -181,16 +179,19 @@ def compare_circular(seq_a: Sequence[Any], seq_b: Sequence[Any]) -> bool:
     return tuple(seq_a) == tuple(seq_b[idx:]) + tuple(seq_b[:idx])
 
 
-def compare_circular_2(seq_a: List[List[Any]], seq_b: List[List[Any]]) -> bool:
+def compare_circular_2(
+    seq_a: Iterable[Sequence[Any]], seq_b: Iterable[Sequence[Any]]
+) -> bool:
     """ "
     Compare_circular with a nested list
     """
-    seq_a = deepcopy(seq_a)
-    seq_b = deepcopy(seq_b)
+    list_list_a = [list(x) for x in seq_a]
+    list_list_b = [list(x) for x in seq_b]
     while seq_a and seq_b:
-        sub_a = seq_a.pop()
         try:
-            seq_b.remove(next(x for x in seq_b if compare_circular(sub_a, x)))
+            list_list_b.remove(
+                next(x for x in list_list_b if compare_circular(list_list_a, x))
+            )
         except StopIteration:
             return False
     if seq_b:
