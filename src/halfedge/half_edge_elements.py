@@ -30,7 +30,7 @@ This module is all the base elements (Vert, Edge, and Face).
 
 from __future__ import annotations
 
-import itertools as it
+from contextlib import suppress
 from itertools import count
 from typing import TYPE_CHECKING, Any, Callable, TypeVar
 
@@ -91,13 +91,17 @@ class MeshElementBase:
 
     def get_attrib(self, attrib: type[Attrib[_T]]) -> Attrib[_T]:
         """Get an attribute."""
-        return self.attrib[attrib.__name__]
+        try:
+            return self.attrib[attrib.__name__]
+        except KeyError as e:
+            msg = f"{attrib.__name__} not found in {self.__class__.__name__}"
+            raise AttributeError(msg) from e
 
     def try_attrib(self, attrib: type[Attrib[_T]]) -> Attrib[_T] | None:
         """Try to get an attribute."""
         try:
             return self.get_attrib(attrib)
-        except KeyError:
+        except AttributeError:
             return None
 
     def try_attrib_value(self, attrib: type[Attrib[_T]]) -> _T | None:
@@ -114,16 +118,29 @@ class MeshElementBase:
                 self.set_attrib(attrib)
 
     def merge_from(self: _TMeshElem, *elements: _TMeshElem) -> _TMeshElem:
-        """Fill in missing references from other elements."""
-        # TODO: maybe split merge_from into merge_from and fill_from
-        all_attrib_names = set(it.chain(*(x.attrib.keys() for x in elements)))
-        for new_attrib_name in all_attrib_names - set(self.attrib.keys()):
-            maybe_attribs = [x.attrib.get(new_attrib_name) for x in elements]
-            elements_attribs = [x for x in maybe_attribs if x is not None]
-            if not elements_attribs:
-                # shouldn't ever happen
-                continue
-            merged_attrib = type(elements_attribs[0]).merge(*elements_attribs)
+        """Fill in missing references from other elements.
+
+        :param elements: elements to merge from
+        :returns: self with missing attrs dict keys filled in
+
+        For any key present in one or more e.attrib for e in elements, merge
+        identical keys and fill in self.attrib. Do not overwrite existing keys. Only
+        merge keys that are not already in self.attrib.
+
+        Some attribs, when merged, return None. These these will not be set in
+        self.attrib.
+        """
+        old_attribs: set[type[Attrib[Any]]] = {type(x) for x in self.attrib.values()}
+        all_attribs: set[type[Attrib[Any]]] = set()
+        for element in elements:
+            all_attribs.update({type(x) for x in element.attrib.values()})
+        new_attribs = all_attribs - old_attribs
+        for attrib in new_attribs:
+            attrib_instances: list[Attrib[Any]] = []
+            for element in elements:
+                with suppress(AttributeError):
+                    attrib_instances.append(element.get_attrib(attrib))
+            merged_attrib = attrib.merge(*attrib_instances)
             if merged_attrib is None:
                 continue
             self.set_attrib(merged_attrib)
@@ -425,9 +442,9 @@ class Face(MeshElementBase):
         is_hole: bool = False,
     ) -> None:
         """Create a face instance."""
-        if is_hole:
-            attributes += (IsHole(),)
         super().__init__(*attributes, mesh=mesh)
+        if is_hole:
+            self.set_attrib(IsHole())
         self._edge = edge
         if edge is not None:
             self.edge = edge
