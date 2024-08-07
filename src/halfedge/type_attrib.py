@@ -39,6 +39,7 @@ themselves.
 
 from __future__ import annotations
 
+from contextlib import suppress
 from typing import TYPE_CHECKING, Any, Generic, Literal, TypeVar
 
 if TYPE_CHECKING:
@@ -83,13 +84,14 @@ class Attrib(Generic[_T]):
     @property
     def value(self) -> _T:
         """Return value if set, else try to infer a value."""
-        if not hasattr(self, "_value"):
-            value = self._infer_value()
-            if value is None:
-                msg = f"no value set and failed to infer from {self.element}"
-                raise TypeError(msg)
-            self._value = value
-        return self._value
+        with suppress(AttributeError):
+            return self._value
+        value = self._infer_value()
+        if value is None:
+            msg = f"no value set and failed to infer from {self.element}"
+            raise TypeError(msg)
+        self._value = value
+        return value
 
     @classmethod
     def merge(cls, *merge_from: _TElemAttrib | None) -> _TElemAttrib | None:
@@ -133,14 +135,14 @@ class Attrib(Generic[_T]):
         caution, however. These need to be calculated before merging since the method
         may not support the new shape. For instance, this method might calculate the
         area of a triangle, but would fail if two triangles were merged into a
-        square. To keep this safe, the _value is colculated *before* any merging. In
+        square. To keep this safe, the _value is calculated *before* any merging. In
         the "area of a triangle" example,
 
             * The area calculation is deferred until the first merge.
             * At the first merge, the area of each merged triangle is calculated. The
               implication here is that calculation *cannot* be deferred till after a
               merge.
-            * the merged method areas of the merged triangles at the first and
+            * The merged method areas of the merged triangles at the first and
               subsequent mergers, so further triangle area calculations (which
               wouldn't work on the merged shapes anyway) are not required.
 

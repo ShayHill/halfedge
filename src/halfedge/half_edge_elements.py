@@ -455,7 +455,6 @@ class Face(MeshElementBase):
         """
         return self.try_attrib(IsHole) is not None
 
-    # TODO: eliminate hasattr where possible
     @property
     def edges(self) -> list[Edge]:
         """Look up all edges around face."""

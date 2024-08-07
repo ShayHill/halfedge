@@ -103,16 +103,18 @@ class BlindHalfEdges:
 
         This function can also fill in holes inside the mesh.
         """
-        hole_edges = {
-            self.new_edge(orig=x.dest, pair=x)
-            for x in self.edges
-            if not hasattr(x, "pair")
-        }
-        orig2hole_edge = {x.orig: x for x in hole_edges}
+        hole_edges: set[Edge] = set()
+        for edge in self.edges:
+            with suppress(AttributeError):
+                _ = edge.pair
+                continue
+            hole_edges.add(self.new_edge(orig=edge.dest, pair=edge))
 
+        orig2hole_edge = {x.orig: x for x in hole_edges}
         if len(orig2hole_edge) < len(hole_edges):
             msg = (
-                "Ambiguous 'next' in inferred pair edge. "
+                "Multiple holes edges start at the same vertex. "
+                + "Ambiguous 'next' in inferred pair edge. "
                 + "Inferred holes probably meet at corner."
             )
             raise ManifoldMeshError(msg)
