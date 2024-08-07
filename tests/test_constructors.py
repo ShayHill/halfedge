@@ -21,7 +21,6 @@ from halfedge.half_edge_object import HalfEdges
 from halfedge.half_edge_querries import StaticHalfEdges
 from halfedge.type_attrib import IncompatibleAttrib, NumericAttrib
 
-# noinspection PyProtectedMember,PyProtectedMember
 from .conftest import get_canonical_mesh
 
 alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"

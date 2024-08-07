@@ -25,7 +25,6 @@ from halfedge.half_edge_elements import (
 from halfedge.half_edge_object import HalfEdges
 from halfedge.half_edge_querries import StaticHalfEdges
 
-# noinspection PyProtectedMember,PyProtectedMember
 from halfedge.type_attrib import Attrib, IncompatibleAttrib, NumericAttrib
 
 from .conftest import compare_circular_2, get_canonical_mesh

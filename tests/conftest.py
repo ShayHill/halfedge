@@ -197,8 +197,6 @@ def get_canonical_vr(
     """Rotate each tuple in a set to start with its min item.
 
     See docstring for canonical_mesh.
-
-    #TODO: grep for noinspection
     """
     vr_aligned: Set[Tuple[Tuple[_TAxis, ...], ...]] = set()
     for face_verts in vr:
