@@ -190,12 +190,6 @@ class Vert(MeshElementBase):
         if edge is not None:
             self.edge = edge
 
-    # TODO: get rid of has_ properties. hasattr works
-    @property
-    def has_edge(self) -> bool:
-        """Return True if .edge is set."""
-        return self._edge is not None
-
     @property
     def edge(self) -> Edge:
         """One edge originating at vert."""
@@ -216,16 +210,21 @@ class Vert(MeshElementBase):
     @property
     def edges(self) -> list[Edge]:
         """Half edges radiating from vert."""
-        if self.has_edge:
-            return self.edge.vert_edges
-        return []
+        # document why a vert with no edges might be valid
+        try:
+            vert_edge = self.edge
+        except AttributeError:
+            return []
+        return vert_edge.vert_edges
 
     @property
     def all_faces(self) -> list[Face]:
         """Faces radiating from vert."""
-        if hasattr(self, "edge"):
-            return self.edge.vert_all_faces
-        return []
+        try:
+            vert_edge = self.edge
+        except AttributeError:
+            return []
+        return vert_edge.vert_all_faces
 
     @property
     def faces(self) -> list[Face]:
@@ -240,9 +239,11 @@ class Vert(MeshElementBase):
     @property
     def neighbors(self) -> list[Vert]:
         """Evert vert connected to vert by one edge."""
-        if hasattr(self, "edge"):
-            return self.edge.vert_neighbors
-        return []
+        try:
+            vert_edge = self.edge
+        except AttributeError:
+            return []
+        return vert_edge.vert_neighbors
 
     @property
     def valence(self) -> int:
@@ -288,11 +289,6 @@ class Edge(MeshElementBase):
             self.prev = prev
 
     @property
-    def has_orig(self) -> bool:
-        """Return True if .orig is set."""
-        return self._orig is not None
-
-    @property
     def orig(self) -> Vert:
         """Vert at which edge originates."""
         if self._orig is not None:
@@ -306,11 +302,6 @@ class Edge(MeshElementBase):
         orig.set_edge_without_side_effects(self)
 
     @property
-    def has_pair(self) -> bool:
-        """Return True if .pair is set."""
-        return self._pair is not None
-
-    @property
     def pair(self) -> Edge:
         """Edge running opposite direction over same verts."""
         if self._pair is not None:
@@ -322,11 +313,6 @@ class Edge(MeshElementBase):
     def pair(self, pair: Edge) -> None:
         self._pair = pair
         pair._pair = self
-
-    @property
-    def has_face(self) -> bool:
-        """Return True if .face is set."""
-        return self._face is not None
 
     @property
     def face(self) -> Face:
@@ -344,11 +330,6 @@ class Edge(MeshElementBase):
     def set_face_without_side_effects(self, face: Face) -> None:
         """Set face without setting face's edge."""
         self._face = face
-
-    @property
-    def has_next(self) -> bool:
-        """Return True if .next is set."""
-        return self._next is not None
 
     @property
     def next(self: Edge) -> Edge:
@@ -452,11 +433,6 @@ class Face(MeshElementBase):
             self.edge = edge
 
     @property
-    def has_edge(self) -> bool:
-        """Does face have one edge identified."""
-        return self._edge is not None
-
-    @property
     def edge(self) -> Edge:
         """One edge on the face."""
         if self._edge is not None:
@@ -479,19 +455,24 @@ class Face(MeshElementBase):
         """
         return self.try_attrib(IsHole) is not None
 
+    # TODO: eliminate hasattr where possible
     @property
     def edges(self) -> list[Edge]:
         """Look up all edges around face."""
-        if self.has_edge:
-            return self.edge.face_edges
-        return []
+        try:
+            face_edge = self.edge
+        except AttributeError:
+            return []
+        return face_edge.face_edges
 
     @property
     def verts(self) -> list[Vert]:
         """Look up all verts around face."""
-        if self.has_edge:
-            return [x.orig for x in self.edges]
-        return []
+        try:
+            face_edge = self.edge
+        except AttributeError:
+            return []
+        return face_edge.face_verts
 
     @property
     def sides(self) -> int:

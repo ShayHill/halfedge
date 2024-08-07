@@ -106,8 +106,7 @@ class BlindHalfEdges:
         hole_edges = {
             self.new_edge(orig=x.dest, pair=x)
             for x in self.edges
-            if not x.has_pair
-            # if not hasattr(x, "pair")
+            if not hasattr(x, "pair")
         }
         orig2hole_edge = {x.orig: x for x in hole_edges}
 

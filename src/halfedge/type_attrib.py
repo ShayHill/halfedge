@@ -195,7 +195,6 @@ class ContagionAttrib(Attrib[Literal[True]]):
         holes.
         """
         if getattr(slice_from, "value", None):
-            # TODO: add a value here
             return type(slice_from)()
         return None
 
