@@ -121,34 +121,7 @@ class HalfEdges(StaticHalfEdges):
         msg = "edge cannot be inferred from orig and face"
         raise ValueError(msg)
 
-    def _point_away_from_edge(self, edge: Edge) -> None:
-        """Prepare edge to be removed. Remove vert and face pointers to edge.
-
-        :param edge: any edge in mesh
-        :effects: points edge.orig and edge.face to another edge
-
-        Each vert and each face point to an adjacent edge. *Which* adjacent edge is
-        incidental. This method tries to point an edge's origin and face to
-        *something else*.
-
-        This method requires an intact mesh and produces an intact mesh. After this
-        method, the mesh will be perfectly equivalent to its previous state. However,
-        this method has to be called *before* we start other preparation to remove
-        the edge, because *those* preparations *will* alter the mesh and prevent
-        *this* method from working.
-
-        The method will fail silently if the edge.orig or edge.face doesn't have
-        another edge to point to. But that won't matter, because that orig or face
-        will go out of scope when the edge is removed.
-        """
-        pair = edge.pair
-        for edge_ in (edge, pair):
-            edge_.orig.edge = edge_.pair.next
-            safe_edges = set(edge_.face.edges) - {edge, pair}
-            edge_.face.edge = next(iter(safe_edges), edge_)
-
-    # TODO: replace original with this
-    def _point_away_from_edge2(self, *edges: Edge) -> None:
+    def _point_away_from_edge(self, *edges: Edge) -> None:
         """Prepare edge to be removed. Remove vert and face pointers to edge.
 
         :param edge: any edge in mesh
@@ -327,7 +300,7 @@ class HalfEdges(StaticHalfEdges):
             msg = "would create non-manifold mesh"
             raise ValueError(msg)
 
-        self._point_away_from_edge(edge)
+        self._point_away_from_edge(edge, edge.pair)
 
         edge_face_edges = set(edge.face_edges)
         pair_face_edges = set(pair.face_edges)
@@ -550,7 +523,7 @@ class HalfEdges(StaticHalfEdges):
 
         adjacent_faces = {edge.face, edge.pair.face}
 
-        self._point_away_from_edge2(edge, edge.pair)
+        self._point_away_from_edge(edge, edge.pair)
         edge.prev.next = edge.next
         edge.pair.prev.next = edge.pair.next
         self.edges -= {edge, edge.pair}
@@ -570,7 +543,7 @@ class HalfEdges(StaticHalfEdges):
                 adjacent_faces |= adjacent_faces_prime
                 continue
             # face is a slit
-            self._point_away_from_edge2(*face.edges)
+            self._point_away_from_edge(*face.edges)
             face_edges = face.edges
             face_edges[0].pair.pair = face_edges[1].pair
             self.edges -= set(face_edges)

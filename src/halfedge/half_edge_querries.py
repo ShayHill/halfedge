@@ -57,8 +57,6 @@ class StaticHalfEdges(BlindHalfEdges):
         """All elements in mesh.
 
         The redundant set comprehension is to satisfy the linter.
-
-        TODO: see if redundant set comprehension can be removed.
         """
         return self.verts | self.edges | self.faces
 
