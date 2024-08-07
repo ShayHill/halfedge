@@ -58,8 +58,8 @@ class TestMeshElementBase:
         flag2_defined_a = MeshElementBase(Flag2(3))
         flag2_defined_b = MeshElementBase(Flag2(5))
         _ = flag1_defined.merge_from(flag2_defined_a, flag2_defined_b)
-        assert flag1_defined.try_attrib_value(Flag1) == 2
-        assert flag1_defined.try_attrib_value(Flag2) == 4
+        assert flag1_defined.get_attrib(Flag1).value == 2
+        assert flag1_defined.get_attrib(Flag2).value == 4
 
 
 def test_edge_lap_succeeds(he_triangle: Dict[str, Any]) -> None:

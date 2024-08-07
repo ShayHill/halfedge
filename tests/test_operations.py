@@ -32,6 +32,10 @@ class Coordinate(IncompatibleAttrib[Tuple[float, ...]]):
     """Hold coordinates when creating a mesh from a list of vertices"""
 
 
+class Color(IncompatibleAttrib[str]):
+    """Hold color of face"""
+
+
 def sorted_by_sn(elements: Iterable[MeshElementBase]):
     return sorted(elements, key=attrgetter("sn"))
 
@@ -83,8 +87,16 @@ class TestInsertEdge:
         new_edge = mesh.insert_edge(face.verts[index], face.verts[index - 2], face)
         edge_named = ["blue", None, "red", None][index]
         pair_named = ["red", None, "blue", None][index]
-        assert new_edge.try_attrib_value(NamedAttribute) == edge_named
-        assert new_edge.pair.try_attrib_value(NamedAttribute) == pair_named
+        if edge_named is None:
+            with pytest.raises(AttributeError):
+                _ = new_edge.get_attrib(NamedAttribute)
+        else:
+            assert new_edge.get_attrib(NamedAttribute).value == edge_named
+        if pair_named is None:
+            with pytest.raises(AttributeError):
+                _ = new_edge.pair.get_attrib(NamedAttribute)
+        else:
+            assert new_edge.pair.get_attrib(NamedAttribute).value == pair_named
 
     @pytest.mark.parametrize("index", range(4))
     def test_orig_on_face(self, index: int, mesh_faces: Tuple[HalfEdges, Face]) -> None:
@@ -196,22 +208,22 @@ class TestInsertEdge:
     ) -> None:
         """Pass attributes from face when face is split"""
         mesh, face = mesh_faces
-        face.set_attrib(IncompatibleAttrib("orange"))
+        face.set_attrib(Color("orange"))
         edge = mesh.insert_edge(face.verts[0], face.verts[2])
-        assert edge.face.try_attrib_value(IncompatibleAttrib) == "orange"
-        assert edge.pair.face.try_attrib_value(IncompatibleAttrib) == "orange"
+        assert edge.face.get_attrib(Color).value == "orange"
+        assert edge.pair.face.get_attrib(Color).value == "orange"
 
     @pytest.mark.parametrize("index", range(4))
     def test_edge_kwargs(self, index: int, mesh_faces: Tuple[HalfEdges, Face]) -> None:
         """Shared face edge attributes pass to new edge"""
         mesh, face = mesh_faces
         for edge in face.edges[:2]:
-            edge.set_attrib(IncompatibleAttrib("blue"))
+            edge.set_attrib(Color("blue"))
         for edge in face.edges[2:]:
-            edge.set_attrib(IncompatibleAttrib("red"))
+            edge.set_attrib(Color("red"))
         edge = mesh.insert_edge(face.verts[0], face.verts[2])
-        assert edge.try_attrib_value(IncompatibleAttrib) == "red"
-        assert edge.pair.try_attrib_value(IncompatibleAttrib) == "blue"
+        assert edge.get_attrib(Color).value == "red"
+        assert edge.pair.get_attrib(Color).value == "blue"
 
 
 class TestInsertVert:
@@ -221,7 +233,7 @@ class TestInsertVert:
         for vert in face.verts:
             vert.set_attrib(NamedAttribute("purple"))
         new_vert = mesh.insert_vert(face)
-        assert new_vert.try_attrib_value(NamedAttribute) == "purple"
+        assert new_vert.get_attrib(NamedAttribute).value == "purple"
 
     def test_vert_kwargs_pass(self, mesh_faces: Tuple[HalfEdges, Face]) -> None:
         """vert_kwargs assigned to new vert"""
@@ -229,7 +241,7 @@ class TestInsertVert:
         for vert in face.verts:
             vert.set_attrib(NamedAttribute("purple"))
         new_vert = mesh.insert_vert(face)
-        assert new_vert.try_attrib_value(NamedAttribute) == "purple"
+        assert new_vert.get_attrib(NamedAttribute).value == "purple"
 
 
 class TestRemoveEdge:
@@ -240,14 +252,14 @@ class TestRemoveEdge:
         edge.pair.face.set_attrib(NamedAttribute("brown"))
         new_face = mesh.remove_edge(edge)
         validate_mesh(mesh)
-        assert new_face.try_attrib_value(NamedAttribute) == "brown"
+        assert new_face.get_attrib(NamedAttribute).value == "brown"
 
     def test_face_kwargs_passed(self, mesh_edges: Tuple[HalfEdges, Edge]) -> None:
         """face_kwargs become attributes"""
         mesh, edge = mesh_edges
         new_face = mesh.remove_edge(edge)
         new_face.set_attrib(NamedAttribute("green"))
-        assert new_face.try_attrib_value(NamedAttribute) == "green"
+        assert new_face.get_attrib(NamedAttribute).value == "green"
 
     def test_missing_edge(self, he_mesh: HalfEdges) -> None:
         """Raise ManifoldMeshError if edge not in mesh"""
@@ -402,7 +414,7 @@ class TestSplitEdge:
         edge.orig.set_attrib(NamedAttribute("black"))
         edge.dest.set_attrib(NamedAttribute("black"))
         new_vert = mesh.split_edge(edge)
-        assert new_vert.try_attrib_value(NamedAttribute) == "black"
+        assert new_vert.get_attrib(NamedAttribute).value == "black"
 
     def test_geometry(self, mesh_edges: Tuple[HalfEdges, Edge]) -> None:
         """Add one to number of face edges."""
@@ -498,8 +510,8 @@ class TestCollapseEdge:
         edge = next(
             x
             for x in mesh.edges
-            if x.orig.try_attrib_value(Coordinate) == (0,)
-            and x.dest.try_attrib_value(Coordinate) == (1,)
+            if x.orig.get_attrib(Coordinate).value == (0,)
+            and x.dest.get_attrib(Coordinate).value == (1,)
         )
         _ = mesh.collapse_edge(edge)
         assert not mesh.verts

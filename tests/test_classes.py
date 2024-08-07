@@ -36,6 +36,14 @@ identifiers = (
 )
 
 
+class Flag(IncompatibleAttrib[int]):
+    pass
+
+
+class Score(NumericAttrib[float]):
+    pass
+
+
 def valid_identifier():
     """Return a valid Python Identifier"""
     return next(
@@ -81,7 +89,7 @@ class TestElemAttribs:
 
         elem = MeshElementBase()
         elem.set_attrib(LazyAttrib())
-        assert elem.try_attrib_value(LazyAttrib) == elem.sn
+        assert elem.get_attrib(LazyAttrib).value == elem.sn
 
 
 class TestMeshElementBase:
@@ -101,9 +109,9 @@ class TestMeshElementBase:
 
     def test_attribs_through_init(self) -> None:
         """MeshElement attributes are captured when passed to init"""
-        base_with_attrib = MeshElementBase(IncompatibleAttrib(7), NumericAttrib(8))
-        assert base_with_attrib.try_attrib_value(IncompatibleAttrib) == 7
-        assert base_with_attrib.try_attrib_value(NumericAttrib) == 8
+        base_with_attrib = MeshElementBase(Flag(7), Score(8))
+        assert base_with_attrib.get_attrib(Flag).value == 7
+        assert base_with_attrib.get_attrib(Score).value == 8
 
     def test_pointers_through_init(self) -> None:
         """Key, val pairs passed as kwargs fail if key does not have a setter"""
@@ -112,12 +120,12 @@ class TestMeshElementBase:
 
     def test_fill_attrib(self) -> None:
         """Fill missing attrib values from fill_from"""
-        elem1 = MeshElementBase(NumericAttrib(8), IncompatibleAttrib(3))
-        elem2 = MeshElementBase(NumericAttrib(6), IncompatibleAttrib(3))
-        elem3 = MeshElementBase(IncompatibleAttrib(1))
+        elem1 = MeshElementBase(Score(8), Flag(3))
+        elem2 = MeshElementBase(Score(6), Flag(3))
+        elem3 = MeshElementBase(Flag(1))
         _ = elem3.merge_from(elem1, elem2)
-        assert elem3.try_attrib_value(IncompatibleAttrib) == 1  # unchanged
-        assert elem3.try_attrib_value(NumericAttrib) == 7  # filled
+        assert elem3.get_attrib(Flag).value == 1  # unchanged
+        assert elem3.get_attrib(Score).value == 7  # filled
 
 
 def test_edge_lap_succeeds(he_triangle: dict[str, Any]) -> None:
@@ -169,7 +177,7 @@ class TestInitVert:
 
     def test_coordinate_value_has_not_changes(self):
         """Coordinate value is still (1, 2, 3)"""
-        assert self.vert.try_attrib_value(Coordinate) == (1, 2, 3)
+        assert self.vert.get_attrib(Coordinate).value == (1, 2, 3)
 
     def test_points_to_edge(self):
         """vert.edge points to input edge"""
@@ -213,7 +221,7 @@ class TestInitEdge:
 
     def test_coordinate_value_has_not_changes(self):
         """Coordinate value is still (1, 2, 3)"""
-        assert self.edge.try_attrib_value(Coordinate) == (1, 2, 3)
+        assert self.edge.get_attrib(Coordinate).value == (1, 2, 3)
 
     def test_points_to_orig(self):
         """vert.edge points to input edge"""
@@ -264,7 +272,7 @@ class TestInitFace:
 
     def test_coordinate_value_has_not_changes(self):
         """Coordinate value is still (1, 2, 3)"""
-        assert self.face.try_attrib_value(Coordinate) == (1, 2, 3)
+        assert self.face.get_attrib(Coordinate).value == (1, 2, 3)
 
     def test_points_to_edge(self):
         """face.edge points to input edge"""
@@ -362,10 +370,10 @@ class TestHalfEdges:
         self, meshes_vlvi: dict[str, Any], he_cube: HalfEdges, he_grid: HalfEdges
     ) -> None:
         """Converts unaltered mesh verts back to input vl."""
-        assert {x.try_attrib_value(Coordinate) for x in he_cube.vl} == set(
+        assert {x.get_attrib(Coordinate).value for x in he_cube.vl} == set(
             meshes_vlvi["cube_vl"]
         )
-        assert {x.try_attrib_value(Coordinate) for x in he_grid.vl} == set(
+        assert {x.get_attrib(Coordinate).value for x in he_grid.vl} == set(
             meshes_vlvi["grid_vl"]
         )
 

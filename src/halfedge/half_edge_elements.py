@@ -97,20 +97,6 @@ class MeshElementBase:
             msg = f"{attrib.__name__} not found in {self.__class__.__name__}"
             raise AttributeError(msg) from e
 
-    def try_attrib(self, attrib: type[Attrib[_T]]) -> Attrib[_T] | None:
-        """Try to get an attribute."""
-        try:
-            return self.get_attrib(attrib)
-        except AttributeError:
-            return None
-
-    def try_attrib_value(self, attrib: type[Attrib[_T]]) -> _T | None:
-        """Try to get the value of an attribute."""
-        attrib_found = self.try_attrib(attrib)
-        if attrib_found is None:
-            return None
-        return attrib_found.value
-
     def _maybe_set_attrib(self, *attribs: Attrib[Any] | None) -> None:
         """Set an attribute if it is not None."""
         for attrib in attribs:
@@ -470,7 +456,9 @@ class Face(MeshElementBase):
         "hole-ness" is assigned at instance creation by passing ``is_hole=True`` to
         ``__init__``
         """
-        return self.try_attrib(IsHole) is not None
+        with suppress(AttributeError):
+            return self.get_attrib(IsHole).value
+        return False
 
     @property
     def edges(self) -> list[Edge]:
