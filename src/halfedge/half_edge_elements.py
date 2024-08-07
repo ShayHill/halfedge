@@ -37,7 +37,7 @@ from typing import TYPE_CHECKING, Any, Callable, TypeVar
 from halfedge.type_attrib import Attrib, ContagionAttrib
 
 if TYPE_CHECKING:
-    from .half_edge_constructors import BlindHalfEdges
+    from halfedge.half_edge_constructors import BlindHalfEdges
 
 _TMeshElem = TypeVar("_TMeshElem", bound="MeshElementBase")
 

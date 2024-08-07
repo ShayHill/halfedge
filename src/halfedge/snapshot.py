@@ -8,7 +8,7 @@
 # from svg_ultralight.constructors import new_sub_element
 # from svg_ultralight.strings import svg_color_tuple, svg_float_tuples
 
-# from .half_edge_elements import Edge, Face, Vert
+# from halfedge.half_edge_elements import Edge, Face, Vert
 
 
 # class Snapshot:

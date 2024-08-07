@@ -26,8 +26,6 @@ if TYPE_CHECKING:
 
 _TBlindHalfEdges = TypeVar("_TBlindHalfEdges", bound="BlindHalfEdges")
 
-# TODO: get rid of relative imports across project
-
 
 class BlindHalfEdges:
     """Half-edge structure with no lookups."""

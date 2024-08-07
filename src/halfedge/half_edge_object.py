@@ -9,8 +9,8 @@ from __future__ import annotations
 from contextlib import suppress
 from typing import TypeVar
 
-from .half_edge_elements import Edge, Face, ManifoldMeshError, Vert
-from .half_edge_querries import StaticHalfEdges
+from halfedge.half_edge_elements import Edge, Face, ManifoldMeshError, Vert
+from halfedge.half_edge_querries import StaticHalfEdges
 
 _T = TypeVar("_T")
 

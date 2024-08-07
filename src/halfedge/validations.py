@@ -12,10 +12,10 @@ from __future__ import annotations
 from itertools import chain
 from typing import TYPE_CHECKING, Any, Callable, Iterator, TypeVar
 
-from .half_edge_elements import Face, ManifoldMeshError
+from halfedge.half_edge_elements import Face, ManifoldMeshError
 
 if TYPE_CHECKING:
-    from .half_edge_querries import StaticHalfEdges
+    from halfedge.half_edge_querries import StaticHalfEdges
 
 _T = TypeVar("_T")
 

@@ -13,10 +13,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from .half_edge_constructors import BlindHalfEdges
+from halfedge.half_edge_constructors import BlindHalfEdges
 
 if TYPE_CHECKING:
-    from .half_edge_elements import Edge, Face, Vert
+    from halfedge.half_edge_elements import Edge, Face, Vert
 
 
 class StaticHalfEdges(BlindHalfEdges):
