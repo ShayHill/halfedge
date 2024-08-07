@@ -8,7 +8,7 @@ created: 170204 14:22:23
 import itertools
 import random
 from keyword import iskeyword
-from typing import Any, Dict
+from typing import Any, Dict, Tuple
 
 import pytest
 
@@ -17,6 +17,7 @@ from halfedge.half_edge_elements import (
     MeshElementBase,
     _function_lap,
 )
+from halfedge.half_edge_object import HalfEdges
 from halfedge.half_edge_querries import StaticHalfEdges
 from halfedge.type_attrib import IncompatibleAttrib, NumericAttrib
 
@@ -29,7 +30,7 @@ identifiers = (
 )
 
 
-class Coordinate(IncompatibleAttrib):
+class Coordinate(IncompatibleAttrib[Tuple[float, ...]]):
     pass
 
 
@@ -48,16 +49,16 @@ class TestMeshElementBase:
     def test_fill_attrs_from_fills_missing(self) -> None:
         """Fills attrs if not present."""
 
-        class Flag1(NumericAttrib):
+        class Flag1(NumericAttrib[int]):
             pass
 
-        class Flag2(NumericAttrib):
+        class Flag2(NumericAttrib[int]):
             pass
 
         flag1_defined = MeshElementBase(Flag1(2))
         flag2_defined_a = MeshElementBase(Flag2(3))
         flag2_defined_b = MeshElementBase(Flag2(5))
-        flag1_defined.merge_from(flag2_defined_a, flag2_defined_b)
+        _ = flag1_defined.merge_from(flag2_defined_a, flag2_defined_b)
         assert flag1_defined.try_attrib_value(Flag1) == 2
         assert flag1_defined.try_attrib_value(Flag2) == 4
 
@@ -76,7 +77,7 @@ def test_edge_lap_fails(he_triangle: Dict[str, Any]) -> None:
     """Fails when self intersects."""
     edges = he_triangle["edges"]
     with pytest.raises(ManifoldMeshError) as err:
-        _function_lap(lambda x: edges[1], edges[0])  # type: ignore
+        _ = _function_lap(lambda x: edges[1], edges[0])
     assert "infinite" in err.value.args[0]
 
 
@@ -149,48 +150,50 @@ def test_half_edges_init(he_triangle: Dict[str, Any]) -> None:
 class TestHalfEdges:
     """Keep the linter happy."""
 
-    def test_vi(self, meshes_vlvi: Dict[str, Any], he_grid, he_cube) -> None:
+    def test_vi(
+        self, meshes_vlvi: Dict[str, Any], he_grid: HalfEdges, he_cube: HalfEdges
+    ) -> None:
         """Convert unaltered mesh faces back to input vi."""
         for mesh, key in ((he_grid, "grid"), (he_cube, "cube")):
             input_vl, input_vi = meshes_vlvi[key + "_vl"], meshes_vlvi[key + "_vi"]
             expect = get_canonical_mesh(input_vl, input_vi)
             result = get_canonical_mesh(
-                [x.try_attrib_value(Coordinate) for x in mesh.vl], mesh.fi
+                [x.get_attrib(Coordinate).value for x in mesh.vl], mesh.fi
             )
             assert expect == result
 
-    def test_hi(self, meshes_vlvi: Dict[str, Any], he_grid) -> None:
+    def test_hi(self, meshes_vlvi: Dict[str, Any], he_grid: HalfEdges) -> None:
         """Convert unaltered mesh holes back to input holes."""
         input_vl, input_hi = meshes_vlvi["grid_vl"], meshes_vlvi["grid_hi"]
         expect = get_canonical_mesh(input_vl, input_hi)
         result = get_canonical_mesh(
-            [x.try_attrib_value(Coordinate) for x in he_grid.vl], he_grid.hi
+            [x.get_attrib(Coordinate).value for x in he_grid.vl], he_grid.hi
         )
         assert expect == result
 
 
-def test_half_edges_boundary_edges(he_grid) -> None:
+def test_half_edges_boundary_edges(he_grid: HalfEdges) -> None:
     """12 edges on grid. All face holes."""
     edges = he_grid.boundary_edges
     assert len(edges) == 12
     assert all(x.face.is_hole for x in edges)
 
 
-def test_half_edges_boundary_verts(he_grid) -> None:
+def test_half_edges_boundary_verts(he_grid: HalfEdges) -> None:
     """12 verts on grid. All valence 2 or 3."""
     verts = he_grid.boundary_verts
     assert len(verts) == 12
     assert all(x.valence in (2, 3) for x in verts)
 
 
-def test_half_edges_interior_edges(he_grid) -> None:
+def test_half_edges_interior_edges(he_grid: HalfEdges) -> None:
     """36 in grid. All face Faces."""
     edges = he_grid.interior_edges
     assert len(edges) == 36
     assert not any(x.face.is_hole for x in edges)
 
 
-def test_half_edges_interior_verts(he_grid) -> None:
+def test_half_edges_interior_verts(he_grid: HalfEdges) -> None:
     """4 in grid. All valence 4"""
     verts = he_grid.interior_verts
     assert len(verts) == 4

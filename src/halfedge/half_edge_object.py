@@ -7,10 +7,12 @@
 from __future__ import annotations
 
 from contextlib import suppress
-from typing import Any
+from typing import TypeVar
 
 from .half_edge_elements import Edge, Face, ManifoldMeshError, Vert
 from .half_edge_querries import StaticHalfEdges
+
+_T = TypeVar("_T")
 
 
 def _update_face_edges(face: Face, edge: Edge) -> None:
@@ -26,7 +28,7 @@ def _update_face_edges(face: Face, edge: Edge) -> None:
         edge_.face = face
 
 
-def _get_singleton_item(one: set) -> Any:
+def _get_singleton_item(one: set[_T]) -> _T:
     """If a set has exactly one item, return that item.
 
     :param one: A set with presumably one item
@@ -44,7 +46,7 @@ class UnrecoverableManifoldMeshError(ValueError):
     may have been altered before this discovery. We've found a bug in the module.
     """
 
-    def __init__(self, message: str):
+    def __init__(self, message: str) -> None:
         """Pass message to ValueError."""
         super().__init__(self, message)
 
@@ -203,7 +205,6 @@ class HalfEdges(StaticHalfEdges):
         Passes attributes:
 
             * shared face.edges attributes passed to new edge
-            * edge_kwargs passed to new edge
             * face attributes passed to new face if face is split
         """
         # TODO: raise ValueError for overwriting edges, removing bridge edges, etc.
@@ -246,7 +247,7 @@ class HalfEdges(StaticHalfEdges):
 
         # if face is not split, new face will be created then immediately written over
         new_face = self.new_face()
-        new_face.slice_from(face)
+        _ = new_face.slice_from(face)
         _update_face_edges(new_face, edge)
         _update_face_edges(face, edge.pair)
 
@@ -351,7 +352,7 @@ class HalfEdges(StaticHalfEdges):
         # TODO: move function_lap into a public place to identify these
         return vert
 
-    def remove_vert(self, vert: Vert, **face_kwargs: Any) -> Face:
+    def remove_vert(self, vert: Vert) -> Face:
         """Remove all edges around a vert.
 
         :raises: ManifoldMeshError if the error was caught before any edges were removed
@@ -400,13 +401,17 @@ class HalfEdges(StaticHalfEdges):
             raise ManifoldMeshError(msg)
 
         # TODO: this needs a better test to ensure mixed with peninsulas works
+        face: Face | None = None
         for edge in peninsulas:
-            face = self.remove_edge(edge, **face_kwargs)
+            face = self.remove_edge(edge)
         try:
             for edge in true_edges:  # vert.edges:
                 face = self.remove_edge(edge)
         except ManifoldMeshError as exc:
             raise UnrecoverableManifoldMeshError(str(exc)) from exc
+        if face is None:
+            msg = "vert has no edges"
+            raise ValueError(msg)
         return face
 
     def remove_face(self, face: Face) -> Face:
@@ -436,7 +441,7 @@ class HalfEdges(StaticHalfEdges):
 
         try:
             for edge in edges:
-                self.remove_edge(edge)
+                _ = self.remove_edge(edge)
         except ManifoldMeshError as exc:
             raise UnrecoverableManifoldMeshError(str(exc)) from exc
         return face
@@ -445,7 +450,6 @@ class HalfEdges(StaticHalfEdges):
         """Add a vert to the middle of an edge.
 
         :param edge: edge to be split
-        :param vert_kwargs: attributes for new vert
         :return:
 
         Passes attributes:
@@ -459,11 +463,15 @@ class HalfEdges(StaticHalfEdges):
         new_vert = self.new_vert().merge_from(*{edge.orig, edge.dest})
         edge_face = edge.face
         pair_face = edge.pair.face
+        new_edge: Edge | None = None
         for orig, dest in ((edge.dest, new_vert), (new_vert, edge.orig)):
             new_edge = self.insert_edge(orig, dest, edge.face)
-            new_edge.slice_from(edge.pair)
-            new_edge.pair.slice_from(edge)
-        self.remove_edge(edge)
+            _ = new_edge.slice_from(edge.pair)
+            _ = new_edge.pair.slice_from(edge)
+        _ = self.remove_edge(edge)
+        if new_edge is None:
+            msg = "new edge was not created"
+            raise ValueError(msg)
         _update_face_edges(edge_face, new_edge.pair)
         _update_face_edges(pair_face, new_edge)
         return new_vert
@@ -519,7 +527,6 @@ class HalfEdges(StaticHalfEdges):
         """Collapse an Edge into a Vert.
 
         :param edge: Edge instance in self
-        :param vert_kwargs: attribute/s for the new Vert
         :return: Vert where edge used to be.
 
         Passes attributes:
@@ -559,7 +566,7 @@ class HalfEdges(StaticHalfEdges):
             if len(adjacent_faces_prime) == 1:
                 for face_edge in face.edges:
                     with suppress(ValueError):
-                        self.remove_edge(face_edge)
+                        _ = self.remove_edge(face_edge)
                 adjacent_faces |= adjacent_faces_prime
                 continue
             # face is a slit

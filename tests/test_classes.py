@@ -10,7 +10,7 @@ from __future__ import annotations
 import itertools
 import random
 from keyword import iskeyword
-from typing import Any, Dict, Tuple, TypeVar
+from typing import Any, Tuple, TypeVar
 
 import pytest
 
@@ -383,7 +383,7 @@ class TestHalfEdges:
         """Convert unaltered mesh holes back to input holes."""
         expect = get_canonical_mesh(meshes_vlvi["grid_vl"], meshes_vlvi["grid_hi"])
         result = get_canonical_mesh(
-            [x.try_attrib_value(Coordinate) for x in he_grid.vl], he_grid.hi
+            [x.get_attrib(Coordinate).value for x in he_grid.vl], he_grid.hi
         )
         assert expect == result
 

@@ -8,25 +8,31 @@ import random
 from contextlib import suppress
 from itertools import chain, combinations, permutations
 from operator import attrgetter
-from typing import Any, Dict, Set, Tuple
+from typing import Any, Dict, Iterable, Set, Tuple
 
 import pytest
 
-from halfedge.half_edge_elements import Edge, Face, ManifoldMeshError, Vert
+from halfedge.half_edge_elements import (
+    Edge,
+    Face,
+    ManifoldMeshError,
+    MeshElementBase,
+    Vert,
+)
 from halfedge.half_edge_object import HalfEdges
-from halfedge.type_attrib import IncompatibleAttrib, NumericAttrib
+from halfedge.type_attrib import IncompatibleAttrib
 from halfedge.validations import validate_mesh
 
 
-class NamedAttribute(IncompatibleAttrib):
+class NamedAttribute(IncompatibleAttrib[str]):
     """For color, flags. etc. to ensure attributes are passed"""
 
 
-class Coordinate(NumericAttrib):
+class Coordinate(IncompatibleAttrib[Tuple[float, ...]]):
     """Hold coordinates when creating a mesh from a list of vertices"""
 
 
-def sorted_by_sn(elements):
+def sorted_by_sn(elements: Iterable[MeshElementBase]):
     return sorted(elements, key=attrgetter("sn"))
 
 
@@ -117,7 +123,7 @@ class TestInsertEdge:
         """Raise ManifoldMeshError if attempting to overwrite existing edge."""
         mesh, face = mesh_faces
         with pytest.raises(ManifoldMeshError) as err:
-            mesh.insert_edge(face.verts[index], face.verts[index - 1], face)
+            _ = mesh.insert_edge(face.verts[index], face.verts[index - 1], face)
         assert "overwriting existing edge" in err.value.args[0]
 
     @pytest.mark.parametrize("index", range(4))
@@ -131,7 +137,7 @@ class TestInsertEdge:
             x for x in mesh.verts if x not in face.verts and x not in dest.neighbors
         )
         with pytest.raises(ManifoldMeshError) as err:
-            mesh.insert_edge(orig, dest, face)
+            _ = mesh.insert_edge(orig, dest, face)
         assert VERT_IN_ANOTHER_FACE in err.value.args[0]
 
     @pytest.mark.parametrize("index", range(4))
@@ -359,7 +365,7 @@ class TestRemoveVert:
     def test_peninsulas(self) -> None:
         """Remove a vert with peninsulas and regular edges"""
         mesh = HalfEdges.from_vlvi(
-            [Vert(Coordinate(x)) for x in range(8)],
+            [Vert(Coordinate((x,))) for x in range(8)],
             fi={(5, 6, 2, 1)},
             hi={(6, 5, 4, 7, 4, 3, 4, 0, 4, 5, 1, 2)},
         )
@@ -383,7 +389,7 @@ class TestRemoveFace:
         TODO: assert hole fills edge when face on boundary
         TODO: test returns face"""
         mesh, face = mesh_faces
-        mesh.remove_face(face)
+        _ = mesh.remove_face(face)
         validate_mesh(mesh)
 
 
@@ -405,7 +411,7 @@ class TestSplitEdge:
         len_edge_face = len(edge_face.edges)
         pair_face = edge.pair.face
         len_pair_face = len(pair_face.edges)
-        mesh.split_edge(edge)
+        _ = mesh.split_edge(edge)
         assert len(edge_face.edges) == len_edge_face + 1
         assert len(pair_face.edges) == len_pair_face + 1
 
@@ -427,8 +433,8 @@ class TestFlipEdge:
         # edge = MyEdge
         # face = MyFace
 
-        vl = [Vert(Coordinate(x)) for x in range(4)]
-        vi: Set[Tuple[Tuple[int, ...], ...]] = {(0, 1, 2), (0, 2, 3)}
+        vl = [Vert(Coordinate((x,))) for x in range(4)]
+        vi: Set[Tuple[int, ...]] = {(0, 1, 2), (0, 2, 3)}
         mesh = HalfEdges.from_vlvi(vl, vi)
         split = next(
             x for x in mesh.edges if x.orig.valence == 3 and x.pair.orig.valence == 3
@@ -442,23 +448,23 @@ class TestFlipEdge:
 
 class TestCollapseEdge:
     @pytest.mark.parametrize("repeat", range(100))
-    def test_collapse_to_empty(self, he_mesh: HalfEdges, repeat) -> None:
+    def test_collapse_to_empty(self, he_mesh: HalfEdges, repeat: int) -> None:
         """Collapse edge till mesh is empty"""
         while he_mesh.edges:
             edges = list(he_mesh.edges)
             random.shuffle(edges)
             for edge in edges:
                 with suppress(ValueError):
-                    he_mesh.collapse_edge(edge)
+                    _ = he_mesh.collapse_edge(edge)
 
     @pytest.mark.parametrize("repeat", range(100))
-    def test_drum(self, repeat) -> None:
+    def test_drum(self, repeat: int) -> None:
         """Collapse edge with large faces till mesh is empty"""
         top = tuple(range(10))
         bot = tuple(range(10, 20))
         legs = tuple(zip(top, bot))
         sides = {x + tuple(reversed(y)) for x, y in zip(legs, (legs * 2)[1:])}
-        vl = [Vert(Coordinate(x)) for x in range(20)]
+        vl = [Vert(Coordinate((x,))) for x in range(20)]
         fi = {top} | {tuple(reversed(bot))} | sides
         drum = HalfEdges().from_vlvi(vl, fi)
         while drum.edges:
@@ -466,7 +472,7 @@ class TestCollapseEdge:
             random.shuffle(edges)
             for edge in edges:
                 with suppress(ValueError):
-                    drum.collapse_edge(edge)
+                    _ = drum.collapse_edge(edge)
 
     def test_collapse_dart(self) -> None:
         """Create a double slit face by collapsing on side of a triangle inside a dart
@@ -487,13 +493,13 @@ class TestCollapseEdge:
         identical so each half of the face would be unambiguously linear.
         collapse_edge will remove these as well.
         """
-        vl = [Vert(Coordinate(x)) for x in range(4)]
+        vl = [Vert(Coordinate((x,))) for x in range(4)]
         mesh = HalfEdges.from_vlvi(vl, {(0, 1, 3), (1, 2, 0, 3)})
         edge = next(
             x
             for x in mesh.edges
-            if x.orig.try_attrib_value(Coordinate) == 0
-            and x.dest.try_attrib_value(Coordinate) == 1
+            if x.orig.try_attrib_value(Coordinate) == (0,)
+            and x.dest.try_attrib_value(Coordinate) == (1,)
         )
-        mesh.collapse_edge(edge)
+        _ = mesh.collapse_edge(edge)
         assert not mesh.verts

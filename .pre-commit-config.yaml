@@ -116,10 +116,15 @@ repos:
   # ISC003 Explicitly concatenated string should be implicitly concatenated
   #
   # PYI019 Use typing.Self instead of custom TypeVar (useless py < 3.10)
+  # A002 shadowing built-in 'next'
+  # PLR2004 magic value used in comparison
+  # D403 First word of the first line should be properly capitalized
+  # PLR0913 too namy arguments
   # SLF001 Private member accessed (TODO: disable this disabler)
-  # FIX002 TODO: disable this disabler
-  # TD003 TODO: disable this disabler
-  # TD002 TODO: disable this disabler
+  # FIX002 todos TODO: disable this disabler
+  # TD003 todos TODO: disable this disabler
+  # TD002 todos TODO: disable this disabler
+  # ERA001 commented out code TODO: disable this disabler
   rev: 'v0.5.6'
   hooks:
     - id: ruff
@@ -127,7 +132,7 @@ repos:
       args:
       - --target-version=py38
       - --select=ALL
-      - --ignore=COM812,D203,D213,ISC003,PYI019,SLF001,FIX002,TD003,TD002
+      - --ignore=COM812,D203,D213,ISC003,PYI019,A002,PLR2004,D403,PLR0913,SLF001,FIX002,TD003,TD002,ERA001
       # - --fix
 
 # reads pyproject.toml for additional config

@@ -4,18 +4,7 @@ created: 181121 13:14:06
 """
 
 from itertools import product
-from typing import (
-    Any,
-    Dict,
-    Iterable,
-    List,
-    Protocol,
-    Sequence,
-    Set,
-    Tuple,
-    TypeVar,
-    cast,
-)
+from typing import Any, Dict, Iterable, List, Sequence, Set, Tuple, TypeVar, cast
 
 import pytest
 
@@ -199,11 +188,7 @@ def compare_circular_2(
     return True
 
 
-class _HasLT(Protocol):
-    def __lt__(self, other: Any) -> bool: ...
-
-
-_TAxis = TypeVar("_TAxis", bound=_HasLT)
+_TAxis = TypeVar("_TAxis")
 
 
 def get_canonical_vr(

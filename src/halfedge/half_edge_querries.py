@@ -60,7 +60,7 @@ class StaticHalfEdges(BlindHalfEdges):
 
         TODO: see if redundant set comprehension can be removed.
         """
-        return {x for x in self.verts | self.edges | self.faces}
+        return self.verts | self.edges | self.faces
 
     @property
     def boundary_edges(self) -> set[Edge]:

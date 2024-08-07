@@ -39,85 +39,13 @@ themselves.
 
 from __future__ import annotations
 
-from contextlib import suppress
-from typing import TYPE_CHECKING, Any, Generic, TypeVar, cast
+from typing import TYPE_CHECKING, Any, Generic, Literal, TypeVar
 
 if TYPE_CHECKING:
     from halfedge.half_edge_elements import MeshElementBase
 
-# _TAttribHolder = TypeVar("_TAttribHolder", bound="AttribHolder")
 _TAttrib = TypeVar("_TAttrib", bound="Attrib[Any]")
 _T = TypeVar("_T")
-
-
-# class AttribHolder:
-#     """Hold AttribBase instances and retrieve values."""
-
-#     def set_attrib(self: _TAttribHolder, *attribs: Attrib[Any]) -> _TAttribHolder:
-#         """Set attribute with an Attrib instance.
-
-#         type(attrib).__name__ : attrib
-
-#         :param attribs: Attrib instances, presumably with a None element
-#         attribute.
-#         """
-#         for attrib in attribs:
-#             attrib.element = self
-#             self.__dict__[type(attrib).__name__] = attrib
-#         return self
-
-#     def _maybe_set_attrib(self, *attribs: Attrib[Any] | None) -> None:
-#         """Set attribute if attrib is an Attrib. Pass silently if None."""
-#         _ = self.set_attrib(*[x for x in attribs if isinstance(x, Attrib)])
-
-#     def get_attrib(self, type_: type[_TAttrib]) -> _TAttrib:
-#         """Get an attribute by type."""
-#         name = type_.__name__
-#         try:
-#             return getattr(self, name)
-#         except AttributeError:
-#             msg = f"'{type(self).__name__}' has no Attrib '{name}'"
-#             raise AttributeError(msg)
-
-#     def try_attrib(self, type_: type[_TAttrib]) -> _TAttrib | None:
-#         """Try to get an attribute, None if attrib is not set.
-
-#         :param type_: type of Attrib to seek in the attrib dictionary. This
-#             takes a type instead of a string to eliminate any possibility of getting
-#             a None value just because an attrib dictionary key was mistyped.
-#         """
-#         try:
-#             return self.get_attrib(type_)
-#         except AttributeError:
-#             return None
-
-#     def get_attrib_value(self, type_: type[Attrib[_T]]) -> _T:
-#         """Get attrib value. Will fail if attrib is not set.
-
-#         :param type_: type of Attrib to seek in the attrib dictionary. This
-#             takes a type instead of a string to eliminate any possibility of getting
-#             a None value just because an attrib dictionary key was mistyped.
-#         """
-#         return self.get_attrib(type_).value
-
-#     def try_attrib_value(self, type_: type[Attrib[_T]]) -> _T | None:
-#         """Try to get an attribute value, None if attrib is not set.
-
-#         :param type_: type of Attrib to seek in the attrib dictionary. This
-#             takes a type instead of a string to eliminate any possibility of getting
-#             a None value just because an attrib dictionary key was mistyped.
-#         """
-#         try:
-#             return self.get_attrib_value(type_)
-#         except AttributeError:
-#             return None
-
-#     def cached_attrib_value(self, type_: type[Attrib[_T]]) -> _T | None:
-#         """TODO: docstring."""
-#         attrib = self.try_attrib(type_)
-#         if attrib is not None and hasattr(attrib, "_value"):
-#             return attrib.value
-#         return None
 
 
 _TElemAttrib = TypeVar("_TElemAttrib", bound="Attrib[Any]")
@@ -160,8 +88,7 @@ class Attrib(Generic[_T]):
             if value is None:
                 msg = f"no value set and failed to infer from {self.element}"
                 raise TypeError(msg)
-            else:
-                self._value = value
+            self._value = value
         return self._value
 
     @classmethod
@@ -181,7 +108,7 @@ class Attrib(Generic[_T]):
         return None
 
     @classmethod
-    def slice(cls: type[_TElemAttrib], slice_from: _TElemAttrib) -> _TElemAttrib | None:
+    def slice(cls, slice_from: Attrib[_T]) -> Attrib[_T] | None:
         """Define how attribute will be passed when dividing self.element.
 
         When an element is divided (face divided by an edge, edge divided by a vert,
@@ -231,7 +158,7 @@ class Attrib(Generic[_T]):
         )
 
 
-class ContagionAttrib(Attrib[_T]):
+class ContagionAttrib(Attrib[Literal[True]]):
     """Spread value when combining with anything.
 
     This is for element properties like 'IsHole' that are always passed when combining
@@ -241,23 +168,26 @@ class ContagionAttrib(Attrib[_T]):
     """
 
     def __init__(
-        self, value: _T | None = None, element: MeshElementBase | None = None
+        self, value: Literal[True] | None = None, element: MeshElementBase | None = None
     ) -> None:
         """Set value and element."""
-        super().__init__(cast(_T, True), element)
+        super().__init__(value or True, element)
 
     @classmethod
     def merge(cls, *merge_from: _TAttrib | None) -> _TAttrib | None:
-        """If any element has a ContagionAttributeBase attribute, return a new
-        instance with that attribute. Otherwise None.
+        """Merge values.
+
+        If any element has a ContagionAttributeBase attribute, return a new instance
+        with that attribute. Otherwise None.
         """
-        with suppress(AttributeError):
-            if any(getattr(x, "value", None) for x in merge_from):
-                return type(merge_from[0])()
+        attribs = [x for x in merge_from if x is not None]
+        attribs = [x for x in attribs if x.value is not None]
+        if attribs:
+            return type(attribs[0])()
         return None
 
     @classmethod
-    def slice(cls: type[_TAttrib], slice_from: _TAttrib) -> _TAttrib | None:
+    def slice(cls, slice_from: _TAttrib) -> _TAttrib | None:
         """Copy attribute to slices.
 
         Holes are defined with IsHole(ContagionAttributeBase), so this will split a
@@ -265,10 +195,11 @@ class ContagionAttrib(Attrib[_T]):
         holes.
         """
         if getattr(slice_from, "value", None):
-            return cls()
+            # TODO: add a value here
+            return type(slice_from)()
         return None
 
-    def _infer_value(self) -> _T:
+    def _infer_value(self) -> Literal[True]:
         raise RuntimeError(
             "This will only be called if self._value is None, "
             + "which should not happen."
@@ -283,7 +214,9 @@ class IncompatibleAttrib(Attrib[_T]):
 
     @classmethod
     def merge(cls, *merge_from: _TAttrib | None) -> _TAttrib | None:
-        """If all values match and every contributing element has an analog, return
+        """Merge values.
+
+        If all values match and every contributing element has an analog, return
         a new instance with that value. Otherwise None.
 
         #TODO: verify that merge_from[0] should never be None.
@@ -300,10 +233,10 @@ class IncompatibleAttrib(Attrib[_T]):
         return type(merge_from[0])(first_value)
 
     @classmethod
-    def slice(cls, split_from):
+    def slice(cls, slice_from: Attrib[_T]) -> Attrib[_T] | None:
         """Pass the value on."""
-        if value := split_from.value:
-            return cls(value)
+        if value := slice_from.value:
+            return type(slice_from)(value)
         return None
 
     def _infer_value(self) -> _T | None:

@@ -28,6 +28,8 @@ This module is all the base elements (Vert, Edge, and Face).
 # 2012 September 30
 """
 
+# TODO: get rid of "last modified" comments across the project
+
 from __future__ import annotations
 
 import itertools as it
@@ -41,7 +43,7 @@ if TYPE_CHECKING:
 
 _TMeshElem = TypeVar("_TMeshElem", bound="MeshElementBase")
 
-_TAttrib = TypeVar("_TAttrib", bound=Attrib[Any])
+# _TAttrib = TypeVar("_TAttrib", bound=Attrib[Any])
 _T = TypeVar("_T")
 
 
@@ -59,16 +61,10 @@ class ManifoldMeshError(ValueError):
     """
 
 
-def _all_is(*args: Any) -> bool:
-    """Return True if all arguments are `a is b`."""
-    return bool(args) and all(args[0] is x for x in args[1:])
-
-
 class MeshElementBase:
     """Base class for Vert, Edge, and Face."""
 
     _sn_generator = count()
-    _pointers = {"mesh"}
 
     def __init__(
         self, *attributes: Attrib[Any], mesh: BlindHalfEdges | None = None
@@ -88,13 +84,7 @@ class MeshElementBase:
         self.mesh = mesh
 
         for attribute in attributes:
-            _ = self.set_attrib(attribute)
-
-        # if mesh is not None:
-        #     self._mesh = mesh
-        # for k, v in pointers.items():
-        #     if v is not None:
-        #         setattr(self, k, v)
+            self.set_attrib(attribute)
 
     def set_attrib(self, attrib: Attrib[Any]) -> None:
         """Set an attribute."""
@@ -190,8 +180,6 @@ class Vert(MeshElementBase):
     :edge: pointer to one edge originating at vert
     """
 
-    _pointers = {"mesh", "edge"}
-
     def __init__(
         self,
         *attributes: Attrib[Any],
@@ -200,10 +188,11 @@ class Vert(MeshElementBase):
     ) -> None:
         """Create a vert instance."""
         super().__init__(*attributes, mesh=mesh)
-        self._edge = None
+        self._edge = edge
         if edge is not None:
             self.edge = edge
 
+    # TODO: get rid of has_ properties. hasattr works
     @property
     def has_edge(self) -> bool:
         """Return True if .edge is set."""
@@ -220,7 +209,11 @@ class Vert(MeshElementBase):
     @edge.setter
     def edge(self, edge_: Edge) -> None:
         self._edge = edge_
-        edge_._orig = self
+        edge_.orig = self
+
+    def set_edge_without_side_effects(self, edge: Edge) -> None:
+        """Set edge without setting edge's orig."""
+        self._edge = edge
 
     @property
     def edges(self) -> list[Edge]:
@@ -269,11 +262,9 @@ class Edge(MeshElementBase):
     :next: pointer to next edge along face
     """
 
-    _pointers = {"mesh", "orig", "pair", "face", "next", "prev"}
-
     def __init__(
         self,
-        *attributes: Attrib,
+        *attributes: Attrib[Any],
         mesh: BlindHalfEdges | None = None,
         orig: Vert | None = None,
         pair: Edge | None = None,
@@ -283,10 +274,10 @@ class Edge(MeshElementBase):
     ) -> None:
         """Create an edge instance."""
         super().__init__(*attributes, mesh=mesh)
-        self._orig = None
-        self._pair = None
-        self._face = None
-        self._next = None
+        self._orig = orig
+        self._pair = pair
+        self._face = face
+        self._next = next
         if orig is not None:
             self.orig = orig
         if pair is not None:
@@ -314,7 +305,7 @@ class Edge(MeshElementBase):
     @orig.setter
     def orig(self, orig: Vert) -> None:
         self._orig = orig
-        orig._edge = self
+        orig.set_edge_without_side_effects(self)
 
     @property
     def has_pair(self) -> bool:
@@ -350,7 +341,11 @@ class Edge(MeshElementBase):
     @face.setter
     def face(self, face_: Face) -> None:
         self._face = face_
-        face_._edge = self
+        face_.edge = self
+
+    def set_face_without_side_effects(self, face: Face) -> None:
+        """Set face without setting face's edge."""
+        self._face = face
 
     @property
     def has_next(self) -> bool:
@@ -438,13 +433,14 @@ class Face(MeshElementBase):
 
     required attribute
     :edge: pointer to one edge on the face
-    """
 
-    _pointers = {"mesh", "edge"}
+    TODO: document how faces are a bit different because they can be valid without an
+    edge.
+    """
 
     def __init__(
         self,
-        *attributes: Attrib,
+        *attributes: Attrib[Any],
         mesh: BlindHalfEdges | None = None,
         edge: Edge | None = None,
         is_hole: bool = False,
@@ -474,7 +470,7 @@ class Face(MeshElementBase):
     def edge(self, edge: Edge) -> None:
         """Point face.edge back to face."""
         self._edge = edge
-        edge._face = self
+        edge.set_face_without_side_effects(self)
 
     @property
     def is_hole(self) -> bool:
@@ -488,14 +484,14 @@ class Face(MeshElementBase):
     @property
     def edges(self) -> list[Edge]:
         """Look up all edges around face."""
-        if self.edge is not None:
+        if self.has_edge:
             return self.edge.face_edges
         return []
 
     @property
     def verts(self) -> list[Vert]:
         """Look up all verts around face."""
-        if hasattr(self, "edge"):
+        if self.has_edge:
             return [x.orig for x in self.edges]
         return []
 

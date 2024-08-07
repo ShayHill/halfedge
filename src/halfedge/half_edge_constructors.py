@@ -16,12 +16,17 @@ then passing that raw data to mesh_from_vr would create a mesh with 6 faces and
 
 from __future__ import annotations
 
-from typing import Iterable, TypeVar
+from contextlib import suppress
+from typing import TYPE_CHECKING, Any, Iterable, TypeVar
 
-from .half_edge_elements import Edge, Face, ManifoldMeshError, Vert
-from .type_attrib import Attrib
+from halfedge.half_edge_elements import Edge, Face, ManifoldMeshError, Vert
+
+if TYPE_CHECKING:
+    from halfedge.type_attrib import Attrib
 
 _TBlindHalfEdges = TypeVar("_TBlindHalfEdges", bound="BlindHalfEdges")
+
+# TODO: get rid of relative imports across project
 
 
 class BlindHalfEdges:
@@ -34,13 +39,14 @@ class BlindHalfEdges:
         else:
             self.edges = edges
 
-    def new_vert(self, *attributes: Attrib, edge: Edge | None = None) -> Vert:
+    def new_vert(self, *attributes: Attrib[Any], edge: Edge | None = None) -> Vert:
         """Create a new Vert instance."""
         return Vert(*attributes, mesh=self, edge=edge)
 
+    # determine why an edge needs to know its mesh
     def new_edge(
         self,
-        *attributes: Attrib,
+        *attributes: Attrib[Any],
         orig: Vert | None = None,
         pair: Edge | None = None,
         face: Face | None = None,
@@ -61,11 +67,11 @@ class BlindHalfEdges:
             prev=prev,
         )
 
-    def new_face(self, *attributes: Attrib, edge: Edge | None = None) -> Face:
+    def new_face(self, *attributes: Attrib[Any], edge: Edge | None = None) -> Face:
         """Create a new Face instance."""
         return Face(*attributes, mesh=self, edge=edge)
 
-    def new_hole(self, *attributes: Attrib, edge: Edge | None = None) -> Face:
+    def new_hole(self, *attributes: Attrib[Any], edge: Edge | None = None) -> Face:
         """Create a new Face instance and mark it as a hole."""
         return Face(*attributes, mesh=self, edge=edge, is_hole=True)
 
@@ -80,10 +86,8 @@ class BlindHalfEdges:
         """Match edge pairs, where possible."""
         endpoints2edge = {(edge.orig, edge.dest): edge for edge in self.edges}
         for edge in self.edges:
-            try:
+            with suppress(KeyError):
                 edge.pair = endpoints2edge[(edge.dest, edge.orig)]
-            except KeyError:
-                continue
 
     def _infer_holes(self) -> None:
         """Fill in missing hole faces where unambiguous.
@@ -119,13 +123,10 @@ class BlindHalfEdges:
         while orig2hole_edge:
             _, edge = next(iter(orig2hole_edge.items()))
             edge.face = self.new_hole()
-            try:
-                while edge.dest in orig2hole_edge:
-                    edge.next = orig2hole_edge.pop(edge.dest)
-                    edge.next.face = edge.face
-                    edge = edge.next
-            except:
-                breakpoint()
+            while edge.dest in orig2hole_edge:
+                edge.next = orig2hole_edge.pop(edge.dest)
+                edge.next.face = edge.face
+                edge = edge.next
         self.edges.update(hole_edges)
 
     @classmethod
