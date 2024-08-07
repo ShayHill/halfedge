@@ -28,8 +28,6 @@ This module is all the base elements (Vert, Edge, and Face).
 # 2012 September 30
 """
 
-# TODO: get rid of "last modified" comments across the project
-
 from __future__ import annotations
 
 import itertools as it

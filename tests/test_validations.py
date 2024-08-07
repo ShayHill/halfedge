@@ -1,4 +1,3 @@
-# Last modified: 181126 16:46:28
 """Test functions in classes.py.
 
 created: 170204 14:22:23

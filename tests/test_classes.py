@@ -1,8 +1,8 @@
-# Last modified: 220626 22:40:26
 """Test functions in classes.py.
 
 created: 170204 14:22:23
 """
+
 # pyright: reportPrivateUsage=false
 
 from __future__ import annotations
