@@ -97,12 +97,6 @@ class MeshElementBase:
             msg = f"{attrib.__name__} not found in {self.__class__.__name__}"
             raise AttributeError(msg) from e
 
-    def _maybe_set_attrib(self, *attribs: Attrib[Any] | None) -> None:
-        """Set an attribute if it is not None."""
-        for attrib in attribs:
-            if attrib is not None:
-                self.set_attrib(attrib)
-
     def merge_from(self: _TMeshElem, *elements: _TMeshElem) -> _TMeshElem:
         """Fill in missing references from other elements.
 
@@ -132,14 +126,17 @@ class MeshElementBase:
             self.set_attrib(merged_attrib)
         return self
 
+    # TODO: test with coverage
     def slice_from(self: _TMeshElem, element: _TMeshElem) -> _TMeshElem:
         """Pass attributes when dividing or altering elements.
 
         Do not pass any pointers. ElemAttribBase instances are passed as defined by
         their classes.
         """
-        for key in set(element.attrib) - set(self.attrib):
-            self._maybe_set_attrib(element.attrib[key])
+        elem_attribs = {type(x) for x in element.attrib.values()}
+        self_attribs = {type(x) for x in self.attrib.values()}
+        for attrib in elem_attribs - self_attribs:
+            self.set_attrib(element.get_attrib(attrib))
         return self
 
     def __lt__(self: _TMeshElem, other: _TMeshElem) -> bool:
