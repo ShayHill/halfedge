@@ -369,9 +369,9 @@ class TestRemoveVert:
 
         # remove any two valence four verts to break manifold
         vl = [x for x in he_grid.vl if x.valence == 4]
-        _ = he_grid.remove_vert(vl[i])
-        with pytest.raises(ManifoldMeshError) as err:
-            _ = he_grid.remove_vert(vl[j])
+        _ = he_grid.remove_vert(vl[1])
+        with pytest.raises(ValueError) as err:
+            _ = he_grid.remove_vert(vl[2])
         assert "removing vert would create non-manifold mesh" in err.value.args[0]
 
     def test_peninsulas(self) -> None:

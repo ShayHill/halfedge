@@ -317,13 +317,48 @@ class HalfEdges(StaticHalfEdges):
 
         return new_face
 
-    def _recursively_remove_vert_peninsulas(self, vert: Vert) -> Vert:
-        """Remove (chains of) peninsula edges from around a vert.
+    @staticmethod
+    def _is_bridge(edge: Edge) -> bool:
+        """Return True if edge is a bridge edge.
 
-        If peninsula's (edge and pair share the same face
+        :param edge: edge in mesh
+        :return: True if edge is a bridge edge
+
+        A bridge edge is an edge that, if removed, would leave a disjoint face.
+
+        0--1  2--3
+        |  |  |  |
+        4--5--6--7
+
+        Here, edge 5--6 would be a bridge edge. If it were removed, the surrounding
+        face would have 8 edges and 8 verts, but not all would be connected.
+
         """
-        # TODO: move function_lap into a public place to identify these
-        return vert
+        return (
+            edge.orig.valence > 1
+            and edge.dest.valence > 1
+            and edge.face is edge.pair.face
+        )
+
+    @staticmethod
+    def _is_peninsula(edge: Edge) -> bool:
+        """Return True if edge is a peninsula edge.
+
+        :param edge: edge in mesh
+        :return: True if edge is a peninsula edge
+
+        A peninsula edge is an edge that intrudes into a face or hole without
+        splitting it. These will always be safe to remove.
+
+        0-----1
+        |     |
+        2--3  |
+        |     |
+        4-----5
+
+        Here, edge 2--3 is a peninsula edge.
+        """
+        return edge.orig.valence == 1 or edge.dest.valence == 1
 
     def remove_vert(self, vert: Vert) -> Face:
         """Remove all edges around a vert.
@@ -340,22 +375,38 @@ class HalfEdges(StaticHalfEdges):
               spaces rather than faces fill holes.
             * identifies and removes (one edge long) peninsula edges first
 
-        remove_edge checks for bridge faces like so:
+        Bridge edges are identified like so:
             * is orig valence > 1
             * is dest valence > 1
             * is edge.face == pair.face
 
-        If all of these are true, remove_edge assumes the edge is bridging between two
-        faces, which would be disjoint if the edge were removed.
+        This simple test usually works; however, when removing multiple edges (around
+        a vert) at one time, there are some special cases when a single bridge edge
+        can be removed if all edges are removed in the correct order.
 
-        A vert may have peninsula edges radiating from it. That is, edges that do not
-        split a face. These would be left floating if any bridge edges were removed.
+           0  1--2
+           |  |  |
+        3--4--5--6
+           |
+           7
 
-              |
-            --*-----FACE
-              |
+        Here, edge 4--5 is a bridge edge. If it were removed by itself, it would
+        create a disjoint face. However, we can safely remove all edges around vert
+        4, maintaining a manifold mesh at every step, if they are removed in the
+        correct order. The remaining face would be 5678, all contiguous.
 
-        Remove peninsula edges first to avoid this.
+        There are also cases of bridge verts, even where no bridge edges exist.
+
+        0--1
+        |  |
+        2--3--4
+           |  |
+           5--6
+
+        Here, there are no bridge edges, but removing vert 3 would create a disjoint
+        mesh.
+
+        Both of these cases are handled here.
 
         Passes attributes:
             * shared face attributes passed to new face
@@ -364,27 +415,26 @@ class HalfEdges(StaticHalfEdges):
             msg = "vert is not in mesh. cannot remove"
             raise ValueError(msg)
 
-        # TODO: review why peninsulas need to be removed.
-        peninsulas = {x for x in vert.edges if x.dest.valence == 1}
-        true_edges = set(vert.edges) - peninsulas
-        vert_faces = {x.face for x in true_edges}
-        if len(true_edges) != len(vert_faces):
-            # TODO: make this into a ValueError
-            msg = "removing vert would create non-manifold mesh"
-            raise ManifoldMeshError(msg)
+        vert_edges = set(vert.edges)
+        vert_faces = set(vert.all_faces)
+        peninsulas = set(filter(self._is_peninsula, vert_edges))
+        bridges = set(filter(self._is_bridge, vert_edges - peninsulas))
 
-        # TODO: this needs a better test to ensure mixed with peninsulas works
+        if len(vert_edges - peninsulas) > len(vert_faces):
+            msg = "removing vert would create non-manifold mesh"
+            raise ValueError(msg)
+
         face: Face | None = None
         for edge in peninsulas:
             face = self.remove_edge(edge)
-        try:
-            for edge in true_edges:  # vert.edges:
-                face = self.remove_edge(edge)
-        except ManifoldMeshError as exc:
-            raise UnrecoverableManifoldMeshError(str(exc)) from exc
+        for edge in vert_edges - peninsulas - bridges:
+            face = self.remove_edge(edge)
+        for edge in bridges:
+            face = self.remove_edge(edge)
+
         if face is None:
-            msg = "vert has no edges"
-            raise ValueError(msg)
+            msg = "Failed to find face around vert. Vert has no edges."
+            raise UnrecoverableManifoldMeshError(msg)
         return face
 
     def remove_face(self, face: Face) -> Face:
