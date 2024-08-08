@@ -23,6 +23,8 @@ from halfedge.half_edge_object import HalfEdges
 from halfedge.type_attrib import IncompatibleAttrib
 from halfedge.validations import validate_mesh
 
+from .conftest import compare_circular
+
 
 class NamedAttribute(IncompatibleAttrib[str]):
     """For color, flags. etc. to ensure attributes are passed"""
@@ -375,7 +377,7 @@ class TestRemoveVert:
         assert "removing vert would create non-manifold mesh" in err.value.args[0]
 
     def test_peninsulas(self) -> None:
-        """Remove a vert with peninsulas and regular edges"""
+        """Do not fail when working with peninsulas."""
         mesh = HalfEdges.from_vlvi(
             [Vert(Coordinate((x,))) for x in range(8)],
             fi={(5, 6, 2, 1)},
@@ -459,6 +461,77 @@ class TestFlipEdge:
 
 
 class TestCollapseEdge:
+    @pytest.mark.parametrize("which_edge", range(3))
+    def test_collapse_single_triangle(self, which_edge: int) -> None:
+        """End up with an empty mesh after collapsing one edge of a single triangle."""
+        vl = [Vert() for _ in range(3)]
+        vi: set[Tuple[int, ...]] = {(0, 1, 2)}
+        mesh = HalfEdges.from_vlvi(vl, vi)
+        edge = sorted(mesh.edges, key=attrgetter("sn"))[which_edge]
+        _ = mesh.collapse_edge(edge)
+        assert not mesh.edges
+
+    def test_collapse_slit_in_peninsula(self) -> None:
+        r"""Collapse a slit in a peninsula
+
+        0-----1
+        |     |
+        |  2  |
+        | / \ |
+        |/   \|
+        3-----4
+
+        becomes
+
+        0-------1
+         \  2  /
+          \ | /
+           \|/
+            *
+        """
+        vl = [Vert() for _ in range(5)]
+        vl[0].sn = vl[0].sn
+        vi: list[Tuple[int, ...]] = [(0, 3, 2, 4, 1), (2, 3, 4)]
+        mesh = HalfEdges.from_vlvi(vl, vi)
+        bottom_edge = (vl[0].sn + 3, vl[0].sn + 4)
+        face_edge = next(x for x in mesh.edges if (x.orig.sn, x.dest.sn) == bottom_edge)
+        _ = mesh.collapse_edge(face_edge)
+        assert len(mesh.faces) == 1
+        face_verts_sns = [x.sn - vl[0].sn for x in mesh.faces.pop().verts]
+        assert compare_circular(face_verts_sns, [0, 20, 2, 20, 1])
+
+    def test_collapse_tower_of_triangles(self) -> None:
+        r"""Collapse edge between two towers of triangles raises ValueError.
+
+           0
+          /|\
+         / 1 \
+        / /|\ \
+        |/ 2 \|
+        / / \ \
+        |/   \|
+        3-----4
+
+        Collapsing edge (3, 4) raises a ValueError. See docstring for _is_stitchable.
+        """
+        vl = [Vert() for _ in range(5)]
+        first_sn = vl[0].sn
+        vi: set[Tuple[int, ...]] = {
+            (0, 3, 1),
+            (0, 1, 4),
+            (1, 3, 2),
+            (1, 2, 4),
+            (2, 3, 4),
+        }
+        mesh = HalfEdges.from_vlvi(vl, vi)
+        face_edge = next(
+            x
+            for x in mesh.edges
+            if (x.orig.sn - first_sn, x.dest.sn - first_sn) == (3, 4)
+        )
+        with pytest.raises(ValueError):
+            _ = mesh.collapse_edge(face_edge)
+
     @pytest.mark.parametrize("repeat", range(100))
     def test_collapse_to_empty(self, he_mesh: HalfEdges, repeat: int) -> None:
         """Collapse edge till mesh is empty"""
@@ -468,6 +541,7 @@ class TestCollapseEdge:
             for edge in edges:
                 with suppress(ValueError):
                     _ = he_mesh.collapse_edge(edge)
+                validate_mesh(he_mesh)
 
     @pytest.mark.parametrize("repeat", range(100))
     def test_drum(self, repeat: int) -> None:
@@ -487,9 +561,7 @@ class TestCollapseEdge:
                     _ = drum.collapse_edge(edge)
 
     def test_collapse_dart(self) -> None:
-        """Create a double slit face by collapsing on side of a triangle inside a dart
-
-        Function will remove both slits.
+        """Leave peninsula when collapsing triangle and dart.
 
         Start with a mesh with two faces, a triange and a "dart" (two adjacent
         triangles). An example would be:
@@ -501,9 +573,7 @@ class TestCollapseEdge:
 
         If the exterior edge of the triangle were collapsed, the triangle would
         become a 2-edge face, which collapse_edge would remove. The dart would still
-        be a 4-edge face, but the 1st and 3rd (or 2nd and 4th) points would be
-        identical so each half of the face would be unambiguously linear.
-        collapse_edge will remove these as well.
+        be a 4-edge face.
         """
         vl = [Vert(Coordinate((x,))) for x in range(4)]
         mesh = HalfEdges.from_vlvi(vl, {(0, 1, 3), (1, 2, 0, 3)})
@@ -514,4 +584,23 @@ class TestCollapseEdge:
             and x.dest.get_attrib(Coordinate).value == (1,)
         )
         _ = mesh.collapse_edge(edge)
-        assert not mesh.verts
+        assert len(mesh.faces) == 1
+        (face,) = mesh.faces
+        assert len(face.edges) == 4
+
+    @pytest.mark.parametrize("repeat", range(100))
+    def test_collapse_with_existing_peninsulas(
+        self, he_grid: HalfEdges, repeat: int
+    ) -> None:
+        """Collapse edge till mesh is empty"""
+        verts = he_grid.vl[:]
+        random.shuffle(verts)
+        side_point = next(x for x in verts if x.valence == 3)
+        _ = he_grid.remove_vert(side_point)
+        while he_grid.edges:
+            edges = list(he_grid.edges)
+            random.shuffle(edges)
+            for edge in edges:
+                with suppress(ValueError):
+                    _ = he_grid.collapse_edge(edge)
+                validate_mesh(he_grid)

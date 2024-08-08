@@ -132,8 +132,8 @@ class BlindHalfEdges:
     def from_vlvi(
         cls: type[_TBlindHalfEdges],
         vl: list[Vert],
-        fi: set[tuple[int, ...]],
-        hi: set[tuple[int, ...]] | None = None,
+        fi: Iterable[tuple[int, ...]],
+        hi: Iterable[tuple[int, ...]] | None = None,
     ) -> _TBlindHalfEdges:
         """Create a set of half edges from a vertex list and vertex index.
 

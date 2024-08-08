@@ -522,22 +522,82 @@ class HalfEdges(StaticHalfEdges):
         return self.insert_edge(new_orig, new_dest, face)
 
     def _is_stitchable(self, edge: Edge) -> bool:
-        """Return True if two edges be stitched (middle 2-side face removed).
+        r"""Return True if two edges be stitched (middle 2-side face removed).
 
-        TODO: revisit docstring
+        :param edge: edge which might be collapsed
+        :return: True if the edge can be collapsed
 
-        :param edge_a:
-        :param edge_b:
-        :return:
+        When collapsing an edge of a triangle, you end up with a slit face: a 2-sided
+        face inside what would look like a single edge.
 
-        Two edges can be stitched if their outside faces don't share > 1 vert.
+        0 ---------> 1 half edge 0; pair is half edge 1
+        0 <--------- 1 half edge 1; pair is half edge 0
+        0 ---------> 1 half edge 2; pair is half edge 3
+        0 <--------- 1 half edge 3; pair is half edge 2
 
-        A mesh is not manifold if two adjacent faces point in opposite directions.
-        From a connectivity perspective (this package only deals with connectivity,
-        not geometry), two faces that share more that two vertices are facing in
-        opposite directions--assuming faces are flat and consecutive sides are not
-        linear. Whether or not we accept that, more than two connected vertices
-        breaks the halfedge data structure, if not immediately, then eventually.
+        Edge 01 (two half edges: half edge 0 and half edge 1) can be "stitched" to
+        edge 23 to create
+
+        0 ---------> 1 half edge 0; pair is half edge 3
+        # half edge 1 is deleted
+        # half edge 2 is deleted
+        0 <--------- 1 half edge 3; pair is half edge 1
+
+        If we didn't eliminate the slits, we might later try to collapse edge 01 and
+        end up with an edge 23 that begins and ends at the same point. That could be
+        handled as well, and maybe more simply, but the goal of this projects is to
+        return a sane, intuitive mesh after every operation, and slit faces are not a
+        part of that for me.
+
+        So far, so good. But ...
+
+        If the edge separates two triangles, you end up with 2 slit faces. These will
+        also be stitched, and that can be the beginning of a problem.
+
+           0
+          /|\
+         / 1 \
+        / /|\ \
+        |/ 2 \|
+        / / \ \
+        |/   \|
+        3-----4
+
+        This one will take a little imagination. You'll have to imagine that edges
+        0-4, 0-3, 1-4, and 1-3 are straight. That leaves SIX (not five) faces:
+
+        0-3-1, 0-1-4, 1-3-2, 1-2-4, 3-4-2, and the hole face around the entire
+        figure: 4-3-0. This means edge 3-4 separates two triangles (3-4-2 and 4-3-0),
+        both oriented counterclockwise.
+
+        Collapse edge 3-4 and your six faces become (where * is the new point at the
+        center of the collapsed edge):
+
+        0-3-1 -> 0-*-1
+        0-1-4 -> 0-1-*
+        1-3-2 -> 1-*-2
+        1-2-4 -> 1-2-*
+        3-4-2 -> *-2 (internal triangle bordering original edge 3-4)
+        4-3-0 -> *-0 (external triangle bordering original edge 3-4)
+
+        New faces *-2 and *-0 will be "stitched" and deleted. That leaves four
+        triangles. The problem with these four triangles is that edges 1-* and *-1
+        each appear twice. We've followed all the rules and still ended up with a
+        non-manifold mesh.
+
+        If you have the spatial skills, you might be able to squint at that ascii art
+        and find a solution, but that solution would require assumptions about
+        geometry. These are easy assumptions to make in 2D, but they will require
+        geometric information to confirm. This package only deals with connectivity,
+        not geometry, so any such solution would be invalid.
+
+        The solution I've chosen is this: if the stitching operation would break
+        manifold, don't collapse a triangle. You will still be able to collapse any
+        mesh into 0 faces, but you'll just need to be more careful (or try ...
+        except) about the order in which you do it.
+
+        This method identifies situations where stitching a collapsed triangle would
+        break manifold.
         """
         pair = edge.pair
         tris = sum(x.face.sides == 3 for x in (edge, pair))
@@ -546,13 +606,10 @@ class HalfEdges(StaticHalfEdges):
         return len(orig_verts & dest_verts) <= tris
 
     def collapse_edge(self, edge: Edge) -> Vert:
-        """Collapse an Edge into a Vert.
+        r"""Collapse an Edge into a Vert.
 
         :param edge: Edge instance in self
         :return: Vert where edge used to be.
-
-        Passes attributes:
-            * shared vert attributes passed to new vert
 
         Warning: Some ugly things can happen here than can only be recognized and
         avoided by examining the geometry. This module only addresses connectivity,
@@ -580,21 +637,20 @@ class HalfEdges(StaticHalfEdges):
         # remove slits
         while adjacent_faces:
             face = adjacent_faces.pop()
-            # face is normal
-            if face.edge not in self.edges or len(face.edges) > 2:
+            if face.edge not in self.edges:  # face has already been removed
                 continue
-            # face is a slit inside a peninsula
-            adjacent_faces_prime = {x.pair.face for x in face.edges}
-            if len(adjacent_faces_prime) == 1:
-                for face_edge in face.edges:
-                    with suppress(ValueError):
-                        _ = self.remove_edge(face_edge)
-                adjacent_faces |= adjacent_faces_prime
+            if len(face.edges) > 2:  # face still has volume. leave it
                 continue
-            # face is a slit
+            # edge is a slit
             self._point_away_from_edge(*face.edges)
             face_edges = face.edges
             face_edges[0].pair.pair = face_edges[1].pair
             self.edges -= set(face_edges)
+
+        if new_vert.edge not in self.edges:
+            new_vert_edge = next(
+                (x for x in self.edges if x.orig is new_vert), new_vert.edge
+            )
+            new_vert.set_edge_without_side_effects(new_vert_edge)
 
         return new_vert

@@ -12,7 +12,7 @@ from __future__ import annotations
 from itertools import chain
 from typing import TYPE_CHECKING, Any, Callable, Iterator, TypeVar
 
-from halfedge.half_edge_elements import Face, ManifoldMeshError
+from halfedge.half_edge_elements import Edge, Face, ManifoldMeshError
 
 if TYPE_CHECKING:
     from halfedge.half_edge_querries import StaticHalfEdges
@@ -82,6 +82,30 @@ def _confirm_edges_do_not_overlap(mesh: StaticHalfEdges) -> None:
         raise ManifoldMeshError(msg)
 
 
+def _confirm_pair_points_align(mesh: StaticHalfEdges) -> None:
+    """Test that pair edges align."""
+    for edge in mesh.edges:
+        if edge.orig != edge.pair.dest or edge.dest != edge.pair.orig:
+            msg = "edge and pair points are not the same"
+            raise ManifoldMeshError(msg)
+
+
+def _confirm_no_ghost_edges(mesh: StaticHalfEdges) -> None:
+    """Test that every face and vert edge is in the edge list."""
+    face_edges: set[Edge] = set()
+    vert_edges: set[Edge] = set()
+    for face in mesh.faces | mesh.holes:
+        face_edges.update(face.edges)
+    for vert in mesh.verts:
+        vert_edges.update(vert.edges)
+    if face_edges ^ mesh.edges:
+        msg = "face edges not in edge list"
+        raise ManifoldMeshError(msg)
+    if vert_edges ^ mesh.edges:
+        msg = "vert edges not in edge list"
+        raise ManifoldMeshError(msg)
+
+
 def validate_mesh(mesh: StaticHalfEdges) -> None:
     """Test for a manifold mesh."""
     if not mesh.edges:
@@ -93,4 +117,6 @@ def validate_mesh(mesh: StaticHalfEdges) -> None:
         msg = "not all faces can be reached by jumping over edges"
         raise ManifoldMeshError(msg)
     _confirm_edges_do_not_overlap(mesh)
+    _confirm_pair_points_align(mesh)
+    _confirm_no_ghost_edges(mesh)
     _confirm_function_laps_do_not_fail(mesh)
