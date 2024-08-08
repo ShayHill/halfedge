@@ -158,7 +158,7 @@ class HalfEdges(StaticHalfEdges):
         :returns: newly inserted edge
 
         :raises: ValueError if no face is given and face is ambiguous
-        :raises: ManifoldMeshError if
+        :raises: ValueError if
             * overwriting existing edge
             * any vert in mesh but not on face
             * orig and dest are the same
@@ -180,7 +180,6 @@ class HalfEdges(StaticHalfEdges):
             * shared face.edges attributes passed to new edge
             * face attributes passed to new face if face is split
         """
-        # TODO: raise ValueError for overwriting edges, removing bridge edges, etc.
         if face is None:
             face = self._infer_face(orig, dest)
 
@@ -194,21 +193,21 @@ class HalfEdges(StaticHalfEdges):
 
         if getattr(edge_orig, "edge", None) and edge_dest in edge_orig.neighbors:
             msg = "overwriting existing edge"
-            raise ManifoldMeshError(msg)
+            raise ValueError(msg)
 
         edge_points_in_face = set(face.verts) & {edge_orig, edge_dest}
         edge_points_in_mesh = set(self.verts) & {edge_orig, edge_dest}
         if edge_points_in_face != edge_points_in_mesh:
             msg = "orig or dest in mesh but not on given face"
-            raise ManifoldMeshError(msg)
+            raise ValueError(msg)
 
         if edge_orig == edge_dest:
             msg = "orig and dest are the same"
-            raise ManifoldMeshError(msg)
+            raise ValueError(msg)
 
         if not edge_points_in_face and face in self.faces:
             msg = "adding floating edge to existing face"
-            raise ManifoldMeshError(msg)
+            raise ValueError(msg)
 
         edge.orig = edge_orig
         edge.prev = edge_prev

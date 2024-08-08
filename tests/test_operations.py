@@ -12,13 +12,7 @@ from typing import Any, Dict, Iterable, Set, Tuple
 
 import pytest
 
-from halfedge.half_edge_elements import (
-    Edge,
-    Face,
-    ManifoldMeshError,
-    MeshElementBase,
-    Vert,
-)
+from halfedge.half_edge_elements import Edge, Face, MeshElementBase, Vert
 from halfedge.half_edge_object import HalfEdges
 from halfedge.type_attrib import IncompatibleAttrib
 from halfedge.validations import validate_mesh
@@ -134,9 +128,9 @@ class TestInsertEdge:
     def test_insert_will_not_overwrite(
         self, index: int, mesh_faces: Tuple[HalfEdges, Face]
     ) -> None:
-        """Raise ManifoldMeshError if attempting to overwrite existing edge."""
+        """Raise ValueError if attempting to overwrite existing edge."""
         mesh, face = mesh_faces
-        with pytest.raises(ManifoldMeshError) as err:
+        with pytest.raises(ValueError) as err:
             _ = mesh.insert_edge(face.verts[index], face.verts[index - 1], face)
         assert "overwriting existing edge" in err.value.args[0]
 
@@ -144,13 +138,13 @@ class TestInsertEdge:
     def test_orig_off_face(
         self, index: int, mesh_faces: Tuple[HalfEdges, Face]
     ) -> None:
-        """Raise ManifoldMeshError if any vert in mesh but not on given face"""
+        """Raise ValueError if any vert in mesh but not on given face"""
         mesh, face = mesh_faces
         dest = face.verts[index]
         orig = next(
             x for x in mesh.verts if x not in face.verts and x not in dest.neighbors
         )
-        with pytest.raises(ManifoldMeshError) as err:
+        with pytest.raises(ValueError) as err:
             _ = mesh.insert_edge(orig, dest, face)
         assert VERT_IN_ANOTHER_FACE in err.value.args[0]
 
@@ -158,18 +152,18 @@ class TestInsertEdge:
     def test_dest_off_face(
         self, index: int, mesh_faces: Tuple[HalfEdges, Face]
     ) -> None:
-        """Raise ManifoldMeshError if any vert in mesh but not on given face"""
+        """Raise ValueError if any vert in mesh but not on given face"""
         mesh, face = mesh_faces
         orig = face.verts[index]
         dest = next(
             x for x in mesh.verts if x not in face.verts and x not in orig.neighbors
         )
-        with pytest.raises(ManifoldMeshError) as err:
+        with pytest.raises(ValueError) as err:
             _ = mesh.insert_edge(orig, dest, face)
         assert VERT_IN_ANOTHER_FACE in err.value.args[0]
 
     def test_orig_and_dest_off_face(self, mesh_faces: Tuple[HalfEdges, Face]) -> None:
-        """Raise ManifoldMeshError if any vert in mesh but not on given face"""
+        """Raise ValueError if any vert in mesh but not on given face"""
         mesh, face = mesh_faces
         orig = next(x for x in mesh.verts if x not in face.verts)
         dest = next(
@@ -177,23 +171,23 @@ class TestInsertEdge:
             for x in mesh.verts
             if x not in face.verts and x != orig and x not in orig.neighbors
         )
-        with pytest.raises(ManifoldMeshError) as err:
+        with pytest.raises(ValueError) as err:
             _ = mesh.insert_edge(orig, dest, face)
         assert VERT_IN_ANOTHER_FACE in err.value.args[0]
 
     @pytest.mark.parametrize("index", range(4))
     def test_orig_eq_dest(self, index: int, mesh_faces: Tuple[HalfEdges, Face]) -> None:
-        """Raise ManifoldMeshError if orig == dest"""
+        """Raise ValueError if orig == dest"""
         mesh, face = mesh_faces
         orig = face.verts[index]
-        with pytest.raises(ManifoldMeshError) as err:
+        with pytest.raises(ValueError) as err:
             _ = mesh.insert_edge(orig, orig, face)
         assert "orig and dest are the same" in err.value.args[0]
 
     def test_floating_edge(self, mesh_faces: Tuple[HalfEdges, Face]) -> None:
-        """Raise ManifoldMeshError neither vert in mesh (and mesh not empty)"""
+        """Raise ValueError neither vert in mesh (and mesh not empty)"""
         mesh, face = mesh_faces
-        with pytest.raises(ManifoldMeshError) as err:
+        with pytest.raises(ValueError) as err:
             _ = mesh.insert_edge(Vert(), Vert(), face)
         assert "adding floating edge to existing face" in err.value.args[0]
 
@@ -264,7 +258,7 @@ class TestRemoveEdge:
         assert new_face.get_attrib(NamedAttribute).value == "green"
 
     def test_missing_edge(self, he_mesh: HalfEdges) -> None:
-        """Raise ManifoldMeshError if edge not in mesh"""
+        """Raise ValueError if edge not in mesh"""
         with pytest.raises(ValueError) as err:
             _ = he_mesh.remove_edge(Edge())
         assert "does not exist" in err.value.args[0]
@@ -363,7 +357,7 @@ class TestRemoveVert:
         "i, j", chain(*(permutations(x) for x in combinations(range(4), 2)))
     )
     def test_remove_vert_bridge(self, i: int, j: int, he_grid: HalfEdges) -> None:
-        """Raise ManifoldMeshError if vert has a bridge edge."""
+        """Raise ValueError if vert has a bridge edge."""
         # create plus
         corners = {x for x in he_grid.verts if x.valence == 2}
         for corner in corners:
