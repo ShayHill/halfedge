@@ -605,11 +605,12 @@ class HalfEdges(StaticHalfEdges):
         dest_verts = set(edge.dest.neighbors)
         return len(orig_verts & dest_verts) <= tris
 
-    def collapse_edge(self, edge: Edge) -> Vert:
+    def collapse_edge(self, edge: Edge) -> Vert | None:
         r"""Collapse an Edge into a Vert.
 
         :param edge: Edge instance in self
-        :return: Vert where edge used to be.
+        :return: Vert where edge used to be or None if this new vert does not exist
+            in the mesh
 
         Warning: Some ugly things can happen here than can only be recognized and
         avoided by examining the geometry. This module only addresses connectivity,
@@ -627,7 +628,7 @@ class HalfEdges(StaticHalfEdges):
         for edge_ in set(edge.orig.edges) | set(edge.dest.edges):
             edge_.orig = new_vert
 
-        adjacent_faces = {edge.face, edge.pair.face}
+        adjacent_faces = sorted({edge.face, edge.pair.face}, key=lambda x: x.is_hole)
 
         self._point_away_from_edge(edge, edge.pair)
         edge.prev.next = edge.next
@@ -636,7 +637,9 @@ class HalfEdges(StaticHalfEdges):
 
         # remove slits
         while adjacent_faces:
-            face = adjacent_faces.pop()
+            face = adjacent_faces.pop(0)
+            if len(self.edges) == 2:  # leave hole face unless explicitly collapsed
+                break
             if face.edge not in self.edges:  # face has already been removed
                 continue
             if len(face.edges) > 2:  # face still has volume. leave it
@@ -647,10 +650,14 @@ class HalfEdges(StaticHalfEdges):
             face_edges[0].pair.pair = face_edges[1].pair
             self.edges -= set(face_edges)
 
-        if new_vert.edge not in self.edges:
-            new_vert_edge = next(
-                (x for x in self.edges if x.orig is new_vert), new_vert.edge
+        # An edge collapses into a vert. In some cases, the vert will not exist in
+        # the resulting mesh. There are cases where the vert *will* exist in the mesh
+        # but be pointed to an edge that no longer exists. This catches those.
+        if new_vert.edge in self.edges:
+            return new_vert
+        with suppress(StopIteration):
+            new_vert.set_edge_without_side_effects(
+                next(x for x in self.edges if x.orig is new_vert)
             )
-            new_vert.set_edge_without_side_effects(new_vert_edge)
-
-        return new_vert
+            return new_vert
+        return None

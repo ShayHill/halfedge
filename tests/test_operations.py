@@ -463,13 +463,16 @@ class TestFlipEdge:
 class TestCollapseEdge:
     @pytest.mark.parametrize("which_edge", range(3))
     def test_collapse_single_triangle(self, which_edge: int) -> None:
-        """End up with an empty mesh after collapsing one edge of a single triangle."""
+        """End up with a 1-face mesh after collapsing one edge of a single triangle."""
         vl = [Vert() for _ in range(3)]
         vi: set[Tuple[int, ...]] = {(0, 1, 2)}
         mesh = HalfEdges.from_vlvi(vl, vi)
         edge = sorted(mesh.edges, key=attrgetter("sn"))[which_edge]
         _ = mesh.collapse_edge(edge)
-        assert not mesh.edges
+        assert len(mesh.faces) == 0
+        assert len(mesh.holes) == 1
+        (hole,) = mesh.holes
+        assert len(hole.edges) == 2
 
     def test_collapse_slit_in_peninsula(self) -> None:
         r"""Collapse a slit in a peninsula

@@ -57,7 +57,7 @@ def test_validate_mesh_edge_face(he_mesh: HalfEdges) -> None:
     edge.face = edge.pair.face
     with pytest.raises(ManifoldMeshError) as err:
         validate_mesh(he_mesh)
-    assert "face.edges do not all point to face" in err.value.args[0]
+    assert "face edges not in edge list" in err.value.args[0]
 
 
 def test_disjoint_face() -> None:
