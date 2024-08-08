@@ -289,10 +289,9 @@ class HalfEdges(StaticHalfEdges):
         """
         # TODO: incorporate point_Away_From_edge
         # TODO: new hole every time
-        # TODO: make this ManifoldMeshError a ValueError
         if edge not in self.edges:
             msg = f"edge {id(edge)} does not exist in mesh"
-            raise ManifoldMeshError(msg)
+            raise ValueError(msg)
 
         pair = edge.pair
 

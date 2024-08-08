@@ -17,21 +17,28 @@ typing), because the mess involved adds too much complication. If you need to ex
 the Vert, Edge, Face, or HalfEdges classes with additional attributes, you will need
 to define each attribute as a descendent of Attrib.
 
-    class MyAttrib(Attrib):
+    class MyAttrib(Attrib[something]):
         ...
+        def merge [define how multiple instances of this attribute will combine]
+        def slice [define how this attribute will be passed when the element is split]
+        def _infer_value [define how to calculate the value if not set]
 
     vert = Vert()
     vert.set_attrib(MyAttrib('value'))
-    assert vert.get_attrib(MyAttrib) == 'value'
+    assert vert.get_attrib(MyAttrib).value == 'value'
 
-These attributes are held in an AttribHolder __dict__ keyed to the class name of the
-attribute.
+These attributes are held in an instance attribute dict, `attrib` keyed to the class
+name of the attribute.
 
-    assert vert.MyAttrib.value == 'value'
-    assert vert.__dict__['MyAttrib'].value == 'value'
+    assert vert.get_attrib(MyAttrib).value == 'value'
+    assert vert.attrib['MyAttrib'].value == 'value'
 
 Rules governing combination of these properties are defined in the Attrib classes
 themselves.
+
+There is a base class, Attrib, here, plus some subclasses modelling common cases. Do
+not use these classes directly. Instead, subclass one of these classes for each
+attribute you need to define.
 
 :author: Shay Hill
 :created: 2022-06-14
@@ -39,7 +46,6 @@ themselves.
 
 from __future__ import annotations
 
-from contextlib import suppress
 from typing import TYPE_CHECKING, Any, Generic, Literal, TypeVar
 
 if TYPE_CHECKING:
@@ -47,9 +53,6 @@ if TYPE_CHECKING:
 
 _TAttrib = TypeVar("_TAttrib", bound="Attrib[Any]")
 _T = TypeVar("_T")
-
-
-_TElemAttrib = TypeVar("_TElemAttrib", bound="Attrib[Any]")
 
 
 class Attrib(Generic[_T]):
@@ -74,17 +77,13 @@ class Attrib(Generic[_T]):
         self, value: _T | None = None, element: MeshElementBase | None = None
     ) -> None:
         """Set value and element."""
-        self._value: _T
-        self.element: MeshElementBase
-        if value is not None:
-            self._value = value
-        if element is not None:
-            self.element = element
+        self._value = value
+        self.element = element
 
     @property
     def value(self) -> _T:
         """Return value if set, else try to infer a value."""
-        with suppress(AttributeError):
+        if self._value is not None:
             return self._value
         value = self._infer_value()
         if value is None:
@@ -93,9 +92,20 @@ class Attrib(Generic[_T]):
         self._value = value
         return value
 
+    def copy_to_element(self: Attrib[_T], element: MeshElementBase) -> Attrib[_T]:
+        """Return a new instance with the same value, assigned to a new element."""
+        return type(self)(self._value, element)
+
     @classmethod
-    def merge(cls, *merge_from: _TElemAttrib | None) -> _TElemAttrib | None:
+    def merge(cls, *merge_from: _TAttrib | None) -> _TAttrib | None:
         """Get value of self from self._merge_from.
+
+        :param merge_from: Attrib instances to merge (all of the same class)
+        :return: Attrib instance with merged value or None. It is fine to return one
+            of the merge_from arguments if it represents what a new merged element
+            should be. Eventually, it will be passed through
+            MeshElementBase.set_attrib, which will *copy* the Attrib instance to the
+            new element.
 
         Use merge_from values to determine a value. If no value can be determined,
         return None. No element attribute will be set for a None return value.
@@ -109,9 +119,14 @@ class Attrib(Generic[_T]):
         _ = merge_from
         return None
 
-    @classmethod
-    def slice(cls, slice_from: Attrib[_T]) -> Attrib[_T] | None:
+    def slice(self: _TAttrib) -> _TAttrib | None:
         """Define how attribute will be passed when dividing self.element.
+
+        :return: Attrib instance to be set on any element created by dividing and
+            element with this attribute. It is fine to return one of the merge_from
+            arguments if it represents what a new merged element should be.
+            Eventually, it will be passed through MeshElementBase.set_attrib, which
+            will *copy* the Attrib instance to the new element.
 
         When an element is divided (face divided by an edge, edge divided by a vert,
         etc.) or altered, define how, if at all, this attribute will be passed to the
@@ -122,7 +137,6 @@ class Attrib(Generic[_T]):
 
         This base method will not pass an attribute when dividing or altering.
         """
-        _ = slice_from
         return None
 
     def _infer_value(self) -> _T | None:
@@ -167,6 +181,8 @@ class ContagionAttrib(Attrib[Literal[True]]):
     elements. The value of the attribute is always True. If any element in a group of
     to-be-merged elements has a ContagionAttributeBase attribute, then the merged
     element will have that attribute.
+
+    The value is always True, even if something else is passed to __init__.
     """
 
     def __init__(
@@ -185,26 +201,17 @@ class ContagionAttrib(Attrib[Literal[True]]):
         attribs = [x for x in merge_from if x is not None]
         attribs = [x for x in attribs if x.value is not None]
         if attribs:
-            return type(attribs[0])()
+            return attribs[0]
         return None
 
-    @classmethod
-    def slice(cls, slice_from: _TAttrib) -> _TAttrib | None:
+    def slice(self: _TAttrib) -> _TAttrib | None:
         """Copy attribute to slices.
 
         Holes are defined with IsHole(ContagionAttributeBase), so this will split a
         non-face hole into two non-face holes and a hole (is_face == True) into two
         holes.
         """
-        if getattr(slice_from, "value", None):
-            return type(slice_from)()
-        return None
-
-    def _infer_value(self) -> Literal[True]:
-        raise RuntimeError(
-            "This will only be called if self._value is None, "
-            + "which should not happen."
-        )
+        return self
 
 
 class IncompatibleAttrib(Attrib[_T]):
@@ -219,35 +226,20 @@ class IncompatibleAttrib(Attrib[_T]):
 
         If all values match and every contributing element has an analog, return
         a new instance with that value. Otherwise None.
-
-        #TODO: verify that merge_from[0] should never be None.
         """
         if not merge_from or merge_from[0] is None:
             return None
 
         first_value = merge_from[0].value
-        if first_value is None:
-            return None
         for x in merge_from[1:]:
             if x is None or x.value != first_value:
                 return None
-        return type(merge_from[0])(first_value)
+        return merge_from[0]
 
-    @classmethod
-    def slice(cls, slice_from: Attrib[_T]) -> Attrib[_T] | None:
+    def slice(self: _TAttrib) -> _TAttrib | None:
         """Pass the value on."""
-        if value := slice_from.value:
-            return type(slice_from)(value)
-        return None
-
-    def _infer_value(self) -> _T | None:
-        """No way to infer a value.
-
-        TODO: clarify what's going on here by improving the docstring.
-
-        If value is not set in init or merged from init arg merge_from, fail (i.e.,
-        return None). This should never happen.
-        """
+        if self.value:
+            return self
         return None
 
 
@@ -262,11 +254,3 @@ class NumericAttrib(Attrib[_T]):
             return None
         values = [x.value for x in have_values]
         return type(have_values[0])(sum(values) / len(values))
-
-    def _infer_value(self) -> _T | None:
-        """TODO: see where merge value will ever be called.
-
-        No way to infer a value. If value is not set in init or merged from init
-        arg merge_from, fail (i.e., return None). This should never happen.
-        """
-        return None

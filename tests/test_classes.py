@@ -85,6 +85,8 @@ class TestElemAttribs:
                 raise NotImplementedError()
 
             def _infer_value(self):
+                if self.element is None:
+                    return None
                 return self.element.sn
 
         elem = MeshElementBase()
@@ -103,9 +105,9 @@ class TestMeshElementBase:
     def test_set_attrib(self) -> None:
         """Set an attrib by passing a MeshElementBase instance"""
         elem = MeshElementBase()
-        elem_attrib = IncompatibleAttrib(8)
+        elem_attrib = Flag(8)
         elem.set_attrib(elem_attrib)
-        assert elem.get_attrib(IncompatibleAttrib) is elem_attrib
+        assert elem.get_attrib(Flag).value == 8
 
     def test_attribs_through_init(self) -> None:
         """MeshElement attributes are captured when passed to init"""
@@ -169,7 +171,9 @@ class TestInitVert:
 
     def test_coordinate_is_attribute(self):
         """Coordinate has been captured as an attribute"""
-        assert self.vert.get_attrib(Coordinate) is self.coordinate
+        result = self.vert.get_attrib(Coordinate).value
+        expect = self.coordinate.value
+        assert result == expect
 
     def test_coordinate_element_is_vert(self):
         """Coordinate.element is set during init/"""
@@ -213,7 +217,7 @@ class TestInitEdge:
 
     def test_coordinate_is_attribute(self):
         """Coordinate has been captured as an attribute"""
-        assert self.edge.get_attrib(Coordinate) is self.coordinate
+        assert self.edge.get_attrib(Coordinate).value == self.coordinate.value
 
     def test_coordinate_element_is_vert(self):
         """Coordinate.element is set during init/"""
@@ -264,7 +268,7 @@ class TestInitFace:
 
     def test_coordinate_is_attribute(self):
         """Coordinate has been captured as an attribute"""
-        assert self.face.get_attrib(Coordinate) is self.coordinate
+        assert self.face.get_attrib(Coordinate).value is self.coordinate.value
 
     def test_coordinate_element_is_vert(self):
         """Coordinate.element is set during init/"""

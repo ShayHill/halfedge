@@ -45,16 +45,6 @@ _TMeshElem = TypeVar("_TMeshElem", bound="MeshElementBase")
 _T = TypeVar("_T")
 
 
-class _NullValue:
-    """A null value for use in optional arguments."""
-
-    def __repr__(self) -> str:
-        return "NullValue()"
-
-
-_NULL_VALUE = _NullValue()
-
-
 class IsHole(ContagionAttrib):
     """Flag a Face instance as a hole."""
 
@@ -96,8 +86,7 @@ class MeshElementBase:
 
     def set_attrib(self, attrib: Attrib[Any]) -> None:
         """Set an attribute."""
-        attrib.element = self
-        self.attrib[type(attrib).__name__] = attrib
+        self.attrib[type(attrib).__name__] = attrib.copy_to_element(self)
 
     def get_attrib(self, attrib: type[Attrib[_T]]) -> Attrib[_T]:
         """Get an attribute."""
@@ -142,13 +131,15 @@ class MeshElementBase:
     def slice_from(self: _TMeshElem, element: _TMeshElem) -> _TMeshElem:
         """Pass attributes when dividing or altering elements.
 
-        Do not pass any pointers. ElemAttribBase instances are passed as defined by
-        their classes.
+        Use the 'slice' method of Attrib instances to determine how to pass
+        attributes child elements when dividing an element.
         """
         elem_attribs = {type(x) for x in element.attrib.values()}
         self_attribs = {type(x) for x in self.attrib.values()}
         for attrib in elem_attribs - self_attribs:
-            self.set_attrib(element.get_attrib(attrib))
+            sliced = element.get_attrib(attrib).slice()
+            if sliced is not None:
+                self.set_attrib(sliced)
         return self
 
     def __lt__(self: _TMeshElem, other: _TMeshElem) -> bool:

@@ -263,7 +263,7 @@ class TestRemoveEdge:
 
     def test_missing_edge(self, he_mesh: HalfEdges) -> None:
         """Raise ManifoldMeshError if edge not in mesh"""
-        with pytest.raises(ManifoldMeshError) as err:
+        with pytest.raises(ValueError) as err:
             _ = he_mesh.remove_edge(Edge())
         assert "does not exist" in err.value.args[0]
 
