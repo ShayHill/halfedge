@@ -45,6 +45,16 @@ _TMeshElem = TypeVar("_TMeshElem", bound="MeshElementBase")
 _T = TypeVar("_T")
 
 
+class _NullValue:
+    """A null value for use in optional arguments."""
+
+    def __repr__(self) -> str:
+        return "NullValue()"
+
+
+_NULL_VALUE = _NullValue()
+
+
 class IsHole(ContagionAttrib):
     """Flag a Face instance as a hole."""
 
@@ -97,6 +107,13 @@ class MeshElementBase:
             msg = f"{attrib.__name__} not found in {self.__class__.__name__}"
             raise AttributeError(msg) from e
 
+    def try_attrib(self, attrib: type[Attrib[_T]]) -> Attrib[_T] | None:
+        """Get an attribute or return None."""
+        try:
+            return self.get_attrib(attrib)
+        except AttributeError:
+            return None
+
     def merge_from(self: _TMeshElem, *elements: _TMeshElem) -> _TMeshElem:
         """Fill in missing references from other elements.
 
@@ -116,14 +133,9 @@ class MeshElementBase:
             all_attribs.update({type(x) for x in element.attrib.values()})
         new_attribs = all_attribs - old_attribs
         for attrib in new_attribs:
-            attrib_instances: list[Attrib[Any]] = []
-            for element in elements:
-                with suppress(AttributeError):
-                    attrib_instances.append(element.get_attrib(attrib))
-            merged_attrib = attrib.merge(*attrib_instances)
-            if merged_attrib is None:
-                continue
-            self.set_attrib(merged_attrib)
+            merged_attrib = attrib.merge(*(e.try_attrib(attrib) for e in elements))
+            if merged_attrib is not None:
+                self.set_attrib(merged_attrib)
         return self
 
     # TODO: test with coverage
