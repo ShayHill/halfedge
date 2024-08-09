@@ -16,16 +16,22 @@ This is a typical halfedges data structure. Exceptions:
 
     * Orig, pair, face, and next assignments are mirrored, so a.pair = b will set
       a.pair = b and b.pair = a. This makes edge insertion, etc. cleaner, but the
-      whole thing is still easy to break. Hopefully, I've provided enough insertion /
-      removal code to get you over the pitfalls. Halfedges (as a data structure,
-      not just this implementation) is clever when it's all built, but a lot has to
-      be temporarily broken down to transform the mesh. All I can say is, write a lot
-      of test if you want to extend the insertion / removal methods here.
+      whole thing is still easy to break if you extend the class. Hopefully, I've
+      provided enough insertion / removal code to get you over the pitfalls.
+      Halfedges (as a data structure, not just this implementation) is clever when
+      it's all built, but a lot has to be temporarily broken down to transform the
+      mesh. All I can say is, write a lot of test if you want to extend the insertion
+      / removal methods here.
+
+    * Some methods (e.g., Vert.edges or Face.verts) return an empty list, even when
+      self.edge would raise an AttributeError. A Vert or Face without an edge is not
+      manifold, but a Vert or Face without an edge will never be in a mesh, because a
+      mesh only stores edges. These empty Verts or Faces will occur when iteratively
+      removing edges around a Vert or Face.
 
 This module is all the base elements (Vert, Edge, and Face).
 
-# 2006 June 05
-# 2012 September 30
+created: 2006 June 05
 """
 
 from __future__ import annotations
@@ -41,7 +47,6 @@ if TYPE_CHECKING:
 
 _TMeshElem = TypeVar("_TMeshElem", bound="MeshElementBase")
 
-# _TAttrib = TypeVar("_TAttrib", bound=Attrib[Any])
 _T = TypeVar("_T")
 
 
@@ -175,11 +180,7 @@ def _function_lap(
 
 
 class Vert(MeshElementBase):
-    """Half-edge mesh vertices.
-
-    required attributes
-    :edge: pointer to one edge originating at vert
-    """
+    """Half-edge mesh vertices."""
 
     def __init__(
         self,
@@ -187,7 +188,7 @@ class Vert(MeshElementBase):
         mesh: BlindHalfEdges | None = None,
         edge: Edge | None = None,
     ) -> None:
-        """Create a vert instance."""
+        """Create a Vert instance."""
         super().__init__(*attributes, mesh=mesh)
         self._edge = edge
         if edge is not None:
@@ -213,7 +214,6 @@ class Vert(MeshElementBase):
     @property
     def edges(self) -> list[Edge]:
         """Half edges radiating from vert."""
-        # document why a vert with no edges might be valid
         try:
             vert_edge = self.edge
         except AttributeError:
@@ -255,14 +255,7 @@ class Vert(MeshElementBase):
 
 
 class Edge(MeshElementBase):
-    """Half-edge mesh edges.
-
-    required attributes
-    :orig: pointer to vert at which edge originates
-    :pair: pointer to edge running opposite direction over same verts
-    :face: pointer to face
-    :next: pointer to next edge along face
-    """
+    """Half-edge mesh edges."""
 
     def __init__(
         self,
@@ -274,7 +267,7 @@ class Edge(MeshElementBase):
         next: Edge | None = None,
         prev: Edge | None = None,
     ) -> None:
-        """Create an edge instance."""
+        """Create an Edge instance."""
         super().__init__(*attributes, mesh=mesh)
         self._orig = orig
         self._pair = pair
@@ -411,14 +404,7 @@ class Edge(MeshElementBase):
 
 
 class Face(MeshElementBase):
-    """Half-edge mesh faces.
-
-    required attribute
-    :edge: pointer to one edge on the face
-
-    TODO: document how faces are a bit different because they can be valid without an
-    edge.
-    """
+    """Half-edge mesh faces."""
 
     def __init__(
         self,
@@ -427,7 +413,7 @@ class Face(MeshElementBase):
         edge: Edge | None = None,
         is_hole: bool = False,
     ) -> None:
-        """Create a face instance."""
+        """Create a Face instance."""
         super().__init__(*attributes, mesh=mesh)
         if is_hole:
             self.set_attrib(IsHole())
