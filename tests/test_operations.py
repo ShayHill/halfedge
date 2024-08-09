@@ -391,14 +391,58 @@ class TestRemoveVert:
 
 
 class TestRemoveFace:
-    def test_remove_face(self, mesh_faces: Tuple[HalfEdges, Face]) -> None:
-        """A poor test, running to see it it works.
-        TODO: assert exception
-        TODO: assert hole fills edge when face on boundary
-        TODO: test returns face"""
+
+    # TODO: align names for vi vs fi
+    def test_do_not_break_manifold(self, mesh_faces: Tuple[HalfEdges, Face]) -> None:
+        """Raise ValueError if removing face would break manifold.
+
+        0--1  2--3
+        |  |  |  |
+        4--5--6--7
+        """
+        vl = [Vert() for _ in range(8)]
+        fi: set[Tuple[int, ...]] = {(0, 4, 5, 1), (2, 6, 7, 3)}
+        hi: set[Tuple[int, ...]] = {(0, 1, 5, 6, 2, 3, 7, 6, 5, 4)}
+        mesh = HalfEdges.from_vlvi(vl, fi, hi)
+        (hole,) = mesh.holes
+        with pytest.raises(ValueError) as err:
+            _ = mesh.remove_face(hole)
+        assert "would create a non-manifold mesh" in err.value.args[0]
+
+    def test_hole_fills_when_face_on_boundary(self) -> None:
+        """When a boundary face is removed, destroy the face, not the adjacent hole.
+
+        0--1  2--3
+        |  |  |  |
+        4--5--6--7
+        """
+        vl = [Vert() for _ in range(8)]
+        fi: set[Tuple[int, ...]] = {(0, 4, 5, 1), (2, 6, 7, 3)}
+        hi: set[Tuple[int, ...]] = {(0, 1, 5, 6, 2, 3, 7, 6, 5, 4)}
+        mesh = HalfEdges.from_vlvi(vl, fi, hi)
+        for face in set(mesh.faces):
+            _ = mesh.remove_face(face)
+        assert not mesh.faces
+        assert len(mesh.holes) == 1
+
+    def test_returns_face(self, mesh_faces: Tuple[HalfEdges, Face]) -> None:
+        """Return removed face"""
         mesh, face = mesh_faces
-        _ = mesh.remove_face(face)
-        validate_mesh(mesh)
+        assert isinstance(mesh.remove_face(face), Face)
+
+    @pytest.mark.parametrize("repeat", range(100))
+    def test_remove_to_empty(self, he_mesh: HalfEdges, repeat: int) -> None:
+        """Collapse edge till mesh is empty"""
+        while he_mesh.all_faces:
+            num_faces = len(he_mesh.all_faces)
+            for face in he_mesh.all_faces:
+                with suppress(ValueError):
+                    _ = he_mesh.remove_face(face)
+                validate_mesh(he_mesh)
+                he_mesh.recursively_remove_peninsulas()
+                validate_mesh(he_mesh)
+            assert len(he_mesh.all_faces) < num_faces
+        assert not he_mesh.edges
 
 
 class TestSplitEdge:

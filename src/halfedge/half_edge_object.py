@@ -435,11 +435,41 @@ class HalfEdges(StaticHalfEdges):
             raise UnrecoverableManifoldMeshError(msg)
         return face
 
+    def recursively_remove_peninsulas(self) -> None:
+        r"""Remove all peninsula edges from the mesh.
+
+        This is only necessary if you are trying and failing to remove a face. A mesh
+        face can end up as a polygon with tentacles at the corners. Some of these
+        tentacles are made of bridge edges, but they will be safe to remove if the
+        peninsula edges are removed first.
+
+        0--1--2---3
+              | 4 |
+              |/  |
+              5---6--7--8
+
+        Here, edges 1-2 and 6-7 are bridge edges, but they will not be once
+        peninsulas 0-1 and 7-8 are removed.
+        """
+        peninsulas = set(filter(self._is_peninsula, self.edges))
+        if not peninsulas:
+            return
+        num_peninsulas = len(peninsulas)
+        for edge in list(peninsulas):
+            with suppress(ValueError):
+                _ = self.remove_edge(edge)
+                peninsulas.remove(edge)
+        if len(peninsulas) == num_peninsulas:
+            msg = "Failed to remove all peninsula edges"
+            raise UnrecoverableManifoldMeshError(msg)
+
+        self.recursively_remove_peninsulas()
+
     def remove_face(self, face: Face) -> Face:
         """Remove all edges around a face.
 
         :returns: face or hole remaining
-        :raises: ManifoldMeshError if the error was caught before any edges were removed
+        :raises: ValueError if the error was caught before any edges were removed
             (this SHOULD always be the case).
         :raises: UnrecoverableManifoldMeshError if a problem was found after we started
             removing edges (this SHOULD never happen).
@@ -450,21 +480,47 @@ class HalfEdges(StaticHalfEdges):
 
         Passes attributes:
             * shared face attributes passed to new face
+
+        The test in this method should catch all cases where removing a face would
+        break manifold, but it is a little too conservative. Repeated calls to
+        remove_face have a tendancy to create "tentacles" of peninsula edges.
+
+        0--1--2---3
+              |   |
+              |   |
+              5---6--7--8
+
+        This method will not remove face 5-6-3-2, because doing so would leave
+        disjoint "tentacles" 0-1-2 and 6-7-8. It wouldn't be that difficult to
+        identify these cases and surgically remove faces along with a minimum
+        number of tentacles, but you'd have to somehow guess which tentacles to
+        preserve, and all of this for no practical reason I can see. To remove a
+        tentacled face, you may have to clean up the entire mesh by first running
+        recursively_remove_peninsulas.
         """
-        edges = tuple(face.edges)
-        potential_bridges = [x for x in edges if x.orig.valence > 2]
+        if face.edge not in self.edges:
+            msg = "face is not in mesh"
+            raise ValueError(msg)
+
+        edges = set(face.edges)
+
+        potential_bridges = {x for x in edges if x.orig.valence > 2}
         if len({x.pair.face for x in edges}) < len(potential_bridges):
             msg = (
-                "Removing this face would create non-manifold mesh. "
+                "Removing this face would create a non-manifold mesh. "
                 + "One of this faces's edges is a bridge edge."
             )
             raise ManifoldMeshError(msg)
 
-        try:
-            for edge in edges:
-                _ = self.remove_edge(edge)
-        except ManifoldMeshError as exc:
-            raise UnrecoverableManifoldMeshError(str(exc)) from exc
+        while edges:
+            num_edges = len(edges)
+            for edge in tuple(edges):
+                with suppress(ValueError):
+                    _ = self.remove_edge(edge)
+                    edges.remove(edge)
+            if len(edges) == num_edges:
+                msg = "Failed to remove all edges around face"
+                raise UnrecoverableManifoldMeshError(msg)
         return face
 
     def split_edge(self, edge: Edge) -> Vert:
