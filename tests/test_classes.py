@@ -23,7 +23,12 @@ from halfedge.half_edge_elements import (
 )
 from halfedge.half_edge_object import HalfEdges
 from halfedge.half_edge_querries import StaticHalfEdges
-from halfedge.type_attrib import Attrib, IncompatibleAttrib, NumericAttrib
+from halfedge.type_attrib import (
+    Attrib,
+    ContagionAttrib,
+    IncompatibleAttrib,
+    NumericAttrib,
+)
 from tests.conftest import compare_circular_2, get_canonical_mesh
 
 _TElemAttrib = TypeVar("_TElemAttrib", bound="Attrib[Any]")
@@ -65,7 +70,7 @@ class TestAttribBaseClass:
 class TestContagionAttrib:
     def test_return_on_merge_if_no_values(self) -> None:
         """Return None if no values are set."""
-        attrib: NumericAttrib[int] = NumericAttrib()
+        attrib = ContagionAttrib()
         new_attrib = attrib.merge(None, None, None)
         assert new_attrib is None
 
