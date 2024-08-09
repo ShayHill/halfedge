@@ -20,7 +20,7 @@ to define each attribute as a descendent of Attrib.
     class MyAttrib(Attrib[something]):
         ...
         def merge [define how multiple instances of this attribute will combine]
-        def slice [define how this attribute will be passed when the element is split]
+        def split [define how this attribute will be passed when the element is split]
         def _infer_value [define how to calculate the value if not set]
 
     vert = Vert()
@@ -69,7 +69,7 @@ class Attrib(Generic[_T]):
     attributes.
 
     Do not overload `__init__` or `value`. For the most part, treat as an ABC with
-    abstract methods `merge`, `slice`, and `_infer_value`--although the base methods
+    abstract methods `merge`, `split`, and `_infer_value`--although the base methods
     are marginally useful and instructive, so you will not need to overload both in
     every case.
     """
@@ -122,7 +122,7 @@ class Attrib(Generic[_T]):
         _ = merge_from
         return None
 
-    def slice(self: _TAttrib) -> _TAttrib | None:
+    def split(self: _TAttrib) -> _TAttrib | None:
         """Define how attribute will be passed when dividing self.element.
 
         :return: Attrib instance to be set on any element created by dividing and
@@ -207,8 +207,8 @@ class ContagionAttrib(Attrib[Literal[True]]):
             return attribs[0]
         return None
 
-    def slice(self: _TAttrib) -> _TAttrib | None:
-        """Copy attribute to slices.
+    def split(self: _TAttrib) -> _TAttrib | None:
+        """Copy attribute to splits.
 
         Holes are defined with IsHole(ContagionAttributeBase), so this will split a
         non-face hole into two non-face holes and a hole (is_face == True) into two
@@ -239,7 +239,7 @@ class IncompatibleAttrib(Attrib[_T]):
                 return None
         return merge_from[0]
 
-    def slice(self: _TAttrib) -> _TAttrib | None:
+    def split(self: _TAttrib) -> _TAttrib | None:
         """Pass the value on."""
         return self
 

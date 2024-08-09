@@ -217,7 +217,7 @@ class HalfEdges(StaticHalfEdges):
 
         # if face is not split, new face will be created then immediately written over
         new_face = self.new_face()
-        _ = new_face.slice_from(face)
+        _ = new_face.split_from(face)
         _update_face_edges(new_face, edge)
         _update_face_edges(face, edge.pair)
 
@@ -539,8 +539,8 @@ class HalfEdges(StaticHalfEdges):
         new_edge: Edge | None = None
         for orig, dest in ((edge.dest, new_vert), (new_vert, edge.orig)):
             new_edge = self.insert_edge(orig, dest, edge.face)
-            _ = new_edge.slice_from(edge.pair)
-            _ = new_edge.pair.slice_from(edge)
+            _ = new_edge.split_from(edge.pair)
+            _ = new_edge.pair.split_from(edge)
         if new_edge is None:
             msg = par(
                 """new edge was not created. This is only possible if the mesh is

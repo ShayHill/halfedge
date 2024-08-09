@@ -132,18 +132,18 @@ class MeshElementBase:
                 self.set_attrib(merged_attrib)
         return self
 
-    def slice_from(self: _TMeshElem, element: _TMeshElem) -> _TMeshElem:
+    def split_from(self: _TMeshElem, element: _TMeshElem) -> _TMeshElem:
         """Pass attributes when dividing or altering elements.
 
-        Use the 'slice' method of Attrib instances to determine how to pass
+        Use the 'split' method of Attrib instances to determine how to pass
         attributes child elements when dividing an element.
         """
         elem_attribs = {type(x) for x in element.attrib.values()}
         self_attribs = {type(x) for x in self.attrib.values()}
         for attrib in elem_attribs - self_attribs:
-            sliced = element.get_attrib(attrib).slice()
-            if sliced is not None:
-                self.set_attrib(sliced)
+            splitted = element.get_attrib(attrib).split()
+            if splitted is not None:
+                self.set_attrib(splitted)
         return self
 
     def __lt__(self: _TMeshElem, other: _TMeshElem) -> bool:

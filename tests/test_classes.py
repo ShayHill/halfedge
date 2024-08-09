@@ -54,10 +54,10 @@ class TestAttribBaseClass:
         new_attrib = attrib.merge(None)
         assert new_attrib is None
 
-    def test_slice_returns_none(self) -> None:
-        """Return None when attempting to slice Attrib instances."""
+    def test_split_returns_none(self) -> None:
+        """Return None when attempting to split Attrib instances."""
         attrib: Attrib[Any] = Attrib()
-        new_attrib = attrib.slice()
+        new_attrib = attrib.split()
         assert new_attrib is None
 
 
@@ -70,10 +70,10 @@ class TestContagionAttrib:
 
 
 class TestIncompatibleAttrib:
-    def test_return_self_on_slice(self) -> None:
+    def test_return_self_on_split(self) -> None:
         """Return self when slicing from."""
         attrib: IncompatibleAttrib[int] = IncompatibleAttrib()
-        new_attrib = attrib.slice()
+        new_attrib = attrib.split()
         assert new_attrib is attrib
 
 
