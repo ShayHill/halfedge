@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from contextlib import suppress
 from typing import TypeVar
+from paragraphs import par
 
 from halfedge.half_edge_elements import Edge, Face, ManifoldMeshError, Vert
 from halfedge.half_edge_querries import StaticHalfEdges
@@ -521,7 +522,7 @@ class HalfEdges(StaticHalfEdges):
         """Add a vert to the middle of an edge.
 
         :param edge: edge to be split
-        :return:
+        :return: new vert in the middle of the edge
 
         Passes attributes:
             * shared vert attributes passed to new vert
@@ -539,10 +540,15 @@ class HalfEdges(StaticHalfEdges):
             new_edge = self.insert_edge(orig, dest, edge.face)
             _ = new_edge.slice_from(edge.pair)
             _ = new_edge.pair.slice_from(edge)
-        _ = self.remove_edge(edge)
         if new_edge is None:
-            msg = "new edge was not created"
-            raise ValueError(msg)
+            msg = par(
+                """new edge was not created. This is only possible if the mesh is
+                broken. It didn't happen in this method, because nothing has been
+                updated yet, but your mesh is definitely broken. I'll be suprised if
+                you ever see this message."""
+                )
+            raise UnrecoverableManifoldMeshError(msg)
+        _ = self.remove_edge(edge)
         _update_face_edges(edge_face, new_edge.pair)
         _update_face_edges(pair_face, new_edge)
         return new_vert
