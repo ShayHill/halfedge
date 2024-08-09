@@ -4,7 +4,7 @@ created: 181121 13:14:06
 """
 
 from itertools import product
-from typing import Any, Dict, Iterable, List, Sequence, Set, Tuple, TypeVar, cast, Iterable
+from typing import Any, Dict, Iterable, List, Sequence, Set, Tuple, TypeVar, cast
 
 import pytest
 

@@ -185,7 +185,7 @@ class Coordinate(IncompatibleAttrib[Tuple[int, int, int]]):
 
 
 class TestInitVert:
-    def setup_method(self):
+    def setup_method(self) -> None:
         self.coordinate: Coordinate  # type: ignore
         self.edge: Edge  # type: ignore
         self.vert: Vert  # type: ignore
@@ -193,7 +193,7 @@ class TestInitVert:
         self.edge = Edge()
         self.vert = Vert(self.coordinate, edge=self.edge)
 
-    def test_fill_from_preserves_pointers(self):
+    def test_fill_from_preserves_pointers(self) -> None:
         """fill_from() will not overwrite pointers"""
         edge = Edge()
         vert = Vert(edge=edge)
@@ -201,32 +201,32 @@ class TestInitVert:
         _ = vert.merge_from(filler)
         assert vert.edge is edge
 
-    def test_coordinate_is_attribute(self):
+    def test_coordinate_is_attribute(self) -> None:
         """Coordinate has been captured as an attribute"""
         result = self.vert.get_attrib(Coordinate).value
         expect = self.coordinate.value
         assert result == expect
 
-    def test_coordinate_element_is_vert(self):
+    def test_coordinate_element_is_vert(self) -> None:
         """Coordinate.element is set during init/"""
         assert self.vert.get_attrib(Coordinate).element is self.vert
 
-    def test_coordinate_value_has_not_changes(self):
+    def test_coordinate_value_has_not_changes(self) -> None:
         """Coordinate value is still (1, 2, 3)"""
         assert self.vert.get_attrib(Coordinate).value == (1, 2, 3)
 
-    def test_points_to_edge(self):
+    def test_points_to_edge(self) -> None:
         """vert.edge points to input edge"""
         assert self.vert.edge is self.edge
 
-    def test_mirrored_assignment(self):
+    def test_mirrored_assignment(self) -> None:
         """vert.edge assignment mirrored in edge.orig"""
         assert self.vert.edge.orig is self.vert
 
 
 class TestInitEdge:
 
-    def setup_method(self):
+    def setup_method(self) -> None:
         self.coordinate: Coordinate  # type: ignore
         self.edge: Edge  # type: ignore
         self.orig: Vert  # type: ignore
@@ -247,50 +247,50 @@ class TestInitEdge:
             next=self.next,
         )
 
-    def test_coordinate_is_attribute(self):
+    def test_coordinate_is_attribute(self) -> None:
         """Coordinate has been captured as an attribute"""
         assert self.edge.get_attrib(Coordinate).value == self.coordinate.value
 
-    def test_coordinate_element_is_vert(self):
+    def test_coordinate_element_is_vert(self) -> None:
         """Coordinate.element is set during init/"""
         assert self.edge.get_attrib(Coordinate).element is self.edge
 
-    def test_coordinate_value_has_not_changes(self):
+    def test_coordinate_value_has_not_changes(self) -> None:
         """Coordinate value is still (1, 2, 3)"""
         assert self.edge.get_attrib(Coordinate).value == (1, 2, 3)
 
-    def test_points_to_orig(self):
+    def test_points_to_orig(self) -> None:
         """vert.edge points to input edge"""
         assert self.edge.orig is self.orig
 
-    def test_mirrored_orig(self):
+    def test_mirrored_orig(self) -> None:
         """edge.orig assignment mirrored in edge.orig"""
         assert self.edge.orig.edge is self.edge
 
-    def test_points_to_pair(self):
+    def test_points_to_pair(self) -> None:
         """vert.pair points to input edge"""
         assert self.edge.pair is self.pair
 
-    def test_mirrored_pair(self):
+    def test_mirrored_pair(self) -> None:
         """edge.pair assignment mirrored in edge.pair"""
         assert self.edge.pair.pair is self.edge
 
-    def test_points_to_face(self):
+    def test_points_to_face(self) -> None:
         """edge.face points to input face"""
         assert self.edge.face is self.face
 
-    def test_mirrored_face(self):
+    def test_mirrored_face(self) -> None:
         """edge.face assignment mirrored in edge.face"""
         assert self.edge.face.edge is self.edge
 
-    def test_points_to_next(self):
+    def test_points_to_next(self) -> None:
         """edge.next points to input edge"""
         assert self.edge.next is self.next
 
 
 class TestInitFace:
 
-    def setup_method(self):
+    def setup_method(self) -> None:
         self.coordinate: Coordinate  # type: ignore
         self.edge: Edge  # type: ignore
         self.face: Face  # type: ignore
@@ -298,23 +298,23 @@ class TestInitFace:
         self.edge = Edge()
         self.face = Face(self.coordinate, edge=self.edge)
 
-    def test_coordinate_is_attribute(self):
+    def test_coordinate_is_attribute(self) -> None:
         """Coordinate has been captured as an attribute"""
         assert self.face.get_attrib(Coordinate).value is self.coordinate.value
 
-    def test_coordinate_element_is_vert(self):
+    def test_coordinate_element_is_vert(self) -> None:
         """Coordinate.element is set during init/"""
         assert self.face.get_attrib(Coordinate).element is self.face
 
-    def test_coordinate_value_has_not_changes(self):
+    def test_coordinate_value_has_not_changes(self) -> None:
         """Coordinate value is still (1, 2, 3)"""
         assert self.face.get_attrib(Coordinate).value == (1, 2, 3)
 
-    def test_points_to_edge(self):
+    def test_points_to_edge(self) -> None:
         """face.edge points to input edge"""
         assert self.face.edge is self.edge
 
-    def test_mirrored_orig(self):
+    def test_mirrored_orig(self) -> None:
         """face.edge assignment mirrored in face.edge"""
         assert self.face.edge.face is self.face
 

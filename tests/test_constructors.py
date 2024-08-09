@@ -7,7 +7,6 @@ created: 170204 14:22:23
 
 import itertools
 import random
-from keyword import iskeyword
 from typing import Any, Dict, Tuple
 
 import pytest
@@ -31,16 +30,6 @@ identifiers = (
 
 class Coordinate(IncompatibleAttrib[Tuple[float, ...]]):
     pass
-
-
-def valid_identifier():
-    """Return a strategy which generates a valid Python Identifier"""
-    return next(
-        filter(
-            lambda x: x[0].isalpha() and x.isidentifier() and not (iskeyword(x)),
-            identifiers,
-        )
-    )
 
 
 class TestFromVlfi:
