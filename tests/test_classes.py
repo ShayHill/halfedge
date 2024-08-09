@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import itertools
 import random
-from keyword import iskeyword
 from typing import Any, Tuple, TypeVar
 
 import pytest
@@ -42,16 +41,6 @@ class Flag(IncompatibleAttrib[int]):
 
 class Score(NumericAttrib[float]):
     pass
-
-
-def valid_identifier():
-    """Return a valid Python Identifier"""
-    return next(
-        filter(
-            lambda x: x[0].isalpha() and x.isidentifier() and not (iskeyword(x)),
-            identifiers,
-        )
-    )
 
 
 class TestElemAttribs:
@@ -96,11 +85,11 @@ class TestElemAttribs:
 
 class TestMeshElementBase:
     def test_lt_gt(self) -> None:
-        """Sorts by id."""
+        """Sorts by sn."""
         elem1 = MeshElementBase()
         elem2 = MeshElementBase()
-        assert (elem1 < elem2) == (id(elem1) < id(elem2))
-        assert (elem2 > elem1) == (id(elem2) > id(elem1))
+        assert (elem1 < elem2) == (elem1.sn < elem2.sn)
+        assert (elem2 > elem1) == (elem2.sn > elem1.sn)
 
     def test_set_attrib(self) -> None:
         """Set an attrib by passing a MeshElementBase instance"""

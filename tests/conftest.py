@@ -4,7 +4,7 @@ created: 181121 13:14:06
 """
 
 from itertools import product
-from typing import Any, Dict, Iterable, List, Sequence, Set, Tuple, TypeVar, cast
+from typing import Any, Dict, Iterable, List, Sequence, Set, Tuple, TypeVar, cast, Iterable
 
 import pytest
 
@@ -189,6 +189,18 @@ def compare_circular_2(
 
 
 _TAxis = TypeVar("_TAxis")
+
+
+def get_canonical_index_tuple(vals: Iterable[int]) -> Tuple[int, ...]:
+    """Return a tuple with the lowest value first.
+
+    This is useful for comparing circular sequences. It will only be canonical when
+    only one min value is present. That will always be the case for face or edge
+    indices.
+    """
+    vals_tuple = tuple(vals)
+    min_idx = vals_tuple.index(min(vals_tuple))
+    return vals_tuple[min_idx:] + vals_tuple[:min_idx]
 
 
 def get_canonical_vr(
