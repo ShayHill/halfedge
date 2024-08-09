@@ -91,6 +91,11 @@ class StaticHalfEdges(BlindHalfEdges):
         return sorted(self.edges)
 
     @property
+    def fl(self) -> list[Face]:
+        """face list - Sorted list of faces."""
+        return sorted(self.faces)
+
+    @property
     def _vert2list_index(self) -> dict[Vert, int]:
         """self.vl mapped to list indices."""
         return {vert: cnt for cnt, vert in enumerate(self.vl)}
