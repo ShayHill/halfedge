@@ -7,7 +7,6 @@ created: 170204 14:22:23
 
 from __future__ import annotations
 
-import itertools
 import random
 from typing import Any, Tuple, TypeVar
 
@@ -32,11 +31,6 @@ from halfedge.type_attrib import (
 from tests.conftest import compare_circular_2, get_canonical_mesh
 
 _TElemAttrib = TypeVar("_TElemAttrib", bound="Attrib[Any]")
-
-alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-identifiers = (
-    "".join(random.choice(alphabet) for _ in range(10)) for _ in itertools.count()
-)
 
 
 class Flag(IncompatibleAttrib[int]):
