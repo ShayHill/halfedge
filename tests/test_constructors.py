@@ -15,6 +15,7 @@ import pytest
 from halfedge.half_edge_elements import (
     ManifoldMeshError,
     MeshElementBase,
+    Vert,
     _function_lap,
 )
 from halfedge.half_edge_object import HalfEdges
@@ -41,6 +42,16 @@ def valid_identifier():
             identifiers,
         )
     )
+
+
+class TestFromVlfi:
+    def test_raise_on_non_inferable_holes(self) -> None:
+        """Raises if holes cannot be inferred."""
+        vl = [Vert() for _ in range(7)]
+        fi: list[Tuple[int, ...]] = [(0, 2, 3, 1), (3, 5, 6, 4)]
+        with pytest.raises(ManifoldMeshError) as err:
+            _ = HalfEdges.from_vlfi(vl, fi)
+        assert "Ambiguous 'next'" in err.value.args[0]
 
 
 class TestMeshElementBase:
