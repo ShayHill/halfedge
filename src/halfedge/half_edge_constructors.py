@@ -75,7 +75,7 @@ class BlindHalfEdges:
         """Create a new Face instance and mark it as a hole."""
         return Face(*attributes, mesh=self, edge=edge, is_hole=True)
 
-    def _create_face_edges(self, face_verts: Iterable[Vert], face: Face) -> list[Edge]:
+    def create_face_edges(self, face_verts: Iterable[Vert], face: Face) -> list[Edge]:
         """Create edges around a face defined by vert indices."""
         new_edges = [self.new_edge(orig=vert, face=face) for vert in face_verts]
         for idx, edge in enumerate(new_edges):
@@ -89,7 +89,7 @@ class BlindHalfEdges:
             with suppress(KeyError):
                 edge.pair = endpoints2edge[(edge.dest, edge.orig)]
 
-    def _infer_holes(self) -> None:
+    def infer_holes(self) -> None:
         """Fill in missing hole faces where unambiguous.
 
         :raises: Manifold mesh error if holes touch at corners. If this happens, holes
@@ -170,9 +170,9 @@ class BlindHalfEdges:
         for vert in vl:
             vert.mesh = mesh
         for face_verts in vr:
-            mesh.edges.update(mesh._create_face_edges(face_verts, mesh.new_face()))
+            mesh.edges.update(mesh.create_face_edges(face_verts, mesh.new_face()))
         for face_verts in hr:
-            mesh.edges.update(mesh._create_face_edges(face_verts, mesh.new_hole()))
+            mesh.edges.update(mesh.create_face_edges(face_verts, mesh.new_hole()))
         mesh.find_pairs()
-        mesh._infer_holes()
+        mesh.infer_holes()
         return mesh

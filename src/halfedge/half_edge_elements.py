@@ -307,7 +307,11 @@ class Edge(MeshElementBase):
     @pair.setter
     def pair(self, pair: Edge) -> None:
         self._pair = pair
-        pair._pair = self
+        pair.set_pair_without_side_effects(self)
+
+    def set_pair_without_side_effects(self, edge: Edge) -> None:
+        """Set pair without setting pair's pair."""
+        self._pair = edge
 
     @property
     def face(self) -> Face:
