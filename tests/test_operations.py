@@ -272,7 +272,7 @@ class TestRemoveEdge:
         row_vl = meshes_vlvi["grid_vl"][:8]
         row_vi = {x for x in meshes_vlvi["grid_vi"] if not any(y > 7 for y in x)}
         vl = [Vert(Coordinate(x)) for x in row_vl]
-        mesh = HalfEdges.from_vlvi(vl, row_vi)
+        mesh = HalfEdges.from_vlfi(vl, row_vi)
         outer_center_edges = [
             x
             for x in mesh.edges
@@ -372,7 +372,7 @@ class TestRemoveVert:
 
     def test_peninsulas(self) -> None:
         """Do not fail when working with peninsulas."""
-        mesh = HalfEdges.from_vlvi(
+        mesh = HalfEdges.from_vlfi(
             [Vert(Coordinate((x,))) for x in range(8)],
             fi={(5, 6, 2, 1)},
             hi={(6, 5, 4, 7, 4, 3, 4, 0, 4, 5, 1, 2)},
@@ -392,7 +392,6 @@ class TestRemoveVert:
 
 class TestRemoveFace:
 
-    # TODO: align names for vi vs fi
     def test_do_not_break_manifold(self, mesh_faces: Tuple[HalfEdges, Face]) -> None:
         """Raise ValueError if removing face would break manifold.
 
@@ -403,7 +402,7 @@ class TestRemoveFace:
         vl = [Vert() for _ in range(8)]
         fi: set[Tuple[int, ...]] = {(0, 4, 5, 1), (2, 6, 7, 3)}
         hi: set[Tuple[int, ...]] = {(0, 1, 5, 6, 2, 3, 7, 6, 5, 4)}
-        mesh = HalfEdges.from_vlvi(vl, fi, hi)
+        mesh = HalfEdges.from_vlfi(vl, fi, hi)
         (hole,) = mesh.holes
         with pytest.raises(ValueError) as err:
             _ = mesh.remove_face(hole)
@@ -419,7 +418,7 @@ class TestRemoveFace:
         vl = [Vert() for _ in range(8)]
         fi: set[Tuple[int, ...]] = {(0, 4, 5, 1), (2, 6, 7, 3)}
         hi: set[Tuple[int, ...]] = {(0, 1, 5, 6, 2, 3, 7, 6, 5, 4)}
-        mesh = HalfEdges.from_vlvi(vl, fi, hi)
+        mesh = HalfEdges.from_vlfi(vl, fi, hi)
         for face in set(mesh.faces):
             _ = mesh.remove_face(face)
         assert not mesh.faces
@@ -487,7 +486,7 @@ class TestFlipEdge:
 
         vl = [Vert(Coordinate((x,))) for x in range(4)]
         vi: Set[Tuple[int, ...]] = {(0, 1, 2), (0, 2, 3)}
-        mesh = HalfEdges.from_vlvi(vl, vi)
+        mesh = HalfEdges.from_vlfi(vl, vi)
         split = next(
             x for x in mesh.edges if x.orig.valence == 3 and x.pair.orig.valence == 3
         )
@@ -504,7 +503,7 @@ class TestCollapseEdge:
         """End up with a 1-face mesh after collapsing one edge of a single triangle."""
         vl = [Vert() for _ in range(3)]
         vi: set[Tuple[int, ...]] = {(0, 1, 2)}
-        mesh = HalfEdges.from_vlvi(vl, vi)
+        mesh = HalfEdges.from_vlfi(vl, vi)
         edge = sorted(mesh.edges, key=attrgetter("sn"))[which_edge]
         _ = mesh.collapse_edge(edge)
         assert len(mesh.faces) == 0
@@ -533,7 +532,7 @@ class TestCollapseEdge:
         vl = [Vert() for _ in range(5)]
         vl[0].sn = vl[0].sn
         vi: list[Tuple[int, ...]] = [(0, 3, 2, 4, 1), (2, 3, 4)]
-        mesh = HalfEdges.from_vlvi(vl, vi)
+        mesh = HalfEdges.from_vlfi(vl, vi)
         bottom_edge = (vl[0].sn + 3, vl[0].sn + 4)
         face_edge = next(x for x in mesh.edges if (x.orig.sn, x.dest.sn) == bottom_edge)
         _ = mesh.collapse_edge(face_edge)
@@ -564,7 +563,7 @@ class TestCollapseEdge:
             (1, 2, 4),
             (2, 3, 4),
         }
-        mesh = HalfEdges.from_vlvi(vl, vi)
+        mesh = HalfEdges.from_vlfi(vl, vi)
         face_edge = next(
             x
             for x in mesh.edges
@@ -593,7 +592,7 @@ class TestCollapseEdge:
         sides = {x + tuple(reversed(y)) for x, y in zip(legs, (legs * 2)[1:])}
         vl = [Vert(Coordinate((x,))) for x in range(20)]
         fi = {top} | {tuple(reversed(bot))} | sides
-        drum = HalfEdges().from_vlvi(vl, fi)
+        drum = HalfEdges().from_vlfi(vl, fi)
         while drum.edges:
             edges = list(drum.edges)
             random.shuffle(edges)
@@ -617,7 +616,7 @@ class TestCollapseEdge:
         be a 4-edge face.
         """
         vl = [Vert(Coordinate((x,))) for x in range(4)]
-        mesh = HalfEdges.from_vlvi(vl, {(0, 1, 3), (1, 2, 0, 3)})
+        mesh = HalfEdges.from_vlfi(vl, {(0, 1, 3), (1, 2, 0, 3)})
         edge = next(
             x
             for x in mesh.edges

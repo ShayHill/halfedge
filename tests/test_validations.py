@@ -63,7 +63,7 @@ def test_validate_mesh_edge_face(he_mesh: HalfEdges) -> None:
 def test_disjoint_face() -> None:
     """Fails for disconnected faces."""
     vl = [Vert(Coordinate((0, 0, 0))) for _ in range(6)]
-    mesh = StaticHalfEdges.from_vlvi(vl, {(0, 1, 2), (3, 4, 5)})
+    mesh = StaticHalfEdges.from_vlfi(vl, {(0, 1, 2), (3, 4, 5)})
     with pytest.raises(ManifoldMeshError) as err:
         validate_mesh(mesh)
     assert "not all faces can be reached" in err.value.args[0]

@@ -75,13 +75,13 @@ def meshes_vlvi() -> Dict[str, Any]:
 @pytest.fixture(scope="function")
 def he_cube(meshes_vlvi: Dict[str, Any]) -> HalfEdges:
     vl = [Vert(Coordinate(x)) for x in meshes_vlvi["cube_vl"]]
-    return HalfEdges.from_vlvi(vl, meshes_vlvi["cube_vi"])
+    return HalfEdges.from_vlfi(vl, meshes_vlvi["cube_vi"])
 
 
 @pytest.fixture(scope="function")
 def he_grid(meshes_vlvi: Dict[str, Any]) -> HalfEdges:
     vl = [Vert(Coordinate(x)) for x in meshes_vlvi["grid_vl"]]
-    return HalfEdges.from_vlvi(vl, meshes_vlvi["grid_vi"])
+    return HalfEdges.from_vlfi(vl, meshes_vlvi["grid_vi"])
 
 
 @pytest.fixture(scope="function", params=range(2))

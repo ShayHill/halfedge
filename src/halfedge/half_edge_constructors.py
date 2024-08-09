@@ -129,7 +129,7 @@ class BlindHalfEdges:
         self.edges.update(hole_edges)
 
     @classmethod
-    def from_vlvi(
+    def from_vlfi(
         cls: type[_TBlindHalfEdges],
         vl: list[Vert],
         fi: Iterable[tuple[int, ...]],
