@@ -286,8 +286,6 @@ class HalfEdges(StaticHalfEdges):
             * shared face attributes passed to new face
 
         """
-        # TODO: incorporate point_Away_From_edge
-        # TODO: new hole every time
         if edge not in self.edges:
             msg = f"edge {id(edge)} does not exist in mesh"
             raise ValueError(msg)
