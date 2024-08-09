@@ -17,7 +17,7 @@ then passing that raw data to mesh_from_vr would create a mesh with 6 faces and
 from __future__ import annotations
 
 from contextlib import suppress
-from typing import TYPE_CHECKING, Any, Iterable, TypeVar
+from typing import TYPE_CHECKING, Any, Iterable, Sequence, TypeVar
 
 from halfedge.half_edge_elements import Edge, Face, ManifoldMeshError, Vert
 
@@ -131,26 +131,20 @@ class BlindHalfEdges:
     @classmethod
     def from_vlfi(
         cls: type[_TBlindHalfEdges],
-        vl: list[Vert],
+        vl: Sequence[Vert],
         fi: Iterable[tuple[int, ...]],
         hi: Iterable[tuple[int, ...]] | None = None,
     ) -> _TBlindHalfEdges:
-        """Create a set of half edges from a vertex list and vertex index.
+        """Create a set of half edges from a vertex list and face index.
 
         :param vl: (vertex list) a seq of vertices
         [(12.3, 42.02, 4.2), (23.1, 3.55, 3.2) ...]
 
-        :param fi: (face index) a seq of face indices (indices to vl)
+        :param fi: (face index) an iterable of face indices (indices to vl)
         [(0, 1, 3), (4, 2, 5, 7) ...]
 
         :param hi: (hole index) optionally provide empty faces (same format as fi)
         that will be used to pair all edges
-
-        # TODO: update docstring
-        :param attr_name: optionally override the default attribute name: "coordinate"
-
-        Presumably, the vl is a list of coordinate values. These will be assigned,
-        by default, to ``vert_instance.coordinate.``
 
         Will attempt to add missing hole edges. This is intended for fields of
         faces on a plane (like a 2D Delaunay triangulation), but the algorithm
