@@ -95,7 +95,6 @@ class HalfEdges(StaticHalfEdges):
         :param default: edge value if vert is new (no connected edges)
             - this will always be the edge pair.
         :return: a vert on the face (or presumed to be) and the edge ENDING at vert
-        :raises: ValueError if very and edge are ambiguous
 
         This is a subroutine of insert_edge, which accepts a vert or edge as origin
         and destination arguments. The wing returned is
@@ -115,11 +114,8 @@ class HalfEdges(StaticHalfEdges):
             return elem.dest, elem
         if elem not in face.verts:
             return elem, default
-        with suppress(ValueError):
-            prev_edge = _get_singleton_item({x for x in face.edges if x.dest is elem})
-            return elem, prev_edge
-        msg = "edge cannot be inferred from orig and face"
-        raise ValueError(msg)
+        prev_edge = _get_singleton_item({x for x in face.edges if x.dest is elem})
+        return elem, prev_edge
 
     def _point_away_from_edge(self, *edges: Edge) -> None:
         """Prepare edge to be removed. Remove vert and face pointers to edge.
