@@ -1,7 +1,7 @@
 ci:
   skip: [pyright]
 
-# exclude: "tests"
+exclude: ".*snapshot.*"
 
 repos:
 
@@ -132,7 +132,7 @@ repos:
       args:
       - --target-version=py38
       - --select=ALL
-      - --ignore=COM812,D203,D213,ISC003,PYI019,A002,PLR2004,D403,PLR0913,SLF001,FIX002,TD003,TD002,ERA001
+      - --ignore=COM812,D203,D213,ISC003,PYI019,A002,PLR2004,D403,PLR0913,SLF001,FIX002,TD003,TD002
       # - --fix
 
 # reads pyproject.toml for additional config
