@@ -46,6 +46,7 @@ attribute you need to define.
 
 from __future__ import annotations
 
+from contextlib import suppress
 from typing import TYPE_CHECKING, Any, Generic, Literal, TypeVar
 
 from paragraphs import par
@@ -87,12 +88,12 @@ class Attrib(Generic[_T]):
         """Return value if set, else try to infer a value."""
         if self._value is not None:
             return self._value
-        value = self._infer_value()
-        if value is None:
-            msg = f"no value set and failed to infer from {self.element}"
-            raise TypeError(msg)
-        self._value = value
-        return value
+        with suppress(NotImplementedError, ValueError):
+            value = self._infer_value()
+            self._value = value
+            return value
+        msg = f"no value set and failed to infer from {self.element}"
+        raise AttributeError(msg)
 
     def copy_to_element(self: Attrib[_T], element: MeshElementBase) -> Attrib[_T]:
         """Return a new instance with the same value, assigned to a new element."""
@@ -141,7 +142,7 @@ class Attrib(Generic[_T]):
         """
         return None
 
-    def _infer_value(self) -> _T | None:
+    def _infer_value(self) -> _T:
         """Get value of self from self._element.
 
         Use the containing element to determine a value for self. If no value can be
@@ -202,7 +203,6 @@ class ContagionAttrib(Attrib[Literal[True]]):
         with that attribute. Otherwise None.
         """
         attribs = [x for x in merge_from if x is not None]
-        attribs = [x for x in attribs if x.value is not None]
         if attribs:
             return attribs[0]
         return None
@@ -241,9 +241,7 @@ class IncompatibleAttrib(Attrib[_T]):
 
     def slice(self: _TAttrib) -> _TAttrib | None:
         """Pass the value on."""
-        if self.value:
-            return self
-        return None
+        return self
 
 
 class NumericAttrib(Attrib[_T]):
@@ -252,7 +250,7 @@ class NumericAttrib(Attrib[_T]):
     @classmethod
     def merge(cls, *merge_from: _TAttrib | None) -> _TAttrib | None:
         """Average values if every contributor has a value. Otherwise None."""
-        have_values = [x for x in merge_from if x is not None and x.value is not None]
+        have_values = [x for x in merge_from if x is not None]
         if not have_values:
             return None
         values = [x.value for x in have_values]

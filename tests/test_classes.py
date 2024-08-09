@@ -43,6 +43,50 @@ class Score(NumericAttrib[float]):
     pass
 
 
+class TestAttribBaseClass:
+    def test_attribute_error_if_no_value_set(self) -> None:
+        """Raise AttributeError if no value set."""
+        attrib: Attrib[Any] = Attrib()
+        with pytest.raises(AttributeError):
+            _ = attrib.value
+
+    def test_merge_returns_none(self) -> None:
+        """Return None when attempting to merge Attrib instances."""
+        attrib: Attrib[Any] = Attrib()
+        new_attrib = attrib.merge(None)
+        assert new_attrib is None
+
+    def test_slice_returns_none(self) -> None:
+        """Return None when attempting to slice Attrib instances."""
+        attrib: Attrib[Any] = Attrib()
+        new_attrib = attrib.slice()
+        assert new_attrib is None
+
+
+class TestContagionAttrib:
+    def test_return_on_merge_if_no_values(self) -> None:
+        """Return None if no values are set."""
+        attrib: NumericAttrib[int] = NumericAttrib()
+        new_attrib = attrib.merge(None, None, None)
+        assert new_attrib is None
+
+
+class TestIncompatibleAttrib:
+    def test_return_self_on_slice(self) -> None:
+        """Return self when slicing from."""
+        attrib: IncompatibleAttrib[int] = IncompatibleAttrib()
+        new_attrib = attrib.slice()
+        assert new_attrib is attrib
+
+
+class TestNumericAttrib:
+    def test_return_none_on_empty_merge(self) -> None:
+        """Return None if no values are set."""
+        attrib: NumericAttrib[int] = NumericAttrib()
+        new_attrib = attrib.merge(None, None, None)
+        assert new_attrib is None
+
+
 class TestElemAttribs:
     def test_incompatible_merge_match(self) -> None:
         """Return a new attribute with same value if all values are equal"""
@@ -73,9 +117,10 @@ class TestElemAttribs:
             def merge(cls, *merge_from: _TElemAttrib | None) -> _TElemAttrib | None:
                 raise NotImplementedError()
 
-            def _infer_value(self):
+            def _infer_value(self) -> int:
                 if self.element is None:
-                    return None
+                    msg = "no element from which to infer a value"
+                    raise AttributeError(msg)
                 return self.element.sn
 
         elem = MeshElementBase()
