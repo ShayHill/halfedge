@@ -19,6 +19,8 @@ from __future__ import annotations
 from contextlib import suppress
 from typing import TYPE_CHECKING, Any, Iterable, Sequence, TypeVar
 
+from paragraphs import par
+
 from halfedge.half_edge_elements import Edge, Face, ManifoldMeshError, Vert
 
 if TYPE_CHECKING:
@@ -112,10 +114,9 @@ class BlindHalfEdges:
 
         orig2hole_edge = {x.orig: x for x in hole_edges}
         if len(orig2hole_edge) < len(hole_edges):
-            msg = (
-                "Multiple holes edges start at the same vertex. "
-                + "Ambiguous 'next' in inferred pair edge. "
-                + "Inferred holes probably meet at corner."
+            msg = par(
+                """Multiple holes edges start at the same vertex. Ambiguous 'next' in
+                inferred pair edge. Inferred holes probably meet at corner."""
             )
             raise ManifoldMeshError(msg)
 

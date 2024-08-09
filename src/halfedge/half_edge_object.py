@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from contextlib import suppress
 from typing import TypeVar
+
 from paragraphs import par
 
 from halfedge.half_edge_elements import Edge, Face, ManifoldMeshError, Vert
@@ -501,9 +502,9 @@ class HalfEdges(StaticHalfEdges):
 
         potential_bridges = {x for x in edges if x.orig.valence > 2}
         if len({x.pair.face for x in edges}) < len(potential_bridges):
-            msg = (
-                "Removing this face would create a non-manifold mesh. "
-                + "One of this faces's edges is a bridge edge."
+            msg = par(
+                """Removing this face would create a non-manifold mesh. One of this
+                faces's edges is a bridge edge."""
             )
             raise ManifoldMeshError(msg)
 
@@ -546,7 +547,7 @@ class HalfEdges(StaticHalfEdges):
                 broken. It didn't happen in this method, because nothing has been
                 updated yet, but your mesh is definitely broken. I'll be suprised if
                 you ever see this message."""
-                )
+            )
             raise UnrecoverableManifoldMeshError(msg)
         _ = self.remove_edge(edge)
         _update_face_edges(edge_face, new_edge.pair)

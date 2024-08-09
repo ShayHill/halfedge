@@ -48,6 +48,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Generic, Literal, TypeVar
 
+from paragraphs import par
+
 if TYPE_CHECKING:
     from halfedge.half_edge_elements import MeshElementBase
 
@@ -168,10 +170,11 @@ class Attrib(Generic[_T]):
         is no provision for inferring this Attrib.value, *not* because the
         user failed to set the Attrib property attribute.
         """
-        raise NotImplementedError(
-            f"'{type(self).__name__}' has no provision "
-            + "for inferring a value from 'self.element'"
+        msg = par(
+            f"""'{type(self).__name__}' has no provision for inferring a value from
+            'self.element'"""
         )
+        raise NotImplementedError(msg)
 
 
 class ContagionAttrib(Attrib[Literal[True]]):
