@@ -132,7 +132,6 @@ class MeshElementBase:
                 self.set_attrib(merged_attrib)
         return self
 
-    # TODO: test with coverage
     def slice_from(self: _TMeshElem, element: _TMeshElem) -> _TMeshElem:
         """Pass attributes when dividing or altering elements.
 
