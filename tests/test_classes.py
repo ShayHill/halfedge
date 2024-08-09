@@ -24,8 +24,7 @@ from halfedge.half_edge_elements import (
 from halfedge.half_edge_object import HalfEdges
 from halfedge.half_edge_querries import StaticHalfEdges
 from halfedge.type_attrib import Attrib, IncompatibleAttrib, NumericAttrib
-
-from .conftest import compare_circular_2, get_canonical_mesh
+from tests.conftest import compare_circular_2, get_canonical_mesh
 
 _TElemAttrib = TypeVar("_TElemAttrib", bound="Attrib[Any]")
 

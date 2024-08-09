@@ -16,8 +16,7 @@ from halfedge.half_edge_elements import Edge, Face, MeshElementBase, Vert
 from halfedge.half_edge_object import HalfEdges
 from halfedge.type_attrib import IncompatibleAttrib
 from halfedge.validations import validate_mesh
-
-from .conftest import compare_circular
+from tests.conftest import compare_circular
 
 
 class NamedAttribute(IncompatibleAttrib[str]):

@@ -6,7 +6,7 @@ authors = [{ name = "Shay Hill", email = "shay_public@hotmail.com" }]
 license = {text = "MIT"}
 readme = "README.md"
 requires-python = ">=3.8"
-dependencies = ["svg-ultralight"]
+dependencies = ["svg-ultralight", "paragraphs"]
 
 [project.optional-dependencies]
 dev = ["commitizen", "pre-commit", "pytest", "tox"]
@@ -29,7 +29,9 @@ profile = "black"
 
 
 [tool.pytest.ini_options]
-addopts = "--doctest-modules"
+# addopts = "--doctest-modules"
+pythonpath = ["tests"]
+log_cli = 1
 
 [tool.tox]
 legacy_tox_ini = """

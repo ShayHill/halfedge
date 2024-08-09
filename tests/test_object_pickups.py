@@ -9,10 +9,11 @@ tests exceptions and other details missed by the other tests.
 
 # pyright: reportPrivateUsage=false
 
-from halfedge.half_edge_object import HalfEdges
-from halfedge.half_edge_elements import Face, Edge, Vert
 import pytest
-from .conftest import compare_circular_2, Coordinate, get_canonical_index_tuple
+
+from halfedge.half_edge_elements import Edge, Face, Vert
+from halfedge.half_edge_object import HalfEdges
+from tests.conftest import get_canonical_index_tuple
 
 
 def test_get_edge_or_vert_faces_with_vert_arg() -> None:
@@ -57,11 +58,13 @@ def test_fi_explicit(he_cube: HalfEdges) -> None:
     fi = {get_canonical_index_tuple(x) for x in he_cube.fi}
     assert fi == expect
 
+
 def test_hi_explicit(he_grid: HalfEdges) -> None:
     """Return holes as a set of n-tuples of vl indices."""
     expect = {(0, 4, 8, 12, 13, 14, 15, 11, 7, 3, 2, 1)}
     hi = {get_canonical_index_tuple(x) for x in he_grid.hi}
     assert hi == expect
+
 
 def test_ei() -> None:
     """Return edges as a set of 2-tuples of vl indices."""
