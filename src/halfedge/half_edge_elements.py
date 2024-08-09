@@ -148,12 +148,12 @@ class MeshElementBase:
         return self
 
     def __lt__(self: _TMeshElem, other: _TMeshElem) -> bool:
-        """Sort by id.
+        """Sort by sn.
 
         You'll want to be able to sort Verts at least to make a vlvi (vertex list,
         vertex index) format.
         """
-        return id(self) < id(other)
+        return self.sn < other.sn
 
 
 # argument to a function that returns same type as the input argument
