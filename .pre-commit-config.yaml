@@ -84,29 +84,39 @@ repos:
   hooks:
   - id: remove-tabs
 
-# - repo: https://github.com/commitizen-tools/commitizen
-#   rev: v2.40.0
-#   hooks:
-#   - id: commitizen
+- repo: https://github.com/commitizen-tools/commitizen
+  rev: v3.28.0
+  hooks:
+  - id: commitizen
 
-# pylint still broken in python 3.12
-# - repo: https://github.com/pre-commit/mirrors-pylint
-#   rev: v3.0.0a5
-#   hooks:
-#   - id: pylint
-#     exclude: "tests"
-#     name: pylint
-#     args:
-#     - --good-names=i,j,_,f
-#     - --disable=protected-access
-#     - --disable=no-member
-#     - --disable=import-error
-#     - --disable=no-name-in-module
-#     - --load-plugins=pylint.extensions.docparams
-#     - --accept-no-param-doc=n
-#     - --accept-no-raise-doc=n
-#     - --accept-no-return-doc=n
-#     - --accept-no-yields-doc=n
+- repo: local
+  hooks:
+  - id: pylint
+    exclude: "tests"
+    name: pylint
+    entry: ./venv/Scripts/pylint.exe
+    language: system
+    types: [python]
+    args:
+    - --ignore-patterns=venv
+    - --good-names=i,j,_,f
+    # - --disable=protected-access
+    # - --disable=no-member
+    # - --disable=import-error
+    # - --disable=no-name-in-module
+    - --disable=redundant-returns-doc # many false positives
+    - --disable=too-many-arguments
+    - --disable=too-many-instance-attributes
+    - --disable=redefined-builtin # sticking with edge.next
+    - --disable=invalid-name # for _TMeshElem and similar type hints
+    - --disable=useless-return # conflicts with mypy
+    - --disable=assignment-from-no-return # prevents overloading Attrib methods to only raise an Exception
+    - --disable=useless-parent-delegation
+    - --load-plugins=pylint.extensions.docparams
+    - --accept-no-param-doc=n
+    - --accept-no-raise-doc=n
+    - --accept-no-return-doc=n
+    - --accept-no-yields-doc=n
 
 - repo: https://github.com/charliermarsh/ruff-pre-commit
   # ignores
@@ -120,7 +130,7 @@ repos:
   # PLR2004 magic value used in comparison
   # D403 First word of the first line should be properly capitalized
   # PLR0913 too namy arguments
-  rev: 'v0.5.6'
+  rev: 'v0.5.7'
   hooks:
     - id: ruff
       exclude: "tests"
@@ -132,6 +142,6 @@ repos:
 
 # reads pyproject.toml for additional config
 - repo: https://github.com/RobertCraigie/pyright-python
-  rev: v1.1.374
+  rev: v1.1.375
   hooks:
     - id: pyright

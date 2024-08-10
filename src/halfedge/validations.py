@@ -47,7 +47,7 @@ def _does_reach_all(population: set[_T], f_next: Callable[[_T], Iterator[_T]]) -
 
 
 def _confirm_function_laps_do_not_fail(mesh: StaticHalfEdges) -> None:
-    """Test any property that uses a function lap does not fail."""
+    """Confirm any property that uses a function lap does not fail."""
     for vert in mesh.verts:
         if not all(e.orig is vert for e in vert.edges):
             msg = "vert.edges do not all point to vert"
@@ -59,7 +59,7 @@ def _confirm_function_laps_do_not_fail(mesh: StaticHalfEdges) -> None:
 
 
 def _confirm_edge_have_two_distinct_points(mesh: StaticHalfEdges) -> None:
-    """Test that edges have two distinct points."""
+    """Confirm that edges have two distinct points."""
     for edge in mesh.edges:
         if edge.orig is edge.dest:
             msg = "loop edge (orig == dest)"
@@ -67,7 +67,7 @@ def _confirm_edge_have_two_distinct_points(mesh: StaticHalfEdges) -> None:
 
 
 def _confirm_edge_dest_lookups_match(mesh: StaticHalfEdges) -> None:
-    """Test that both lookup methods for edge.dest are the same."""
+    """Confirm that both lookup methods for edge.dest are the same."""
     for edge in mesh.edges:
         if edge.next.orig is not edge.pair.orig:
             msg = "next and pair do not share orig point"
@@ -75,7 +75,7 @@ def _confirm_edge_dest_lookups_match(mesh: StaticHalfEdges) -> None:
 
 
 def _confirm_edges_do_not_overlap(mesh: StaticHalfEdges) -> None:
-    """Test that edges do not overlap."""
+    """Confirm that edges do not overlap."""
     edge_tuples = {(x.orig, x.dest) for x in mesh.edges}
     if len(edge_tuples) < len(mesh.edges):
         msg = "overlapping edges"
@@ -83,7 +83,7 @@ def _confirm_edges_do_not_overlap(mesh: StaticHalfEdges) -> None:
 
 
 def _confirm_pair_points_align(mesh: StaticHalfEdges) -> None:
-    """Test that pair edges align."""
+    """Confirm that pair edges align."""
     for edge in mesh.edges:
         if edge.orig != edge.pair.dest or edge.dest != edge.pair.orig:
             msg = "edge and pair points are not the same"
@@ -91,7 +91,7 @@ def _confirm_pair_points_align(mesh: StaticHalfEdges) -> None:
 
 
 def _confirm_no_ghost_edges(mesh: StaticHalfEdges) -> None:
-    """Test that every face and vert edge is in the edge list."""
+    """Confirm that every face and vert edge is in the edge list."""
     face_edges: set[Edge] = set()
     vert_edges: set[Edge] = set()
     for face in mesh.faces | mesh.holes:
@@ -107,7 +107,12 @@ def _confirm_no_ghost_edges(mesh: StaticHalfEdges) -> None:
 
 
 def validate_mesh(mesh: StaticHalfEdges) -> None:
-    """Test for a manifold mesh."""
+    """Confirm that mesh is a manifold mesh.
+
+    :param mesh: mesh to validate
+    :raise ManifoldMeshError: if not all faces can be reached by normal halfedges
+        functions
+    """
     if not mesh.edges:
         return
 

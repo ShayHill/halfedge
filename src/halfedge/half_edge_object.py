@@ -153,10 +153,9 @@ class HalfEdges(StaticHalfEdges):
         :param orig: origin of new edge (vert or edge such that edge.dest == vert)
         :param dest: destination of new edge (vert or edge as above)
         :param face: edge will lie on or split face (will infer if unambiguous)
-        :returns: newly inserted edge
-
-        :raises: ValueError if no face is given and face is ambiguous
-        :raises: ValueError if
+        :return: newly inserted edge
+        :raise ValueError: if no face is given and face is ambiguous
+        :raise ValueError: if
             * overwriting existing edge
             * any vert in mesh but not on face
             * orig and dest are the same
@@ -235,8 +234,8 @@ class HalfEdges(StaticHalfEdges):
 
         :param face: face to triangulate
         :returns: newly inserted vert
-        :raises: UnrecoverableManifoldMeshError if an unanticipated
-            ManifoldMeshError occurs
+        :raise UnrecoverableManifoldMeshError: if a problem was found after we started
+            altering the mesh (this SHOULD never happen).
 
         new vert is created on face
         new edges are created from new vert to extant face verts
@@ -262,9 +261,8 @@ class HalfEdges(StaticHalfEdges):
         :param edge: edge to remove
         :returns: Newly joined (if edge split face) face, else new face that replaces
             previously shared face.
-        :raises: ManifoldMeshError if
-            * edge not in mesh
-            * edge is a "bridge edge"
+        :raise ValueError: if edge not in mesh
+        :raise ValueError: if edge is a bridge edge
 
         Will not allow you to break (make non-manifold) the mesh. For example,
         here's a mesh with three faces, one in each square, and a third face or
@@ -357,10 +355,12 @@ class HalfEdges(StaticHalfEdges):
     def remove_vert(self, vert: Vert) -> Face:
         """Remove all edges around a vert.
 
-        :raises: ManifoldMeshError if the error was caught before any edges were removed
-            (this SHOULD always be the case).
-        :raises: UnrecoverableManifoldMeshError if a problem was found after we started
-            removing edges (this SHOULD never happen).
+        :param vert: vert to remove
+        :returns: face or hole remaining
+        :raise UnrecoverableManifoldMeshError: if a problem was found after we started
+            altering the mesh (this SHOULD never happen).
+        :raise ValueError: if vert is not in mesh
+        :raise ValueError: if removing vert would create a non-manifold mesh
 
         How does this differ from consecutive calls to remove_edge?
             * checks (successfully as far as I can determine) that all edges are safe
@@ -434,6 +434,9 @@ class HalfEdges(StaticHalfEdges):
     def recursively_remove_peninsulas(self) -> None:
         r"""Remove all peninsula edges from the mesh.
 
+        :raise UnrecoverableManifoldMeshError: if a problem was found after we started
+            altering the mesh (this SHOULD never happen).
+
         This is only necessary if you are trying and failing to remove a face. A mesh
         face can end up as a polygon with tentacles at the corners. Some of these
         tentacles are made of bridge edges, but they will be safe to remove if the
@@ -464,11 +467,13 @@ class HalfEdges(StaticHalfEdges):
     def remove_face(self, face: Face) -> Face:
         """Remove all edges around a face.
 
+        :param face: face to remove
         :returns: face or hole remaining
         :raises: ValueError if the error was caught before any edges were removed
             (this SHOULD always be the case).
-        :raises: UnrecoverableManifoldMeshError if a problem was found after we started
-            removing edges (this SHOULD never happen).
+        :raise UnrecoverableManifoldMeshError: if a problem was found after we started
+            altering the mesh (this SHOULD never happen).
+        :raise ValueError: if face is not in mesh
 
         How does this differ from consecutive calls to remove_edge?
             * checks (successfully as far as I can determine) that all edges are safe
@@ -524,6 +529,8 @@ class HalfEdges(StaticHalfEdges):
 
         :param edge: edge to be split
         :return: new vert in the middle of the edge
+        :raise UnrecoverableManifoldMeshError: if a problem was found after we started
+            altering the mesh (this SHOULD never happen).
 
         Passes attributes:
             * shared vert attributes passed to new vert
@@ -559,6 +566,7 @@ class HalfEdges(StaticHalfEdges):
 
         :param edge: Edge instance in self
         :return: None
+        :raise ValueError: if edge is not in mesh
 
         * The edge must be between two triangles.
         * Only shared edge attributes will remain.
@@ -667,6 +675,8 @@ class HalfEdges(StaticHalfEdges):
         :param edge: Edge instance in self
         :return: Vert where edge used to be or None if this new vert does not exist
             in the mesh
+        :raise ValueError: if edge is not in mesh
+        :raise ValueError: if edge collapse would break manifold
 
         Warning: Some ugly things can happen here than can only be recognized and
         avoided by examining the geometry. This module only addresses connectivity,

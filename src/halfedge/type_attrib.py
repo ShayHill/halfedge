@@ -54,7 +54,6 @@ from paragraphs import par
 if TYPE_CHECKING:
     from halfedge.half_edge_elements import MeshElementBase
 
-_TAttrib = TypeVar("_TAttrib", bound="Attrib[Any]")
 _T = TypeVar("_T")
 
 
@@ -85,18 +84,26 @@ class Attrib(Generic[_T]):
 
     @property
     def value(self) -> _T:
-        """Return value if set, else try to infer a value."""
+        """Return value if set, else try to infer a value.
+
+        :return: Value of the attribute
+        :raises AttributeError: If no value is set and _infer_value fails
+        """
         if self._value is not None:
             return self._value
         with suppress(NotImplementedError, ValueError):
             value = self._infer_value()
             self._value = value
-            return value
+            return self._value
         msg = f"no value set and failed to infer from {self.element}"
         raise AttributeError(msg)
 
     def copy_to_element(self: Attrib[_T], element: MeshElementBase) -> Attrib[_T]:
-        """Return a new instance with the same value, assigned to a new element."""
+        """Return a new instance with the same value, assigned to a new element.
+
+        :param element: New element
+        :return: Attrib instance
+        """
         return type(self)(self._value, element)
 
     @classmethod
@@ -104,11 +111,12 @@ class Attrib(Generic[_T]):
         """Get value of self from self._merge_from.
 
         :param merge_from: Attrib instances to merge (all of the same class)
-        :return: Attrib instance with merged value or None. It is fine to return one
-            of the merge_from arguments if it represents what a new merged element
-            should be. Eventually, it will be passed through
-            MeshElementBase.set_attrib, which will *copy* the Attrib instance to the
-            new element.
+        :return: Attrib instance or None
+
+        Attrib instance with merged value or None. It is fine to return one of the
+        merge_from arguments if it represents what a new merged element should be.
+        Eventually, it will be passed through MeshElementBase.set_attrib, which will
+        *copy* the Attrib instance to the new element.
 
         Use merge_from values to determine a value. If no value can be determined,
         return None. No element attribute will be set for a None return value.
@@ -125,11 +133,13 @@ class Attrib(Generic[_T]):
     def split(self: _TAttrib) -> _TAttrib | None:
         """Define how attribute will be passed when dividing self.element.
 
-        :return: Attrib instance to be set on any element created by dividing and
-            element with this attribute. It is fine to return one of the merge_from
-            arguments if it represents what a new merged element should be.
-            Eventually, it will be passed through MeshElementBase.set_attrib, which
-            will *copy* the Attrib instance to the new element.
+        :return: Attrib instance or None
+
+        Attrib instance to be set on any element created by dividing and element with
+        this attribute. It is fine to return one of the merge_from arguments if it
+        represents what a new merged element should be.  Eventually, it will be
+        passed through MeshElementBase.set_attrib, which will *copy* the Attrib
+        instance to the new element.
 
         When an element is divided (face divided by an edge, edge divided by a vert,
         etc.) or altered, define how, if at all, this attribute will be passed to the
@@ -178,6 +188,9 @@ class Attrib(Generic[_T]):
         raise NotImplementedError(msg)
 
 
+_TAttrib = TypeVar("_TAttrib", bound=Attrib[Any])
+
+
 class ContagionAttrib(Attrib[Literal[True]]):
     """Spread value when combining with anything.
 
@@ -199,6 +212,9 @@ class ContagionAttrib(Attrib[Literal[True]]):
     def merge(cls, *merge_from: _TAttrib | None) -> _TAttrib | None:
         """Merge values.
 
+        :param merge_from: Attrib instances to merge (all of the same class)
+        :return: self if any element has a ContagionAttributeBase attribute.
+
         If any element has a ContagionAttributeBase attribute, return a new instance
         with that attribute. Otherwise None.
         """
@@ -209,6 +225,8 @@ class ContagionAttrib(Attrib[Literal[True]]):
 
     def split(self: _TAttrib) -> _TAttrib | None:
         """Copy attribute to splits.
+
+        :return: self
 
         Holes are defined with IsHole(ContagionAttributeBase), so this will split a
         non-face hole into two non-face holes and a hole (is_face == True) into two
@@ -227,6 +245,9 @@ class IncompatibleAttrib(Attrib[_T]):
     def merge(cls, *merge_from: _TAttrib | None) -> _TAttrib | None:
         """Merge values.
 
+        :param merge_from: Attrib instances to merge (all of the same class)
+        :return: self if all values match and every contributing element has an analog.
+
         If all values match and every contributing element has an analog, return
         a new instance with that value. Otherwise None.
         """
@@ -240,7 +261,10 @@ class IncompatibleAttrib(Attrib[_T]):
         return merge_from[0]
 
     def split(self: _TAttrib) -> _TAttrib | None:
-        """Pass the value on."""
+        """Pass the value on.
+
+        :return: self
+        """
         return self
 
 
@@ -249,7 +273,11 @@ class NumericAttrib(Attrib[_T]):
 
     @classmethod
     def merge(cls, *merge_from: _TAttrib | None) -> _TAttrib | None:
-        """Average values if every contributor has a value. Otherwise None."""
+        """Average values if every contributor has a value. Otherwise None.
+
+        :param merge_from: Attrib instances to merge (all of the same class)
+        :return: Attrib instance with merged value or None
+        """
         have_values = [x for x in merge_from if x is not None]
         if not have_values:
             return None

@@ -40,7 +40,12 @@ class BlindHalfEdges:
             self.edges = edges
 
     def new_vert(self, *attributes: Attrib[Any], edge: Edge | None = None) -> Vert:
-        """Create a new Vert instance."""
+        """Create a new Vert instance.
+
+        :param attributes: attributes to add to the Vert instance
+        :param edge: an Edge instance to assign to the Vert instance
+        :return: the new Vert instance
+        """
         return Vert(*attributes, mesh=self, edge=edge)
 
     # determine why an edge needs to know its mesh
@@ -55,6 +60,14 @@ class BlindHalfEdges:
     ) -> Edge:
         """Create a new Edge instance.
 
+        :param attributes: attributes to add to the Edge instance
+        :param orig: optionally pass origin Vert instance
+        :param pair: optionally pass pair Edge instance
+        :param face: optionally pass Face instance
+        :param next: optionally pass next Edge instance
+        :param prev: optionally pass previous Edge instance
+        :return: the new Edge instance
+
         The Edge instance will not be inserted into the mesh.
         """
         return Edge(
@@ -68,15 +81,30 @@ class BlindHalfEdges:
         )
 
     def new_face(self, *attributes: Attrib[Any], edge: Edge | None = None) -> Face:
-        """Create a new Face instance."""
+        """Create a new Face instance.
+
+        :param attributes: attributes to add to the Face instance
+        :param edge: an Edge instance to assign to the Face instance
+        :return: the new Face instance
+        """
         return Face(*attributes, mesh=self, edge=edge)
 
     def new_hole(self, *attributes: Attrib[Any], edge: Edge | None = None) -> Face:
-        """Create a new Face instance and mark it as a hole."""
+        """Create a new Face instance and mark it as a hole.
+
+        :param attributes: attributes to add to the Face instance
+        :param edge: an Edge instance to assign to the Face instance
+        :return: the new Face instance
+        """
         return Face(*attributes, mesh=self, edge=edge, is_hole=True)
 
     def create_face_edges(self, face_verts: Iterable[Vert], face: Face) -> list[Edge]:
-        """Create edges around a face defined by vert indices."""
+        """Create edges around a face defined by vert indices.
+
+        :param face_verts: an iterable of Vert instances
+        :param face: the Face instance to which the edges will belong
+        :return: a list of the Edge instances created
+        """
         new_edges = [self.new_edge(orig=vert, face=face) for vert in face_verts]
         for idx, edge in enumerate(new_edges):
             new_edges[idx - 1].next = edge
@@ -92,7 +120,7 @@ class BlindHalfEdges:
     def infer_holes(self) -> None:
         """Fill in missing hole faces where unambiguous.
 
-        :raises: Manifold mesh error if holes touch at corners. If this happens, holes
+        :raise ManifoldMeshError: if holes touch at corners. If this happens, holes
         are ambiguous.
 
         Create pairs for unpaired edges. Try to connect into hole faces.
@@ -146,6 +174,8 @@ class BlindHalfEdges:
 
         :param hi: (hole index) optionally provide empty faces (same format as fi)
         that will be used to pair all edges
+
+        :return: a BlindHalfEdges instance
 
         Will attempt to add missing hole edges. This is intended for fields of
         faces on a plane (like a 2D Delaunay triangulation), but the algorithm

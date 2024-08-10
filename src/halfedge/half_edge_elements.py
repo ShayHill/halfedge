@@ -90,11 +90,19 @@ class MeshElementBase:
             self.set_attrib(attribute)
 
     def set_attrib(self, attrib: Attrib[Any]) -> None:
-        """Set an attribute."""
+        """Set an attribute.
+
+        :param attrib: Attrib instance
+        """
         self.attrib[type(attrib).__name__] = attrib.copy_to_element(self)
 
     def get_attrib(self, attrib: type[Attrib[_T]]) -> Attrib[_T]:
-        """Get an attribute."""
+        """Get an attribute.
+
+        :param attrib: Attrib class
+        :returns: Attrib instance
+        :raise AttributeError: if attrib not found in self.attrib
+        """
         try:
             return self.attrib[attrib.__name__]
         except KeyError as e:
@@ -102,7 +110,12 @@ class MeshElementBase:
             raise AttributeError(msg) from e
 
     def try_attrib(self, attrib: type[Attrib[_T]]) -> Attrib[_T] | None:
-        """Get an attribute or return None."""
+        """Get an attribute or return None.
+
+        :param attrib: Attrib class
+        :returns: Attrib instance or None
+        :raise: AttributeError if attrib not found in self.attrib
+        """
         try:
             return self.get_attrib(attrib)
         except AttributeError:
@@ -134,6 +147,9 @@ class MeshElementBase:
 
     def split_from(self: _TMeshElem, element: _TMeshElem) -> _TMeshElem:
         """Pass attributes when dividing or altering elements.
+
+        :param element: element to split from
+        :returns: self with missing attrs dict keys filled in from elem
 
         Use the 'split' method of Attrib instances to determine how to pass
         attributes child elements when dividing an element.
@@ -195,7 +211,11 @@ class Vert(MeshElementBase):
 
     @property
     def edge(self) -> Edge:
-        """One edge originating at vert."""
+        """One edge originating at vert.
+
+        :return: one edge originating at vert
+        :raise AttributeError: if .edge not set for Vert instance
+        """
         if self._edge is not None:
             return self._edge
         msg = ".edge not set for Vert instance."
@@ -207,12 +227,18 @@ class Vert(MeshElementBase):
         edge_.orig = self
 
     def set_edge_without_side_effects(self, edge: Edge) -> None:
-        """Set edge without setting edge's orig."""
+        """Set edge without setting edge's orig.
+
+        :param edge: edge to set
+        """
         self._edge = edge
 
     @property
     def edges(self) -> list[Edge]:
-        """Half edges radiating from vert."""
+        """Half edges radiating from vert.
+
+        :return: list of edges radiating from vert.
+        """
         try:
             vert_edge = self.edge
         except AttributeError:
@@ -221,7 +247,10 @@ class Vert(MeshElementBase):
 
     @property
     def all_faces(self) -> list[Face]:
-        """Faces radiating from vert."""
+        """Faces radiating from vert.
+
+        :return: list of faces and holes that share vert
+        """
         try:
             vert_edge = self.edge
         except AttributeError:
@@ -230,17 +259,27 @@ class Vert(MeshElementBase):
 
     @property
     def faces(self) -> list[Face]:
-        """Faces radiating from vert."""
+        """Faces radiating from vert.
+
+        :return: list of faces that share vert
+        """
         return [x for x in self.all_faces if not x.is_hole]
 
     @property
     def holes(self) -> list[Face]:
-        """Faces radiating from vert."""
+        """Faces radiating from vert.
+
+        :return: list of holes that share vert
+        """
         return [x for x in self.all_faces if x.is_hole]
 
     @property
     def neighbors(self) -> list[Vert]:
-        """Evert vert connected to vert by one edge."""
+        """Evert vert connected to vert by one edge.
+
+        :return: list of verts incident to self
+        :raise: AttributeError if self.edge not set
+        """
         try:
             vert_edge = self.edge
         except AttributeError:
@@ -249,7 +288,10 @@ class Vert(MeshElementBase):
 
     @property
     def valence(self) -> int:
-        """The number of edges incident to vertex."""
+        """The number of edges incident to vertex.
+
+        :return: the number of edges incident to vertex
+        """
         return len(self.edges)
 
 
@@ -285,7 +327,11 @@ class Edge(MeshElementBase):
 
     @property
     def orig(self) -> Vert:
-        """Vert at which edge originates."""
+        """Vert at which edge originates.
+
+        :return: vert at which edge originates
+        :raise AttributeError: if .orig not set for Edge instance
+        """
         if self._orig is not None:
             return self._orig
         msg = ".orig vertex not set for Edge instance."
@@ -298,7 +344,11 @@ class Edge(MeshElementBase):
 
     @property
     def pair(self) -> Edge:
-        """Edge running opposite direction over same verts."""
+        """Edge running opposite direction over same verts.
+
+        :return: edge running opposite direction over same verts
+        :raise AttributeError: if .pair not set for Edge instance
+        """
         if self._pair is not None:
             return self._pair
         msg = ".pair edge not set for Edge instance."
@@ -310,12 +360,19 @@ class Edge(MeshElementBase):
         pair.set_pair_without_side_effects(self)
 
     def set_pair_without_side_effects(self, edge: Edge) -> None:
-        """Set pair without setting pair's pair."""
+        """Set pair without setting pair's pair.
+
+        :param edge: edge to set
+        """
         self._pair = edge
 
     @property
     def face(self) -> Face:
-        """Face to which edge belongs."""
+        """Face to which edge belongs.
+
+        :return: face to which edge belongs
+        :raise AttributeError: if .face not set for Edge instance
+        """
         if self._face is not None:
             return self._face
         msg = ".face not set for Edge instance."
@@ -327,12 +384,20 @@ class Edge(MeshElementBase):
         face_.edge = self
 
     def set_face_without_side_effects(self, face: Face) -> None:
-        """Set face without setting face's edge."""
+        """Set face without setting face's edge.
+
+        :param face: face to set
+        :effect: sets edge.face to face
+        """
         self._face = face
 
     @property
     def next(self: Edge) -> Edge:
-        """Next edge along face."""
+        """Next edge along face.
+
+        :return: next edge along face
+        :raise AttributeError: if .next not set for Edge instance
+        """
         if self._next is not None:
             return self._next
         msg = ".next not set for Edge instance."
@@ -344,7 +409,10 @@ class Edge(MeshElementBase):
 
     @property
     def prev(self) -> Edge:
-        """Look up the edge before self."""
+        """Look up the edge before self.
+
+        :return: edge before self edge.prev.next == self
+        """
         try:
             return self.face_edges[-1]
         except (AttributeError, ManifoldMeshError):
@@ -356,7 +424,10 @@ class Edge(MeshElementBase):
 
     @property
     def dest(self) -> Vert:
-        """Vert at the end of the edge (opposite of orig)."""
+        """Vert at the end of the edge (opposite of orig).
+
+        :return: vert at the end of the edge
+        """
         try:
             return self.next.orig
         except AttributeError:
@@ -364,7 +435,10 @@ class Edge(MeshElementBase):
 
     @property
     def face_edges(self) -> list[Edge]:
-        """All edges around an edge.face."""
+        """All edges around an edge.face.
+
+        :return: list of edges around an edge.face
+        """
 
         def _get_next(edge: Edge) -> Edge:
             return edge.next
@@ -373,12 +447,17 @@ class Edge(MeshElementBase):
 
     @property
     def face_verts(self) -> list[Vert]:
-        """All verts around an edge.vert."""
+        """All verts around an edge.vert.
+
+        :return: list of verts around an edge.face
+        """
         return [edge.orig for edge in self.face_edges]
 
     @property
     def vert_edges(self) -> list[Edge]:
         """All half edges radiating from edge.orig.
+
+        :return: list of edges radiating from edge.orig
 
         These will be returned in the opposite "handedness" of the faces. IOW,
         if the faces are defined ccw, the vert_edges will be returned cw.
@@ -387,22 +466,34 @@ class Edge(MeshElementBase):
 
     @property
     def vert_all_faces(self) -> list[Face]:
-        """Return all faces and holes around the edge's vert."""
+        """Return all faces and holes around the edge's vert.
+
+        :return: list of faces and holes around the edge's vert
+        """
         return [x.face for x in self.vert_edges]
 
     @property
     def vert_faces(self) -> list[Face]:
-        """Return all faces around the edge's vert."""
+        """Return all faces around the edge's vert.
+
+        :return: list of faces around the edge's vert
+        """
         return [x for x in self.vert_all_faces if not x.is_hole]
 
     @property
     def vert_holes(self) -> list[Face]:
-        """Return all holes around the edge's vert."""
+        """Return all holes around the edge's vert.
+
+        :return: list of holes around the edge's vert
+        """
         return [x for x in self.vert_all_faces if x.is_hole]
 
     @property
     def vert_neighbors(self) -> list[Vert]:
-        """All verts connected to vert by one edge."""
+        """All verts connected to vert by one edge.
+
+        :return: list of verts connected to vert by one edge
+        """
         return [edge.dest for edge in self.vert_edges]
 
 
@@ -426,7 +517,11 @@ class Face(MeshElementBase):
 
     @property
     def edge(self) -> Edge:
-        """One edge on the face."""
+        """One edge on the face.
+
+        :return: one edge on the face
+        :raise AttributeError: if .edge not set for Face instance
+        """
         if self._edge is not None:
             return self._edge
         msg = ".edge not set for Face instance."
@@ -434,13 +529,19 @@ class Face(MeshElementBase):
 
     @edge.setter
     def edge(self, edge: Edge) -> None:
-        """Point face.edge back to face."""
+        """Point face.edge back to face.
+
+        :param edge: on the face
+        :effect: sets edge.face to self
+        """
         self._edge = edge
         edge.set_face_without_side_effects(self)
 
     @property
     def is_hole(self) -> bool:
         """Return True if this face a hole.
+
+        :return: True if this face is a hole
 
         "hole-ness" is assigned at instance creation by passing ``is_hole=True`` to
         ``__init__``
@@ -451,7 +552,10 @@ class Face(MeshElementBase):
 
     @property
     def edges(self) -> list[Edge]:
-        """Look up all edges around face."""
+        """Look up all edges around face.
+
+        :return: list of edges around face
+        """
         try:
             face_edge = self.edge
         except AttributeError:
@@ -460,7 +564,10 @@ class Face(MeshElementBase):
 
     @property
     def verts(self) -> list[Vert]:
-        """Look up all verts around face."""
+        """Look up all verts around face.
+
+        :return: list of verts around face
+        """
         try:
             face_edge = self.edge
         except AttributeError:
@@ -470,6 +577,8 @@ class Face(MeshElementBase):
     @property
     def sides(self) -> int:
         """Return how many sides the face has.
+
+        :return: the number of edges around the face
 
         This is the equivalent of valence for faces.
         """
