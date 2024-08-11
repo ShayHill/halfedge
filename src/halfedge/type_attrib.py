@@ -66,9 +66,104 @@ from typing import TYPE_CHECKING, Any, Generic, Literal, Tuple, TypeVar
 from paragraphs import par
 
 if TYPE_CHECKING:
+    from halfedge.half_edge_constructors import BlindHalfEdges
     from halfedge.half_edge_elements import MeshElementBase
 
 _T = TypeVar("_T")
+
+
+class StaticAttrib(Generic[_T]):
+    """Base class for storing a, potentially inferred, attribute value.
+
+    This is the equivalent to the Attrib class, but for meshes, which will never be
+    merged or split.
+    """
+
+    __slots__ = ("_value", "mesh")
+
+    def __new__(
+        cls: type[_TStaticAttrib],
+        value: _T | None = None,
+        mesh: BlindHalfEdges | None = None,
+    ) -> _TStaticAttrib:
+        """Raise an exception if the attribute is not subclassed."""
+        del value
+        del mesh
+        if cls is StaticAttrib:
+            msg = "StaticAttrib is an abstract class and cannot be instantiated."
+            raise TypeError(msg)
+        return object.__new__(cls)
+
+    def __init__(
+        self, value: _T | None = None, mesh: BlindHalfEdges | None = None
+    ) -> None:
+        """Set value and mesh."""
+        self._value = value
+        self.mesh = mesh
+
+    def copy_to_element(
+        self: StaticAttrib[_T], mesh: BlindHalfEdges
+    ) -> StaticAttrib[_T]:
+        """Return a new instance with the same value, assigned to a new mesh.
+
+        :param mesh: BlindHalfEdges instance to which attrib will be assigned.
+        :return: Attrib instance
+        """
+        return type(self)(self._value, mesh)
+
+    @property
+    def value(self) -> _T:
+        """Return value if set, else try to infer a value.
+
+        :return: Value of the attribute
+        :raises AttributeError: If no value is set and _infer_value fails
+        """
+        if self._value is not None:
+            return self._value
+        with suppress(NotImplementedError, ValueError):
+            value = self._infer_value()
+            self._value = value
+            return self._value
+        msg = "no value set and failed to infer from 'self.mesh'"
+        raise AttributeError(msg)
+
+    def _infer_value(self) -> _T:
+        """Get value of self from self._mesh.
+
+        Use the containing mesh to determine a value for self. If no value can be
+        determined, return None.
+
+        The purpose is to allow lazy attributes like edge norm and face area. Use
+        caution, however. These need to be calculated before merging since the method
+        may not support the new shape. For instance, this method might calculate the
+        area of a triangle, but would fail if two triangles were merged into a
+        square. To keep this safe, the _value is calculated *before* any merging. In
+        the "area of a triangle" example,
+
+            * The area calculation is deferred until the first merge.
+            * At the first merge, the area of each merged triangle is calculated. The
+              implication here is that calculation *cannot* be deferred till after a
+              merge.
+            * The merged method sums areas of the merged triangles at the first and
+              subsequent mergers, so further triangle area calculations (which
+              wouldn't work on the merged shapes anyway) are not required.
+
+        If you infer a value, cache it by setting self._value.
+
+        If you do not intend to infer values, raise an exception. This exception
+        should occur *before* an AttributeError is raised for a potentially missing
+        mesh attribute. It should be clear that _infer_value failed because there
+        is no provision for inferring this Attrib.value, *not* because the
+        user failed to set the Attrib property attribute.
+        """
+        msg = par(
+            f"""'{type(self).__name__}' has no provision for inferring a value from
+            'self.mesh'"""
+        )
+        raise AttributeError(msg)
+
+
+_TStaticAttrib = TypeVar("_TStaticAttrib", bound=StaticAttrib[Any])
 
 
 class Attrib(Generic[_T]):
@@ -121,7 +216,7 @@ class Attrib(Generic[_T]):
             value = self._infer_value()
             self._value = value
             return self._value
-        msg = f"no value set and failed to infer from {self.element}"
+        msg = "no value set and failed to infer from 'self.element'"
         raise AttributeError(msg)
 
     def copy_to_element(self: Attrib[_T], element: MeshElementBase) -> Attrib[_T]:

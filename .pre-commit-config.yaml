@@ -110,6 +110,7 @@ repos:
     - --disable=useless-return # conflicts with mypy
     - --disable=assignment-from-no-return # prevents overloading Attrib methods to only raise an Exception
     - --disable=useless-parent-delegation
+    - --disable=R0801 # Similar lines in multiple files
     - --load-plugins=pylint.extensions.docparams
     - --accept-no-param-doc=n
     - --accept-no-raise-doc=n

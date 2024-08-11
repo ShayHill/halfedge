@@ -12,6 +12,7 @@ from typing import Any, Tuple, TypeVar
 
 import pytest
 
+from halfedge.half_edge_constructors import BlindHalfEdges
 from halfedge.half_edge_elements import (
     Edge,
     Face,
@@ -27,6 +28,7 @@ from halfedge.type_attrib import (
     ContagionAttrib,
     IncompatibleAttrib,
     NumericAttrib,
+    StaticAttrib,
     Vector2Attrib,
     Vector3Attrib,
 )
@@ -48,6 +50,10 @@ class Score(NumericAttrib[float]):
 
 class MyAttrib(Attrib[int]):
     """An attribute with an integer value."""
+
+
+class MyStaticAttrib(StaticAttrib[int]):
+    """A static attribute with an integer value."""
 
 
 class TestCannotInstantiateAbstractClasses:
@@ -86,6 +92,31 @@ class TestCannotInstantiateAbstractClasses:
         with pytest.raises(TypeError) as err:
             _ = Vector3Attrib()
         assert "cannot be instantiated" in err.value.args[0]
+
+    def test_cannot_instantiate_static_attrib(self) -> None:
+        """Raise TypeError when instantiating an abstract class."""
+        with pytest.raises(TypeError) as err:
+            _: StaticAttrib[Any] = StaticAttrib()
+        assert "cannot be instantiated" in err.value.args[0]
+
+
+class TestStaticAttrib:
+    def test_attribute_error_if_no_value_set(self) -> None:
+        """Raise AttributeError if no value set."""
+        attrib = MyStaticAttrib()
+        with pytest.raises(AttributeError):
+            _ = attrib.value
+
+
+class TestBlindHalfEdgesAttribSettersAndGetters:
+    def test_set_attrib(self) -> None:
+        """Set an attrib by passing a MeshElementBase instance"""
+        mesh = BlindHalfEdges()
+        attrib = MyStaticAttrib(7)
+        mesh.set_attrib(attrib)
+        stored_attrib = mesh.get_attrib(MyStaticAttrib)
+        assert stored_attrib.value == 7
+        assert stored_attrib.mesh is mesh
 
 
 class TestAttribBaseClass:

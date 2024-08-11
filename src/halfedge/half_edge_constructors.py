@@ -30,7 +30,10 @@ from paragraphs import par
 from halfedge.half_edge_elements import Edge, Face, ManifoldMeshError, Vert
 
 if TYPE_CHECKING:
-    from halfedge.type_attrib import Attrib
+    from halfedge.type_attrib import Attrib, StaticAttrib
+
+
+_T = TypeVar("_T")
 
 _TBlindHalfEdges = TypeVar("_TBlindHalfEdges", bound="BlindHalfEdges")
 
@@ -44,6 +47,27 @@ class BlindHalfEdges:
             self.edges: set[Edge] = set()
         else:
             self.edges = edges
+        self.attrib: dict[str, StaticAttrib[Any]] = {}
+
+    def set_attrib(self, attrib: StaticAttrib[Any]) -> None:
+        """Set an attribute.
+
+        :param attrib: StaticAttrib instance
+        """
+        self.attrib[type(attrib).__name__] = attrib.copy_to_element(self)
+
+    def get_attrib(self, attrib: type[StaticAttrib[_T]]) -> StaticAttrib[_T]:
+        """Get a StaticAttrib.
+
+        :param attrib: StaticAttrib class
+        :returns: StaticAttrib instance
+        :raise AttributeError: if StaticAttrib not found in self.attrib
+        """
+        try:
+            return self.attrib[attrib.__name__]
+        except KeyError as e:
+            msg = f"{attrib.__name__} not found in {self.__class__.__name__}"
+            raise AttributeError(msg) from e
 
     def new_vert(self, *attributes: Attrib[Any], edge: Edge | None = None) -> Vert:
         """Create a new Vert instance.
