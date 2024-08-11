@@ -1,8 +1,6 @@
 ci:
   skip: [pyright]
 
-exclude: ".*snapshot.*"
-
 repos:
 
 - repo: https://github.com/pre-commit/pre-commit-hooks
