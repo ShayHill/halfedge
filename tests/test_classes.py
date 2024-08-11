@@ -41,46 +41,91 @@ class Score(NumericAttrib[float]):
     pass
 
 
+# TODO: test that abstract classes cannot be instantiated
+
+
+class MyAttrib(Attrib[int]):
+    """An attribute with an integer value."""
+
+
+class TestCannotInstantiateAbstractClasses:
+    def test_cannot_instantiate_abstract_class(self) -> None:
+        """Raise TypeError when instantiating an abstract class."""
+        with pytest.raises(TypeError) as err:
+            _: Attrib[Any] = Attrib()
+        assert "cannot be instantiated" in err.value.args[0]
+
+    def test_cannot_instantiate_contagion_attribute(self) -> None:
+        """Raise TypeError when instantiating an abstract class."""
+        with pytest.raises(TypeError) as err:
+            _ = ContagionAttrib()
+        assert "cannot be instantiated" in err.value.args[0]
+
+    def test_cannot_instantiate_incompatible_attribute(self) -> None:
+        """Raise TypeError when instantiating an abstract class."""
+        with pytest.raises(TypeError) as err:
+            _: IncompatibleAttrib[int] = IncompatibleAttrib()
+        assert "cannot be instantiated" in err.value.args[0]
+
+    def test_cannot_instantiate_numeric_attribute(self) -> None:
+        """Raise TypeError when instantiating an abstract class."""
+        with pytest.raises(TypeError) as err:
+            _: NumericAttrib[int] = NumericAttrib()
+        assert "cannot be instantiated" in err.value.args[0]
+
+
 class TestAttribBaseClass:
     def test_attribute_error_if_no_value_set(self) -> None:
         """Raise AttributeError if no value set."""
-        attrib: Attrib[Any] = Attrib()
+        attrib = MyAttrib()
         with pytest.raises(AttributeError):
             _ = attrib.value
 
     def test_merge_returns_none(self) -> None:
-        """Return None when attempting to merge Attrib instances."""
-        attrib: Attrib[Any] = Attrib()
+        """Return None when attempting to merge MyAttrib instances."""
+        attrib = MyAttrib()
         new_attrib = attrib.merge(None)
         assert new_attrib is None
 
     def test_split_returns_none(self) -> None:
-        """Return None when attempting to split Attrib instances."""
-        attrib: Attrib[Any] = Attrib()
+        """Return None when attempting to split MyAttrib instances."""
+        attrib = MyAttrib()
         new_attrib = attrib.split()
         assert new_attrib is None
+
+
+class Contagion(ContagionAttrib):
+    """A child blass of ContagionAttrib."""
 
 
 class TestContagionAttrib:
     def test_return_on_merge_if_no_values(self) -> None:
         """Return None if no values are set."""
-        attrib = ContagionAttrib()
+        attrib = Contagion()
         new_attrib = attrib.merge(None, None, None)
         assert new_attrib is None
+
+
+class Incompatible(IncompatibleAttrib[int]):
+    """A child class of IncompatibleAttrib."""
 
 
 class TestIncompatibleAttrib:
     def test_return_self_on_split(self) -> None:
         """Return self when slicing from."""
-        attrib: IncompatibleAttrib[int] = IncompatibleAttrib()
+        attrib = Incompatible()
         new_attrib = attrib.split()
         assert new_attrib is attrib
+
+
+class Numeric(NumericAttrib[int]):
+    """A child class of NumericAttrib."""
 
 
 class TestNumericAttrib:
     def test_return_none_on_empty_merge(self) -> None:
         """Return None if no values are set."""
-        attrib: NumericAttrib[int] = NumericAttrib()
+        attrib = Numeric()
         new_attrib = attrib.merge(None, None, None)
         assert new_attrib is None
 
@@ -88,22 +133,22 @@ class TestNumericAttrib:
 class TestElemAttribs:
     def test_incompatible_merge_match(self) -> None:
         """Return a new attribute with same value if all values are equal"""
-        attribs = [IncompatibleAttrib(7, None) for _ in range(3)]
-        new_attrib = IncompatibleAttrib().merge(*attribs)
+        attribs = [Incompatible(7, None) for _ in range(3)]
+        new_attrib = Incompatible().merge(*attribs)
         assert new_attrib is not None
         assert new_attrib.value == 7
 
     def test_incompatible_merge_mismatch(self) -> None:
         """Return None if all values are not equal"""
-        attribs = [IncompatibleAttrib(7, None) for _ in range(3)]
-        attribs.append(IncompatibleAttrib(3))
-        new_attrib = IncompatibleAttrib().merge(*attribs)
+        attribs = [Incompatible(7, None) for _ in range(3)]
+        attribs.append(Incompatible(3))
+        new_attrib = Incompatible().merge(*attribs)
         assert new_attrib is None
 
     def test_numeric_all_nos(self) -> None:
         """Return a new attribute with same value if all values are equal"""
-        attribs = [NumericAttrib(x) for x in range(1, 6)]
-        new_attrib = NumericAttrib().merge(*attribs)
+        attribs = [Numeric(x) for x in range(1, 6)]
+        new_attrib = Numeric().merge(*attribs)
         assert new_attrib is not None
         assert new_attrib.value == 3
 
@@ -181,6 +226,8 @@ def test_edge_lap_fails(he_triangle: dict[str, Any]) -> None:
 
 
 class Coordinate(IncompatibleAttrib[Tuple[int, int, int]]):
+    """A subclass of IncompatibleAttrib."""
+
     pass
 
 

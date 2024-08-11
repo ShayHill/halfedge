@@ -75,6 +75,19 @@ class Attrib(Generic[_T]):
 
     __slots__ = ("_value", "element")
 
+    def __new__(
+        cls: type[_TAttrib],
+        value: _T | None = None,
+        element: MeshElementBase | None = None,
+    ) -> _TAttrib:
+        """Raise an exception if the attribute is not subclassed."""
+        del value
+        del element
+        if cls is Attrib:
+            msg = "Attrib is an abstract class and cannot be instantiated."
+            raise TypeError(msg)
+        return object.__new__(cls)
+
     def __init__(
         self, value: _T | None = None, element: MeshElementBase | None = None
     ) -> None:
@@ -202,6 +215,19 @@ class ContagionAttrib(Attrib[Literal[True]]):
     The value is always True, even if something else is passed to __init__.
     """
 
+    def __new__(
+        cls: type[_TAttrib],
+        value: Literal[True] | None = None,
+        element: MeshElementBase | None = None,
+    ) -> _TAttrib:
+        """Raise an exception if the attribute is not subclassed."""
+        del value
+        del element
+        if cls is ContagionAttrib:
+            msg = "ContagionAttrib is an abstract class and cannot be instantiated."
+            raise TypeError(msg)
+        return object.__new__(cls)
+
     def __init__(
         self, value: Literal[True] | None = None, element: MeshElementBase | None = None
     ) -> None:
@@ -241,6 +267,19 @@ class IncompatibleAttrib(Attrib[_T]):
     This class in intended for flags like IsEdge or Hardness.
     """
 
+    def __new__(
+        cls: type[_TAttrib],
+        value: _T | None = None,
+        element: MeshElementBase | None = None,
+    ) -> _TAttrib:
+        """Raise an exception if the attribute is not subclassed."""
+        del value
+        del element
+        if cls is IncompatibleAttrib:
+            msg = "IncompatibleAttrib is an abstract class and cannot be instantiated."
+            raise TypeError(msg)
+        return object.__new__(cls)
+
     @classmethod
     def merge(cls, *merge_from: _TAttrib | None) -> _TAttrib | None:
         """Merge values.
@@ -270,6 +309,19 @@ class IncompatibleAttrib(Attrib[_T]):
 
 class NumericAttrib(Attrib[_T]):
     """Average merge_from values."""
+
+    def __new__(
+        cls: type[_TAttrib],
+        value: _T | None = None,
+        element: MeshElementBase | None = None,
+    ) -> _TAttrib:
+        """Raise an exception if the attribute is not subclassed."""
+        del value
+        del element
+        if cls is NumericAttrib:
+            msg = "NumericAttrib is an abstract class and cannot be instantiated."
+            raise TypeError(msg)
+        return object.__new__(cls)
 
     @classmethod
     def merge(cls, *merge_from: _TAttrib | None) -> _TAttrib | None:
