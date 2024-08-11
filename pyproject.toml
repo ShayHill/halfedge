@@ -1,6 +1,6 @@
 [project]
 name = "halfedge"
-version = "0.1.0"
+version = "0.2.0"
 description = "A typical half-edge data structure with some padding"
 authors = [{ name = "Shay Hill", email = "shay_public@hotmail.com" }]
 license = {text = "MIT"}
@@ -25,7 +25,7 @@ build-backend = "setuptools.build_meta"
 
 [tool.commitizen]
 name = "cz_conventional_commits"
-version = "0.1.0"
+version = "0.2.0"
 tag_format = "$version"
 major-version-zero = true
 version_files = ["pyproject.toml:^version"]
