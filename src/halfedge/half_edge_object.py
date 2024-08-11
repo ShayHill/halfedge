@@ -1,5 +1,7 @@
 """The HalfEdges data structure and operations on it.
 
+Extend StaticHalfEdges with methods that alter the mesh.
+
 :author: Shay Hill
 :created: 2024-08-05
 """

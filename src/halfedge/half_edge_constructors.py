@@ -1,5 +1,8 @@
 """Create HalfEdges instances.
 
+A base class for the HalfEdges class with constructors and just enough methods to
+support them. This class is enough to store everything that defines a mesh.
+
 Nothing in this module will ever try to "match" Verts by their coordinate values. The
 only Verts that will ever be equal are two references to the identical (by id) Vert
 class instance.
@@ -12,6 +15,9 @@ For instance, creating a raw mesh by ...
 
 then passing that raw data to mesh_from_vr would create a mesh with 6 faces and
 24 (not 8!) Vert instances.
+
+:author: Shay Hill
+:created: 2006 June 05
 """
 
 from __future__ import annotations

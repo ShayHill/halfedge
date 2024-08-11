@@ -1,12 +1,12 @@
 """A half-edges data container with view methods.
 
-A simple container for a list of half edges. Provides lookups and a serial
-number for each mesh element (Vert, Edge, or Face).
+Extend BlindHalfEdges with lookups.
 
-This module is all the lookups. Transformations elsewhere.
+These are all the halfedge tricks (faces around a vert, edges around a face, etc.)
+that do not change the mesh.
 
-# 2006 June 05
-# 2012 September 30
+:author: Shay Hill
+:created: 2006 June 05
 """
 
 from __future__ import annotations
@@ -23,7 +23,7 @@ class StaticHalfEdges(BlindHalfEdges):
     """Basic half edge lookups.
 
     Some properties require a manifold mesh, but the Edge type does support
-    explicitly defined holes. These hole (Face(is_hole=True) provide enough
+    explicitly defined holes. These hole (`Face(is_hole=True)`) provide enough
     information to pair and link all half edges, but will be ignored in any "for face
     in" constructs.
     """
