@@ -7,6 +7,8 @@ from halfedge.type_attrib import (
     ContagionAttrib,
     IncompatibleAttrib,
     NumericAttrib,
+    Vector2Attrib,
+    Vector3Attrib,
 )
 
 __all__ = [
@@ -17,5 +19,7 @@ __all__ = [
     "HalfEdges",
     "IncompatibleAttrib",
     "NumericAttrib",
+    "Vector2Attrib",
+    "Vector3Attrib",
     "Vert",
 ]

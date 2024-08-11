@@ -27,6 +27,8 @@ from halfedge.type_attrib import (
     ContagionAttrib,
     IncompatibleAttrib,
     NumericAttrib,
+    Vector2Attrib,
+    Vector3Attrib,
 )
 from tests.conftest import compare_circular_2, get_canonical_mesh
 
@@ -71,6 +73,18 @@ class TestCannotInstantiateAbstractClasses:
         """Raise TypeError when instantiating an abstract class."""
         with pytest.raises(TypeError) as err:
             _: NumericAttrib[int] = NumericAttrib()
+        assert "cannot be instantiated" in err.value.args[0]
+
+    def test_cannot_instantiate_vector_2_attribute(self) -> None:
+        """Raise TypeError when instantiating an abstract class."""
+        with pytest.raises(TypeError) as err:
+            _ = Vector2Attrib()
+        assert "cannot be instantiated" in err.value.args[0]
+
+    def test_cannot_instantiate_vector_3_attribute(self) -> None:
+        """Raise TypeError when instantiating an abstract class."""
+        with pytest.raises(TypeError) as err:
+            _ = Vector3Attrib()
         assert "cannot be instantiated" in err.value.args[0]
 
 
@@ -128,6 +142,72 @@ class TestNumericAttrib:
         attrib = Numeric()
         new_attrib = attrib.merge(None, None, None)
         assert new_attrib is None
+
+
+class Vec2(Vector2Attrib):
+    """A child class of Vector2Attrib."""
+
+
+class TestVector2Attrib:
+
+    def test_return_none_on_empty_merge(self) -> None:
+        """Return None if no values are set."""
+        attrib = Vec2()
+        new_attrib = attrib.merge(None, None, None)
+        assert new_attrib is None
+
+    def test_average_xy_tuple_on_merge(self) -> None:
+        """Return a new attribute with the average of all x and y values."""
+        attribs = [Vec2((x, x)) for x in range(1, 6)]
+        new_attrib = Vec2().merge(*attribs, None, None)
+        assert new_attrib is not None
+        assert new_attrib.value == (3, 3)
+
+    def test_return_none_on_split(self) -> None:
+        """Return None when attempting to split Vec2 instances."""
+        attrib = Vec2()
+        new_attrib = attrib.split()
+        assert new_attrib is None
+
+    def test_cannot_infer_value(self) -> None:
+        """Raise AttributeError when attempting to infer a value."""
+        attrib = Vec2()
+        with pytest.raises(AttributeError) as err:
+            _ = attrib._infer_value()
+        assert "no provision for inferring a value" in err.value.args[0]
+
+
+class Vec3(Vector3Attrib):
+    """A child class of Vector3Attrib."""
+
+
+class TestVector3Attrib:
+
+    def test_return_none_on_empty_merge(self) -> None:
+        """Return None if no values are set."""
+        attrib = Vec3()
+        new_attrib = attrib.merge(None, None, None)
+        assert new_attrib is None
+
+    def test_average_xy_tuple_on_merge(self) -> None:
+        """Return a new attribute with the average of all x, y, and z values."""
+        attribs = [Vec3((x, x, x)) for x in range(1, 6)]
+        new_attrib = Vec3().merge(*attribs, None, None)
+        assert new_attrib is not None
+        assert new_attrib.value == (3, 3, 3)
+
+    def test_return_none_on_split(self) -> None:
+        """Return None when attempting to split Vec3 instances."""
+        attrib = Vec3()
+        new_attrib = attrib.split()
+        assert new_attrib is None
+
+    def test_cannot_infer_value(self) -> None:
+        """Raise AttributeError when attempting to infer a value."""
+        attrib = Vec3()
+        with pytest.raises(AttributeError) as err:
+            _ = attrib._infer_value()
+        assert "no provision for inferring a value" in err.value.args[0]
 
 
 class TestElemAttribs:

@@ -27,7 +27,7 @@ to define each attribute as a descendent of Attrib.
     vert.set_attrib(MyAttrib('value'))
     assert vert.get_attrib(MyAttrib).value == 'value'
 
-These attributes are held in an instance attribute dict, `attrib` keyed to the class
+These attributes are held in an instance attribute dict, `attrib`, keyed to the class
 name of the attribute.
 
     assert vert.get_attrib(MyAttrib).value == 'value'
@@ -36,9 +36,23 @@ name of the attribute.
 Rules governing combination of these properties are defined in the Attrib classes
 themselves.
 
-There is a base class, Attrib, here, plus some subclasses modelling common cases. Do
-not use these classes directly. Instead, subclass one of these classes for each
-attribute you need to define.
+There is a base class, Attrib, here, plus some alternate base classes modelling
+common cases. These classes are fully functional, but because of the way they're
+stored in MeshElementBase instances, I've prevented instantiating them directly.
+You'll need a new subclass for every attribute. For instance, you might want the same
+behavior as Vector2Attrib for an xy vector *and* a uv vector, but these would
+overwrite each other without distinct types. So you'd need to define two sublasses:
+
+```python
+class VecXY(Vector2Attrib):
+    '''Hold an xy vector.'''
+
+class VecUV(Vector2Attrib):
+    '''Hold a uv vector.'''
+```
+
+When assigned to a Vert instance, these will be stored in the Vert instance's
+`attrib` dict as {'VecXY': VecXY instance, 'VecUV': VecUV instance}.
 
 :author: Shay Hill
 :created: 2022-06-14
@@ -47,7 +61,7 @@ attribute you need to define.
 from __future__ import annotations
 
 from contextlib import suppress
-from typing import TYPE_CHECKING, Any, Generic, Literal, TypeVar
+from typing import TYPE_CHECKING, Any, Generic, Literal, Tuple, TypeVar
 
 from paragraphs import par
 
@@ -60,12 +74,11 @@ _T = TypeVar("_T")
 class Attrib(Generic[_T]):
     """Base class for element attributes.
 
-    MeshElementBase has methods set_attrib and get_attrib that will store
-    Attrib instances in the MeshElemenBase __dict__. The Attrib class
-    defines how these attributes behave when mesh elements are merged and allows a
-    value (e.g., edge length) to be inferred from the Attrib.element property
-    when and if needed, allowing us to cache (and potentially never access) slow
-    attributes.
+    MeshElementBase has methods set_attrib and get_attrib that will store Attrib
+    instances in the MeshElemenBase.attrib dict. The Attrib class defines how these
+    attributes behave when mesh elements are merged and optionally allows a value
+    (e.g., edge length) to be inferred from the Attrib.element property when and if
+    needed, allowing us to cache (and potentially never access) slow attributes.
 
     Do not overload `__init__` or `value`. For the most part, treat as an ABC with
     abstract methods `merge`, `split`, and `_infer_value`--although the base methods
@@ -182,7 +195,7 @@ class Attrib(Generic[_T]):
             * At the first merge, the area of each merged triangle is calculated. The
               implication here is that calculation *cannot* be deferred till after a
               merge.
-            * The merged method areas of the merged triangles at the first and
+            * The merged method sums areas of the merged triangles at the first and
               subsequent mergers, so further triangle area calculations (which
               wouldn't work on the merged shapes anyway) are not required.
 
@@ -198,7 +211,7 @@ class Attrib(Generic[_T]):
             f"""'{type(self).__name__}' has no provision for inferring a value from
             'self.element'"""
         )
-        raise NotImplementedError(msg)
+        raise AttributeError(msg)
 
 
 _TAttrib = TypeVar("_TAttrib", bound=Attrib[Any])
@@ -335,3 +348,67 @@ class NumericAttrib(Attrib[_T]):
             return None
         values = [x.value for x in have_values]
         return type(have_values[0])(sum(values) / len(values))
+
+
+class Vector2Attrib(Attrib[Tuple[float, float]]):
+    """Average merge_from values as xy tuples."""
+
+    def __new__(
+        cls: type[_TAttrib],
+        value: tuple[float, float] | None = None,
+        element: MeshElementBase | None = None,
+    ) -> _TAttrib:
+        """Raise an exception if the attribute is not subclassed."""
+        del value
+        del element
+        if cls is Vector2Attrib:
+            msg = "Vector2Attrib is an abstract class and cannot be instantiated."
+            raise TypeError(msg)
+        return object.__new__(cls)
+
+    @classmethod
+    def merge(cls, *merge_from: _TAttrib | None) -> _TAttrib | None:
+        """Average values if every contributor has a value. Otherwise None.
+
+        :param merge_from: Attrib instances to merge (all of the same class)
+        :return: Attrib instance with merged value or None
+        """
+        have_values = [x for x in merge_from if x is not None]
+        if not have_values:
+            return None
+        values = [x.value for x in have_values]
+        sum_x, sum_y = (sum(xs) for xs in zip(*values))
+        num = len(values)
+        return type(have_values[0])((sum_x / num, sum_y / num))
+
+
+class Vector3Attrib(Attrib[Tuple[float, float, float]]):
+    """Average merge_from values as xyz tuples."""
+
+    def __new__(
+        cls: type[_TAttrib],
+        value: tuple[float, float, float] | None = None,
+        element: MeshElementBase | None = None,
+    ) -> _TAttrib:
+        """Raise an exception if the attribute is not subclassed."""
+        del value
+        del element
+        if cls is Vector3Attrib:
+            msg = "Vector3Attrib is an abstract class and cannot be instantiated."
+            raise TypeError(msg)
+        return object.__new__(cls)
+
+    @classmethod
+    def merge(cls, *merge_from: _TAttrib | None) -> _TAttrib | None:
+        """Average values if every contributor has a value. Otherwise None.
+
+        :param merge_from: Attrib instances to merge (all of the same class)
+        :return: Attrib instance with merged value or None
+        """
+        have_values = [x for x in merge_from if x is not None]
+        if not have_values:
+            return None
+        values = [x.value for x in have_values]
+        sum_x, sum_y, sum_z = (sum(xs) for xs in zip(*values))
+        num = len(values)
+        return type(have_values[0])((sum_x / num, sum_y / num, sum_z / num))
