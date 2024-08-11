@@ -5,8 +5,6 @@ created: 170204 14:22:23
 
 # pyright: reportPrivateUsage=false
 
-import itertools
-import random
 from typing import Any, Dict, Tuple
 
 import pytest
@@ -21,11 +19,6 @@ from halfedge.half_edge_object import HalfEdges
 from halfedge.half_edge_querries import StaticHalfEdges
 from halfedge.type_attrib import IncompatibleAttrib, NumericAttrib
 from tests.conftest import get_canonical_mesh
-
-alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-identifiers = (
-    "".join(random.choice(alphabet) for _ in range(10)) for _ in itertools.count()
-)
 
 
 class Coordinate(IncompatibleAttrib[Tuple[float, ...]]):
