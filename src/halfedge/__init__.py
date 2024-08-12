@@ -6,10 +6,13 @@ from halfedge.half_edge_object import HalfEdges
 from halfedge.type_attrib import (
     Attrib,
     ContagionAttrib,
+    EdgeAttrib,
+    FaceAttrib,
     IncompatibleAttrib,
     NumericAttrib,
     Vector2Attrib,
     Vector3Attrib,
+    VertAttrib,
 )
 
 __all__ = [
@@ -17,7 +20,9 @@ __all__ = [
     "BlindHalfEdges",
     "ContagionAttrib",
     "Edge",
+    "EdgeAttrib",
     "Face",
+    "FaceAttrib",
     "HalfEdges",
     "IncompatibleAttrib",
     "MeshElementBase",
@@ -25,4 +30,5 @@ __all__ = [
     "Vector2Attrib",
     "Vector3Attrib",
     "Vert",
+    "VertAttrib",
 ]
