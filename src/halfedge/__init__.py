@@ -8,6 +8,7 @@ from halfedge.type_attrib import (
     ContagionAttrib,
     IncompatibleAttrib,
     NumericAttrib,
+    StaticAttrib,
     Vector2Attrib,
     Vector3Attrib,
 )
@@ -22,6 +23,7 @@ __all__ = [
     "IncompatibleAttrib",
     "MeshElementBase",
     "NumericAttrib",
+    "StaticAttrib",
     "Vector2Attrib",
     "Vector3Attrib",
     "Vert",
