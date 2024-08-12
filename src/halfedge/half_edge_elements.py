@@ -84,10 +84,30 @@ class MeshElementBase:
         """
         self.sn = next(self._sn_generator)
         self.attrib: dict[str, Attrib[Any]] = {}
-        self.mesh = mesh
+        self._mesh = mesh
 
         for attribute in attributes:
             self.set_attrib(attribute)
+
+    @property
+    def mesh(self) -> BlindHalfEdges:
+        """Return the mesh instance.
+
+        :return: the mesh instance
+        :raise AttributeError: if mesh not set for self
+        """
+        if self._mesh is not None:
+            return self._mesh
+        msg = "mesh not set for self"
+        raise AttributeError(msg)
+
+    @mesh.setter
+    def mesh(self, mesh: BlindHalfEdges) -> None:
+        """Set the mesh instance.
+
+        :param mesh: the mesh instance
+        """
+        self._mesh = mesh
 
     def set_attrib(self, attrib: Attrib[Any]) -> None:
         """Set an attribute.
