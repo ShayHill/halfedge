@@ -272,9 +272,6 @@ class TestElemAttribs:
                 raise NotImplementedError()
 
             def _infer_value(self) -> int:
-                if self.element is None:
-                    msg = "no element from which to infer a value"
-                    raise AttributeError(msg)
                 return self.element.sn
 
         elem = MeshElementBase()

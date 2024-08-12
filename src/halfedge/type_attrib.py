@@ -79,7 +79,7 @@ class StaticAttrib(Generic[_T]):
     merged or split.
     """
 
-    __slots__ = ("_value", "mesh")
+    __slots__ = ("_value", "_mesh")
 
     def __new__(
         cls: type[_TStaticAttrib],
@@ -99,7 +99,7 @@ class StaticAttrib(Generic[_T]):
     ) -> None:
         """Set value and mesh."""
         self._value = value
-        self.mesh = mesh
+        self._mesh = mesh
 
     def copy_to_element(
         self: StaticAttrib[_T], mesh: BlindHalfEdges
@@ -126,6 +126,18 @@ class StaticAttrib(Generic[_T]):
             return self._value
         msg = "no value set and failed to infer from 'self.mesh'"
         raise AttributeError(msg)
+
+    @property
+    def mesh(self) -> BlindHalfEdges:
+        """Return the mesh to which this attribute is assigned.
+
+        :return: BlindHalfEdges instance
+        :raise AttributeError: If no mesh is set
+        """
+        if self._mesh is None:
+            msg = "no mesh set"
+            raise AttributeError(msg)
+        return self._mesh
 
     def _infer_value(self) -> _T:
         """Get value of self from self._mesh.
@@ -181,7 +193,7 @@ class Attrib(Generic[_T]):
     every case.
     """
 
-    __slots__ = ("_value", "element")
+    __slots__ = ("_value", "_element")
 
     def __new__(
         cls: type[_TAttrib],
@@ -201,7 +213,7 @@ class Attrib(Generic[_T]):
     ) -> None:
         """Set value and element."""
         self._value = value
-        self.element = element
+        self._element = element
 
     @property
     def value(self) -> _T:
@@ -218,6 +230,18 @@ class Attrib(Generic[_T]):
             return self._value
         msg = "no value set and failed to infer from 'self.element'"
         raise AttributeError(msg)
+
+    @property
+    def element(self) -> MeshElementBase:
+        """Return the element to which this attribute is assigned.
+
+        :return: MeshElementBase instance
+        :raise AttributeError: If no element is set
+        """
+        if self._element is None:
+            msg = "no element set"
+            raise AttributeError(msg)
+        return self._element
 
     def copy_to_element(self: Attrib[_T], element: MeshElementBase) -> Attrib[_T]:
         """Return a new instance with the same value, assigned to a new element.
