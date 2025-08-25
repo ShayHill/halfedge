@@ -61,7 +61,7 @@ When assigned to a Vert instance, these will be stored in the Vert instance's
 from __future__ import annotations
 
 from contextlib import suppress
-from typing import TYPE_CHECKING, Any, Generic, Literal, Tuple, TypeVar
+from typing import TYPE_CHECKING, Any, Generic, Literal, TypeVar
 
 from paragraphs import par
 
@@ -79,7 +79,7 @@ class StaticAttrib(Generic[_T]):
     merged or split.
     """
 
-    __slots__ = ("_value", "_mesh")
+    __slots__ = ("_mesh", "_value")
 
     def __new__(
         cls: type[_TStaticAttrib],
@@ -193,7 +193,7 @@ class Attrib(Generic[_T]):
     every case.
     """
 
-    __slots__ = ("_value", "_element")
+    __slots__ = ("_element", "_value")
 
     def __new__(
         cls: type[_TAttrib],
@@ -469,7 +469,7 @@ class NumericAttrib(Attrib[_T]):
         return type(have_values[0])(sum(values) / len(values))
 
 
-class Vector2Attrib(Attrib[Tuple[float, float]]):
+class Vector2Attrib(Attrib[tuple[float, float]]):
     """Average merge_from values as xy tuples."""
 
     def __new__(
@@ -501,7 +501,7 @@ class Vector2Attrib(Attrib[Tuple[float, float]]):
         return type(have_values[0])((sum_x / num, sum_y / num))
 
 
-class Vector3Attrib(Attrib[Tuple[float, float, float]]):
+class Vector3Attrib(Attrib[tuple[float, float, float]]):
     """Average merge_from values as xyz tuples."""
 
     def __new__(

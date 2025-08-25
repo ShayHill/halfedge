@@ -4,7 +4,7 @@ ci:
 repos:
 
 - repo: https://github.com/pre-commit/pre-commit-hooks
-  rev: v4.6.0
+  rev: v6.0.0
   hooks:
     - id: check-added-large-files
     - id: check-ast
@@ -29,9 +29,6 @@ repos:
     - id: mixed-line-ending
     - id: requirements-txt-fixer
     - id: trailing-whitespace
-    - id: fix-encoding-pragma
-      args:
-      - --remove
     - id: name-tests-test
       args:
       - --pytest-test-first
@@ -42,12 +39,12 @@ repos:
         # files: .pre-commit-config.yaml
 
 - repo: https://github.com/pre-commit/mirrors-mypy
-  rev: v1.11.1
+  rev: v1.17.1
   hooks:
   - id: mypy
     name: mypy
     language: python
-    language_version: python 3.12
+    language_version: python 3.9
     types: [python]
     require_serial: true
     verbose: true
@@ -58,23 +55,23 @@ repos:
     # files: ^(src/|tests/)
 
 - repo: https://github.com/PyCQA/isort
-  rev: 5.13.2
+  rev: 6.0.1
   hooks:
   - id: isort
     args: ["--profile", "black", "--filter-files", "--combine-as", "honor--noqa"]
 
 - repo: https://github.com/psf/black
-  rev: 24.8.0
+  rev: 25.1.0
   hooks:
   - id: black
-    language_version: python3.8
+    language_version: python3.9
     args: ["--skip-magic-trailing-comma"]
 
 - repo: https://github.com/asottile/pyupgrade
-  rev: v3.17.0
+  rev: v3.20.0
   hooks:
   - args:
-    - --py38-plus
+    - --py39-plus
     id: pyupgrade
 
 - repo: https://github.com/Lucas-C/pre-commit-hooks
@@ -83,7 +80,7 @@ repos:
   - id: remove-tabs
 
 - repo: https://github.com/commitizen-tools/commitizen
-  rev: v3.28.0
+  rev: v4.8.3
   hooks:
   - id: commitizen
 
@@ -129,18 +126,18 @@ repos:
   # PLR2004 magic value used in comparison
   # D403 First word of the first line should be properly capitalized
   # PLR0913 too namy arguments
-  rev: 'v0.5.7'
+  rev: 'v0.12.10'
   hooks:
     - id: ruff
       exclude: "tests"
       args:
-      - --target-version=py38
+      - --target-version=py39
       - --select=ALL
       - --ignore=COM812,D203,D213,ISC003,PYI019,A002,PLR2004,D403,PLR0913
       # - --fix
 
 # reads pyproject.toml for additional config
 - repo: https://github.com/RobertCraigie/pyright-python
-  rev: v1.1.375
+  rev: v1.1.404
   hooks:
     - id: pyright

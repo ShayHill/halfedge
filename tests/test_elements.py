@@ -8,8 +8,6 @@ tested elsewhere.
 :created: 2024-08-09
 """
 
-from typing import Tuple
-
 import pytest
 
 from halfedge.half_edge_elements import Face, Vert
@@ -24,7 +22,7 @@ class TestVert:
     def test_holes(self) -> None:
         """Test that holes are correctly identified."""
         vl = [Vert() for _ in range(3)]
-        fi: list[Tuple[int, ...]] = [(0, 1, 2)]
+        fi: list[tuple[int, ...]] = [(0, 1, 2)]
         mesh = HalfEdges.from_vlfi(vl, fi)
         assert len(mesh.holes) == 1
 
@@ -53,7 +51,7 @@ class TestEdge:
     def test_vert_faces(self, edge_index: int) -> None:
         """Test that vert_faces returns the correct faces."""
         vl = [Vert() for _ in range(3)]
-        fi: list[Tuple[int, ...]] = [(0, 1, 2)]
+        fi: list[tuple[int, ...]] = [(0, 1, 2)]
         mesh = HalfEdges.from_vlfi(vl, fi)
         assert len(mesh.faces) == 1
         (face,) = mesh.faces
@@ -64,7 +62,7 @@ class TestEdge:
     def test_vert_holes(self, edge_index: int) -> None:
         """Test that vert_holes returns the correct holes."""
         vl = [Vert() for _ in range(3)]
-        fi: list[Tuple[int, ...]] = [(0, 1, 2)]
+        fi: list[tuple[int, ...]] = [(0, 1, 2)]
         mesh = HalfEdges.from_vlfi(vl, fi)
         assert len(mesh.holes) == 1
         (hole,) = mesh.holes

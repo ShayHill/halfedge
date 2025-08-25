@@ -23,13 +23,15 @@ then passing that raw data to mesh_from_vr would create a mesh with 6 faces and
 from __future__ import annotations
 
 from contextlib import suppress
-from typing import TYPE_CHECKING, Any, Iterable, Sequence, TypeVar
+from typing import TYPE_CHECKING, Any, TypeVar
 
 from paragraphs import par
 
 from halfedge.half_edge_elements import Edge, Face, ManifoldMeshError, Vert
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable, Sequence
+
     from halfedge.type_attrib import Attrib, StaticAttrib
 
 

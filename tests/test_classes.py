@@ -8,7 +8,7 @@ created: 170204 14:22:23
 from __future__ import annotations
 
 import random
-from typing import Any, Tuple, TypeVar
+from typing import Any, TypeVar
 
 import pytest
 
@@ -333,10 +333,8 @@ def test_edge_lap_fails(he_triangle: dict[str, Any]) -> None:
     assert "infinite" in err.value.args[0]
 
 
-class Coordinate(IncompatibleAttrib[Tuple[int, int, int]]):
+class Coordinate(IncompatibleAttrib[tuple[int, int, int]]):
     """A subclass of IncompatibleAttrib."""
-
-    pass
 
 
 class TestInitVert:

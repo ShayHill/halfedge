@@ -10,11 +10,13 @@ created: 181127
 from __future__ import annotations
 
 from itertools import chain
-from typing import TYPE_CHECKING, Any, Callable, Iterator, TypeVar
+from typing import TYPE_CHECKING, Any, Callable, TypeVar
 
 from halfedge.half_edge_elements import Edge, Face, ManifoldMeshError
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator
+
     from halfedge.half_edge_querries import StaticHalfEdges
 
 _T = TypeVar("_T")

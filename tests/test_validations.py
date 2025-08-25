@@ -3,8 +3,6 @@
 created: 170204 14:22:23
 """
 
-from typing import Tuple
-
 import pytest
 
 from halfedge.half_edge_elements import ManifoldMeshError, Vert
@@ -14,7 +12,7 @@ from halfedge.type_attrib import IncompatibleAttrib
 from halfedge.validations import validate_mesh
 
 
-class Coordinate(IncompatibleAttrib[Tuple[float, ...]]):
+class Coordinate(IncompatibleAttrib[tuple[float, ...]]):
     pass
 
 

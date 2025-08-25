@@ -5,7 +5,7 @@ description = "A typical half-edge data structure with some padding"
 authors = [{ name = "Shay Hill", email = "shay_public@hotmail.com" }]
 license = {text = "MIT"}
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 dependencies = ["paragraphs"]
 
 [project.optional-dependencies]
@@ -43,7 +43,7 @@ log_cli = 1
 [tool.tox]
 legacy_tox_ini = """
 [tox]
-envlist = py{38,39,310,311,312}
+envlist = py{39,310,311,312,313}
 
 [testenv]
 deps = pytest
@@ -55,7 +55,7 @@ commands = pytest
 include = ["src"]
 exclude = ["**/__pycache__.py"]
 
-pythonVersion = "3.8"
+pythonVersion = "3.9"
 pythonPlatform = "Any"
 
 typeCheckingMode = "strict"

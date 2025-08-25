@@ -1,4 +1,4 @@
-""" test halfedge.operations
+"""test halfedge.operations
 
 created: 181121 13:38:46
 
@@ -10,7 +10,7 @@ import random
 from contextlib import suppress
 from itertools import chain, combinations, permutations
 from operator import attrgetter
-from typing import Any, Tuple
+from typing import Any
 
 import pytest
 
@@ -25,7 +25,7 @@ class NamedAttribute(IncompatibleAttrib[str]):
     """For color, flags. etc. to ensure attributes are passed"""
 
 
-class Coordinate(IncompatibleAttrib[Tuple[float, ...]]):
+class Coordinate(IncompatibleAttrib[tuple[float, ...]]):
     """Hold coordinates when creating a mesh from a list of vertices"""
 
 
