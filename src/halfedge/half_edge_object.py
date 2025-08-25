@@ -79,6 +79,13 @@ class HalfEdges(StaticHalfEdges):
         Able to infer from:
             * both verts on same face: that face
             * empty mesh: a new Hole
+
+        This is only called when inserting an edge into an existing face (or empty
+        mesh), so the orig and dest should always be connected to only one face (or
+        nothing, which is handled in this method).
+
+        Once the face is split, the two verts will form an edge that connects to two
+        faces.
         """
         if not self.edges:
             return self.new_hole()
