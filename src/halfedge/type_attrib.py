@@ -157,16 +157,16 @@ class StaticAttrib(Generic[_T]):
               implication here is that calculation *cannot* be deferred till after a
               merge.
             * The merged method sums areas of the merged triangles at the first and
-              subsequent mergers, so further triangle area calculations (which
-              wouldn't work on the merged shapes anyway) are not required.
+              subsequent mergers, so further triangle area calculations (which wouldn't
+              work on the merged shapes anyway) are not required.
 
         If you infer a value, cache it by setting self._value.
 
-        If you do not intend to infer values, raise an exception. This exception
-        should occur *before* an AttributeError is raised for a potentially missing
-        mesh attribute. It should be clear that _infer_value failed because there
-        is no provision for inferring this Attrib.value, *not* because the
-        user failed to set the Attrib property attribute.
+        If you do not intend to infer values, raise an exception. This exception should
+        occur *before* an AttributeError is raised for a potentially missing mesh
+        attribute. It should be clear that _infer_value failed because there is no
+        provision for inferring this Attrib.value, *not* because the user failed to set
+        the Attrib property attribute.
         """
         msg = par(
             f"""'{type(self).__name__}' has no provision for inferring a value from
@@ -180,14 +180,12 @@ class Attrib(Generic[_T]):
 
     MeshElementBase has methods set_attrib and get_attrib that will store Attrib
     instances in the MeshElemenBase.attrib dict. The Attrib class defines how these
-    attributes behave when mesh elements are merged and optionally allows a value
-    (e.g., edge length) to be inferred from the Attrib.element property when and if
-    needed, allowing us to cache (and potentially never access) slow attributes.
+    attributes behave when mesh elements are merged and optionally allows a value (e.g.,
+    edge length) to be inferred from the Attrib.element property when and if needed,
+    allowing us to cache (and potentially never access) slow attributes.
 
-    Do not overload `__init__` or `value`. For the most part, treat as an ABC with
-    abstract methods `merge`, `split`, and `_infer_value`--although the base methods
-    are marginally useful and instructive, so you will not need to overload both in
-    every case.
+    Do not overload `__init__` or `value`. Subclasses can override `merge`, `split`,
+    and `_infer_value` to customize behavior while inheriting all other functionality.
     """
 
     __slots__ = ("_element", "_value")
@@ -265,7 +263,8 @@ class Attrib(Generic[_T]):
         Attrib attributes are assumed None if not defined and are never defined
         if their value is None.
 
-        This base method will not merge attributes, which is desirable in some cases.
+        Override this method in subclasses to customize merge behavior. Default
+        implementation returns None (no merge), which is desirable in some cases.
         For example, a triangle circumcenter that will be meaningless when the
         triangle is merged.
         """
@@ -290,7 +289,9 @@ class Attrib(Generic[_T]):
         attribute is lazy (e.g., edge norm), you might want to unset _value for each
         piece of a split edge.
 
-        This base method will not pass an attribute when dividing or altering.
+        Override this method in subclasses to customize split behavior. Default
+        implementation returns None (no split), meaning the attribute will not be
+        passed when dividing or altering elements.
         """
         return None
 
@@ -317,11 +318,12 @@ class Attrib(Generic[_T]):
 
         If you infer a value, cache it by setting self._value.
 
-        If you do not intend to infer values, raise an exception. This exception
-        should occur *before* an AttributeError is raised for a potentially missing
-        element attribute. It should be clear that _infer_value failed because there
-        is no provision for inferring this Attrib.value, *not* because the
-        user failed to set the Attrib property attribute.
+        Override this method in subclasses to customize value inference. If you do
+        not intend to infer values, raise an exception. This exception should occur
+        *before* an AttributeError is raised for a potentially missing element
+        attribute. It should be clear that _infer_value failed because there is no
+        provision for inferring this Attrib.value, *not* because the user failed to
+        set the Attrib property attribute.
         """
         msg = par(
             f"""'{type(self).__name__}' has no provision for inferring a value from
