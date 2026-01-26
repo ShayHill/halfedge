@@ -36,7 +36,6 @@ class TestFromVlfi:
 
 
 class TestMeshElementBase:
-
     def test_fill_attrs_from_fills_missing(self) -> None:
         """Fills attrs if not present."""
 

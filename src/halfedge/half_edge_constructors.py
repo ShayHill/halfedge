@@ -23,7 +23,7 @@ then passing that raw data to mesh_from_vr would create a mesh with 6 faces and
 from __future__ import annotations
 
 from contextlib import suppress
-from typing import TYPE_CHECKING, Any, TypeVar
+from typing import TYPE_CHECKING, Any, Self, TypeVar
 
 from paragraphs import par
 
@@ -36,8 +36,6 @@ if TYPE_CHECKING:
 
 
 _T = TypeVar("_T")
-
-_TBlindHalfEdges = TypeVar("_TBlindHalfEdges", bound="BlindHalfEdges")
 
 
 class BlindHalfEdges:
@@ -191,11 +189,11 @@ class BlindHalfEdges:
 
     @classmethod
     def from_vlfi(
-        cls: type[_TBlindHalfEdges],
+        cls,
         vl: Sequence[Vert],
         fi: Iterable[tuple[int, ...]],
         hi: Iterable[tuple[int, ...]] | None = None,
-    ) -> _TBlindHalfEdges:
+    ) -> Self:
         """Create a set of half edges from a vertex list and face index.
 
         :param vl: (vertex list) a seq of vertices

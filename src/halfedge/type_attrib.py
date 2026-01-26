@@ -61,7 +61,7 @@ When assigned to a Vert instance, these will be stored in the Vert instance's
 from __future__ import annotations
 
 from contextlib import suppress
-from typing import TYPE_CHECKING, Any, Generic, Literal, TypeVar
+from typing import TYPE_CHECKING, Any, Generic, Literal, Self, TypeVar
 
 from paragraphs import par
 
@@ -82,10 +82,10 @@ class StaticAttrib(Generic[_T]):
     __slots__ = ("_mesh", "_value")
 
     def __new__(
-        cls: type[_TStaticAttrib],
+        cls,
         value: _T | None = None,
         mesh: BlindHalfEdges | None = None,
-    ) -> _TStaticAttrib:
+    ) -> Self:
         """Raise an exception if the attribute is not subclassed."""
         del value
         del mesh
@@ -175,9 +175,6 @@ class StaticAttrib(Generic[_T]):
         raise AttributeError(msg)
 
 
-_TStaticAttrib = TypeVar("_TStaticAttrib", bound=StaticAttrib[Any])
-
-
 class Attrib(Generic[_T]):
     """Base class for element attributes.
 
@@ -196,10 +193,10 @@ class Attrib(Generic[_T]):
     __slots__ = ("_element", "_value")
 
     def __new__(
-        cls: type[_TAttrib],
+        cls,
         value: _T | None = None,
         element: MeshElementBase | None = None,
-    ) -> _TAttrib:
+    ) -> Self:
         """Raise an exception if the attribute is not subclassed."""
         del value
         del element
@@ -275,7 +272,7 @@ class Attrib(Generic[_T]):
         _ = merge_from
         return None
 
-    def split(self: _TAttrib) -> _TAttrib | None:
+    def split(self) -> Self | None:
         """Define how attribute will be passed when dividing self.element.
 
         :return: Attrib instance or None
@@ -348,10 +345,10 @@ class ContagionAttrib(Attrib[Literal[True]]):
     """
 
     def __new__(
-        cls: type[_TAttrib],
+        cls,
         value: Literal[True] | None = None,
         element: MeshElementBase | None = None,
-    ) -> _TAttrib:
+    ) -> Self:
         """Raise an exception if the attribute is not subclassed."""
         del value
         del element
@@ -381,7 +378,7 @@ class ContagionAttrib(Attrib[Literal[True]]):
             return attribs[0]
         return None
 
-    def split(self: _TAttrib) -> _TAttrib | None:
+    def split(self) -> Self | None:
         """Copy attribute to splits.
 
         :return: self
@@ -400,10 +397,10 @@ class IncompatibleAttrib(Attrib[_T]):
     """
 
     def __new__(
-        cls: type[_TAttrib],
+        cls,
         value: _T | None = None,
         element: MeshElementBase | None = None,
-    ) -> _TAttrib:
+    ) -> Self:
         """Raise an exception if the attribute is not subclassed."""
         del value
         del element
@@ -431,7 +428,7 @@ class IncompatibleAttrib(Attrib[_T]):
                 return None
         return merge_from[0]
 
-    def split(self: _TAttrib) -> _TAttrib | None:
+    def split(self) -> Self | None:
         """Pass the value on.
 
         :return: self
@@ -443,10 +440,10 @@ class NumericAttrib(Attrib[_T]):
     """Average merge_from values."""
 
     def __new__(
-        cls: type[_TAttrib],
+        cls,
         value: _T | None = None,
         element: MeshElementBase | None = None,
-    ) -> _TAttrib:
+    ) -> Self:
         """Raise an exception if the attribute is not subclassed."""
         del value
         del element
@@ -473,10 +470,10 @@ class Vector2Attrib(Attrib[tuple[float, float]]):
     """Average merge_from values as xy tuples."""
 
     def __new__(
-        cls: type[_TAttrib],
+        cls,
         value: tuple[float, float] | None = None,
         element: MeshElementBase | None = None,
-    ) -> _TAttrib:
+    ) -> Self:
         """Raise an exception if the attribute is not subclassed."""
         del value
         del element
@@ -496,7 +493,7 @@ class Vector2Attrib(Attrib[tuple[float, float]]):
         if not have_values:
             return None
         values = [x.value for x in have_values]
-        sum_x, sum_y = (sum(xs) for xs in zip(*values))
+        sum_x, sum_y = (sum(xs) for xs in zip(*values, strict=True))
         num = len(values)
         return type(have_values[0])((sum_x / num, sum_y / num))
 
@@ -505,10 +502,10 @@ class Vector3Attrib(Attrib[tuple[float, float, float]]):
     """Average merge_from values as xyz tuples."""
 
     def __new__(
-        cls: type[_TAttrib],
+        cls,
         value: tuple[float, float, float] | None = None,
         element: MeshElementBase | None = None,
-    ) -> _TAttrib:
+    ) -> Self:
         """Raise an exception if the attribute is not subclassed."""
         del value
         del element
@@ -528,6 +525,6 @@ class Vector3Attrib(Attrib[tuple[float, float, float]]):
         if not have_values:
             return None
         values = [x.value for x in have_values]
-        sum_x, sum_y, sum_z = (sum(xs) for xs in zip(*values))
+        sum_x, sum_y, sum_z = (sum(xs) for xs in zip(*values, strict=True))
         num = len(values)
         return type(have_values[0])((sum_x / num, sum_y / num, sum_z / num))

@@ -388,7 +388,6 @@ class TestRemoveVert:
 
 
 class TestRemoveFace:
-
     def test_do_not_break_manifold(self, mesh_faces: tuple[HalfEdges, Face]) -> None:
         """Raise ValueError if removing face would break manifold.
 

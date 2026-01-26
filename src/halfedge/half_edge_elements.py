@@ -38,14 +38,15 @@ from __future__ import annotations
 
 from contextlib import suppress
 from itertools import count
-from typing import TYPE_CHECKING, Any, Callable, TypeVar
+from typing import TYPE_CHECKING, Any, Self, TypeVar
 
 from halfedge.type_attrib import Attrib, ContagionAttrib
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from halfedge.half_edge_constructors import BlindHalfEdges
 
-_TMeshElem = TypeVar("_TMeshElem", bound="MeshElementBase")
 
 _T = TypeVar("_T")
 
@@ -141,7 +142,7 @@ class MeshElementBase:
         except AttributeError:
             return None
 
-    def merge_from(self: _TMeshElem, *elements: _TMeshElem) -> _TMeshElem:
+    def merge_from(self, *elements: Self) -> Self:
         """Fill in missing references from other elements.
 
         :param elements: elements to merge from
@@ -165,7 +166,7 @@ class MeshElementBase:
                 self.set_attrib(merged_attrib)
         return self
 
-    def split_from(self: _TMeshElem, element: _TMeshElem) -> _TMeshElem:
+    def split_from(self, element: Self) -> Self:
         """Pass attributes when dividing or altering elements.
 
         :param element: element to split from
@@ -182,7 +183,7 @@ class MeshElementBase:
                 self.set_attrib(splitted)
         return self
 
-    def __lt__(self: _TMeshElem, other: _TMeshElem) -> bool:
+    def __lt__(self, other: Self) -> bool:
         """Sort by sn.
 
         You'll want to be able to sort Verts at least to make a vlvi (vertex list,

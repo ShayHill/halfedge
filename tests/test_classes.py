@@ -180,7 +180,6 @@ class Vec2(Vector2Attrib):
 
 
 class TestVector2Attrib:
-
     def test_return_none_on_empty_merge(self) -> None:
         """Return None if no values are set."""
         attrib = Vec2()
@@ -213,7 +212,6 @@ class Vec3(Vector3Attrib):
 
 
 class TestVector3Attrib:
-
     def test_return_none_on_empty_merge(self) -> None:
         """Return None if no values are set."""
         attrib = Vec3()
@@ -378,7 +376,6 @@ class TestInitVert:
 
 
 class TestInitEdge:
-
     def setup_method(self) -> None:
         self.coordinate: Coordinate  # type: ignore
         self.edge: Edge  # type: ignore
@@ -442,7 +439,6 @@ class TestInitEdge:
 
 
 class TestInitFace:
-
     def setup_method(self) -> None:
         self.coordinate: Coordinate  # type: ignore
         self.edge: Edge  # type: ignore
