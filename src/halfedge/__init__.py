@@ -1,4 +1,8 @@
-"""Allow modules to be imported from top-level."""
+"""Import functions into the package namespace.
+
+:author: Shay Hill
+:created: 2026-01-25
+"""
 
 from halfedge.half_edge_constructors import BlindHalfEdges
 from halfedge.half_edge_elements import Edge, Face, MeshElementBase, Vert

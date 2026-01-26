@@ -1,7 +1,10 @@
 """simple HalfEdges instances for testing
 
-created: 181121 13:14:06
+:author: Shay Hill
+:created: 2018-11-21
 """
+
+from __future__ import annotations
 
 from collections.abc import Iterable, Sequence
 from itertools import product
@@ -13,6 +16,16 @@ from halfedge import half_edge_elements
 from halfedge.half_edge_elements import Edge, Face, Vert
 from halfedge.half_edge_object import HalfEdges
 from halfedge.type_attrib import IncompatibleAttrib
+
+
+def pytest_assertrepr_compare(
+    config: Any, op: str, left: str, right: str
+) -> list[str] | None:
+    """See full error diffs"""
+    del config
+    if op in ("==", "!="):
+        return [f"{left} {op} {right}"]
+    return None
 
 
 class Coordinate(IncompatibleAttrib[tuple[int, ...]]):
