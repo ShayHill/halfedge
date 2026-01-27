@@ -98,7 +98,7 @@ class StaticAttrib(Generic[_T]):
         self, value: _T | None = None, mesh: BlindHalfEdges | None = None
     ) -> None:
         """Set value and mesh."""
-        self.cached_value = value
+        self.cached_value: _T | None = value
         self._mesh = mesh
 
     def copy_to_element(
@@ -207,7 +207,7 @@ class Attrib(Generic[_T]):
         self, value: _T | None = None, element: MeshElementBase | None = None
     ) -> None:
         """Set value and element."""
-        self.cached_value = value
+        self.cached_value: _T | None = value
         self._element = element
 
     @property
