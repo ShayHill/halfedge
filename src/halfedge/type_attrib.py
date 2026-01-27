@@ -79,7 +79,7 @@ class StaticAttrib(Generic[_T]):
     merged or split.
     """
 
-    __slots__ = ("_mesh", "_value")
+    __slots__ = ("_mesh", "cached_value")
 
     def __new__(
         cls,
@@ -98,7 +98,7 @@ class StaticAttrib(Generic[_T]):
         self, value: _T | None = None, mesh: BlindHalfEdges | None = None
     ) -> None:
         """Set value and mesh."""
-        self._value = value
+        self.cached_value = value
         self._mesh = mesh
 
     def copy_to_element(
@@ -109,7 +109,7 @@ class StaticAttrib(Generic[_T]):
         :param mesh: BlindHalfEdges instance to which attrib will be assigned.
         :return: Attrib instance
         """
-        return type(self)(self._value, mesh)
+        return type(self)(self.cached_value, mesh)
 
     @property
     def value(self) -> _T:
@@ -118,12 +118,12 @@ class StaticAttrib(Generic[_T]):
         :return: Value of the attribute
         :raises AttributeError: If no value is set and _infer_value fails
         """
-        if self._value is not None:
-            return self._value
+        if self.cached_value is not None:
+            return self.cached_value
         with suppress(NotImplementedError, ValueError):
             value = self._infer_value()
-            self._value = value
-            return self._value
+            self.cached_value = value
+            return self.cached_value
         msg = "no value set and failed to infer from 'self.mesh'"
         raise AttributeError(msg)
 
@@ -188,7 +188,7 @@ class Attrib(Generic[_T]):
     and `_infer_value` to customize behavior while inheriting all other functionality.
     """
 
-    __slots__ = ("_element", "_value")
+    __slots__ = ("_element", "cached_value")
 
     def __new__(
         cls,
@@ -207,7 +207,7 @@ class Attrib(Generic[_T]):
         self, value: _T | None = None, element: MeshElementBase | None = None
     ) -> None:
         """Set value and element."""
-        self._value = value
+        self.cached_value = value
         self._element = element
 
     @property
@@ -217,12 +217,12 @@ class Attrib(Generic[_T]):
         :return: Value of the attribute
         :raises AttributeError: If no value is set and _infer_value fails
         """
-        if self._value is not None:
-            return self._value
+        if self.cached_value is not None:
+            return self.cached_value
         with suppress(NotImplementedError, ValueError):
             value = self._infer_value()
-            self._value = value
-            return self._value
+            self.cached_value = value
+            return self.cached_value
         msg = "no value set and failed to infer from 'self.element'"
         raise AttributeError(msg)
 
@@ -244,7 +244,7 @@ class Attrib(Generic[_T]):
         :param element: New element
         :return: Attrib instance
         """
-        return type(self)(self._value, element)
+        return type(self)(self.cached_value, element)
 
     @classmethod
     def merge(cls, *merge_from: _TAttrib | None) -> _TAttrib | None:
