@@ -67,8 +67,8 @@ def test_hi_explicit(he_grid: HalfEdges) -> None:
 
 
 def test_ei() -> None:
-    """Return edges as a set of 2-tuples of vl indices."""
+    """Return edges as a list of 2-tuples of vl indices."""
     vl = [Vert() for _ in range(3)]
-    fi = {(0, 1, 2)}
+    fi = [(0, 1, 2)]
     mesh = HalfEdges.from_vlfi(vl, fi)
-    assert mesh.ei == {(0, 1), (1, 2), (2, 1), (2, 0), (0, 2), (1, 0)}
+    assert mesh.ei == [(0, 1), (1, 2), (2, 0), (1, 0), (2, 1), (0, 2)]

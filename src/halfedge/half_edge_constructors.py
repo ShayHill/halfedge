@@ -164,7 +164,7 @@ class BlindHalfEdges:
         This function can also fill in holes inside the mesh.
         """
         hole_edges: set[Edge] = set()
-        for edge in self.edges:
+        for edge in sorted(self.edges):
             with suppress(AttributeError):
                 _ = edge.pair
                 continue

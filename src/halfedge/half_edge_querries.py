@@ -143,31 +143,31 @@ class StaticHalfEdges(BlindHalfEdges):
         return {vert: cnt for cnt, vert in enumerate(self.vl)}
 
     @property
-    def ei(self) -> set[tuple[int, int]]:
+    def ei(self) -> list[tuple[int, int]]:
         """Edge indices - Edges as a set of paired vertex indices.
 
         :return: A set of tuples where each tuple represents an edge as paired vertex
             indices.
         """
         v2i = self._vert2list_index
-        return {(v2i[edge.orig], v2i[edge.dest]) for edge in self.edges}
+        return [(v2i[edge.orig], v2i[edge.dest]) for edge in sorted(self.edges)]
 
     @property
-    def fi(self) -> set[tuple[int, ...]]:
+    def fi(self) -> list[tuple[int, ...]]:
         """Face indices - Faces as a set of tuples of vertex list indices.
 
         :return: A set of tuples where each tuple represents a face as a sequence of
             vertex indices.
         """
         v2i = self._vert2list_index
-        return {tuple(v2i[x] for x in face.verts) for face in self.faces}
+        return [tuple(v2i[x] for x in face.verts) for face in sorted(self.faces)]
 
     @property
-    def hi(self) -> set[tuple[int, ...]]:
+    def hi(self) -> list[tuple[int, ...]]:
         """Hole indices - Holes as a set of tuples of vertex list indices.
 
         :return: A set of tuples where each tuple represents a hole as a sequence of
             vertex indices.
         """
         v2i = self._vert2list_index
-        return {tuple(v2i[x] for x in hole.verts) for hole in self.holes}
+        return [tuple(v2i[x] for x in face.verts) for face in sorted(self.holes)]
