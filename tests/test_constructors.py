@@ -67,7 +67,7 @@ def test_edge_lap_fails(he_triangle: dict[str, Any]) -> None:
     """Fails when self intersects."""
     edges = he_triangle["edges"]
     with pytest.raises(ManifoldMeshError) as err:
-        _ = _function_lap(lambda x: edges[1], edges[0])
+        _ = _function_lap(lambda x: edges[1], edges[0])  # noqa: ARG005
     assert "infinite" in err.value.args[0]
 
 

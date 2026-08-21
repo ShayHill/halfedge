@@ -6,9 +6,8 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Sequence
 from itertools import product
-from typing import Any, TypeVar, cast
+from typing import TYPE_CHECKING, Any, TypeVar, cast
 
 import pytest
 
@@ -17,9 +16,12 @@ from halfedge.half_edge_elements import Edge, Face, Vert
 from halfedge.half_edge_object import HalfEdges
 from halfedge.type_attrib import IncompatibleAttrib
 
+if TYPE_CHECKING:
+    from collections.abc import Iterable, Sequence
+
 
 def pytest_assertrepr_compare(
-    config: Any, op: str, left: str, right: str
+    config: pytest.Config, op: str, left: str, right: str
 ) -> list[str] | None:
     """See full error diffs"""
     del config
@@ -86,19 +88,19 @@ def meshes_vlvi() -> dict[str, Any]:
     # fmt: on
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def he_cube(meshes_vlvi: dict[str, Any]) -> HalfEdges:
     vl = [Vert(Coordinate(x)) for x in meshes_vlvi["cube_vl"]]
     return HalfEdges.from_vlfi(vl, meshes_vlvi["cube_vi"])
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def he_grid(meshes_vlvi: dict[str, Any]) -> HalfEdges:
     vl = [Vert(Coordinate(x)) for x in meshes_vlvi["grid_vl"]]
     return HalfEdges.from_vlfi(vl, meshes_vlvi["grid_vi"])
 
 
-@pytest.fixture(scope="function", params=range(2))
+@pytest.fixture(params=range(2))
 def he_mesh(
     request: pytest.FixtureRequest, he_cube: HalfEdges, he_grid: HalfEdges
 ) -> HalfEdges:
@@ -108,21 +110,21 @@ def he_mesh(
     return he_cube
 
 
-@pytest.fixture(scope="function", params=range(9))
+@pytest.fixture(params=range(9))
 def grid_faces(
     request: pytest.FixtureRequest, he_grid: HalfEdges
 ) -> tuple[HalfEdges, Face]:
     """A cube and a 3 x 3 grid as HalfEdges instances"""
-    idx = cast(int, request.param)
+    idx = cast("int", request.param)
     return he_grid, sorted(he_grid.faces)[idx]
 
 
-@pytest.fixture(scope="function", params=range(6))
+@pytest.fixture(params=range(6))
 def cube_faces(
     request: pytest.FixtureRequest, he_cube: HalfEdges
 ) -> tuple[HalfEdges, Face]:
     """A cube and a 3 x 3 grid as HalfEdges instances"""
-    idx = cast(int, request.param)
+    idx = cast("int", request.param)
     return he_cube, sorted(he_cube.faces)[idx]
 
 
@@ -138,21 +140,21 @@ def mesh_faces(
     return cube_faces
 
 
-@pytest.fixture(scope="function", params=range(48))
+@pytest.fixture(params=range(48))
 def grid_edges(
     request: pytest.FixtureRequest, he_grid: HalfEdges
 ) -> tuple[HalfEdges, Edge]:
     """A cube and a 3 x 3 grid as HalfEdges instances"""
-    idx = cast(int, request.param)
+    idx = cast("int", request.param)
     return he_grid, sorted(he_grid.edges)[idx]
 
 
-@pytest.fixture(scope="function", params=range(24))
+@pytest.fixture(params=range(24))
 def cube_edges(
     request: pytest.FixtureRequest, he_cube: HalfEdges
 ) -> tuple[HalfEdges, Edge]:
     """A cube and a 3 x 3 grid as HalfEdges instances"""
-    idx = cast(int, request.param)
+    idx = cast("int", request.param)
     return he_cube, sorted(he_cube.edges)[idx]
 
 
@@ -197,9 +199,7 @@ def compare_circular_2(
             )
         except StopIteration:
             return False
-    if seq_b:
-        return False
-    return True
+    return not seq_b
 
 
 _TAxis = TypeVar("_TAxis")

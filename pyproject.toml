@@ -3,30 +3,38 @@ name = "halfedge"
 version = "0.13.0"
 description = "A typical half-edge data structure with some padding"
 readme = "README.md"
+license-files = ["LICENSE"]
 license = "MIT"
 authors = [
     { name = "Shay Hill", email = "shay_public@hotmail.com" }
 ]
 requires-python = ">=3.11"
-dependencies = [
-    "paragraphs>=1.0.1",
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Typing :: Typed",
 ]
+dependencies = ["paragraphs"]
 
 [build-system]
-requires = ["uv_build>=0.9.4,<0.10.0"]
+requires = ["uv_build>=0.11.25,<0.12.0"]
 build-backend = "uv_build"
 
 [dependency-groups]
 dev = [
-    "commitizen>=4.12.1",
-    "pre-commit>=4.5.1",
-    "pytest>=9.0.2",
-    "ruff>=0.14.14",
+    "commitizen>=4.18.0",
+    "pre-commit>=4.6.2",
+    "pytest>=9.1.1",
 ]
 
 
 [tool.commitizen]
-kame = "cz_conventional_commits"
+name = "cz_conentional_commits"
 version = "0.13.0"
 tag_format = "$version"
 major-version-zero = true
@@ -40,31 +48,46 @@ profile = "black"
 [tool.pytest.ini_options]
 addopts = "--doctest-modules"
 pythonpath = "tests"
-log_cli = true
 testpaths = ["tests"]
-norecursedirs = ["src", ".git", ".venv", "__pycache__", "*.egg"]
+log_cli = true
 
 
+[tool.ruff]
+target-version = "py311"
+exclude = ["typings", ".venv"]
 [tool.ruff.lint.pydocstyle]
 convention = "pep257"
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*.py" = [
     "S101",
+    "SLF001",  # private member
     "D",
     "F401",
 ] # Ignore assertions, docstrings, unused imports in test files
 
 [tool.ruff.format]
 docstring-code-line-length = 88
+skip-magic-trailing-comma = true
+
+[tool.ruff.lint.isort]
+# keep isort consistent with format.skip-magic-trailing-comma
+split-on-trailing-comma = false
 
 [tool.ruff.lint]
-
 select = ["ALL"]
-
+# only auto-fix __all__ sorting (RUF022) and import sorting (I)
+fixable = ["RUF022", "I"]
 ignore = [
+    "COM812",  # trailing comma missing (does not agree with Black)
+    "D203",    # 1 blank line before class docstring (incompatible with D211)
+    "D213",    # multi-line summary second line (incompatible with D212)
+    "ISC003",  # explicitly concatenated string should be implicit
+    "FLY",     # Use f-string instead of ...
+    "S311",    # Standard pseudo-random generators are not suitable for security/cryptographic purposes
+    "S301",    # don't use pickle
+    "CPY001",  # copyrite notice should be present in each file
     "PLR",  # magic values
-    "COM",  # trailing commas
     "ANN",  # forbid Any
     "S",    # warnings about pickle, random, etc.
     "N",    # names
@@ -73,8 +96,9 @@ ignore = [
 
 
 [tool.pyright]
-include = ["src"]
+include = ["src", "tests"]
 exclude = ["**/__pycache__.py"]
+ignore = ["typings", ".venv"]
 
 pythonVersion = "3.11"
 pythonPlatform = "All"
@@ -82,7 +106,6 @@ pythonPlatform = "All"
 typeCheckingMode = "strict"
 reportCallInDefaultInitializer = true
 reportImplicitStringConcatenation = true
-# reportMissingSuperCall = true
 reportPropertyTypeMismatch = true
 reportUninitializedInstanceVariable = true
 reportUnnecessaryTypeIgnoreComment = true
@@ -90,3 +113,7 @@ reportUnusedCallResult = true
 
 venvPath = "."
 venv = "./.venv"
+
+[[tool.pyright.executionEnvironments]]
+root = "tests"
+extraPaths = ["."]

@@ -37,14 +37,14 @@ class TestEdge:
         """Raise an AttributeError if orig is not set."""
         edge = HalfEdges().new_edge()
         with pytest.raises(AttributeError) as err:
-            edge.orig
+            _ = edge.orig
         assert ".orig" in str(err.value)
 
     def test_raise_attribute_error_if_face_not_set(self) -> None:
         """Raise an AttributeError if face is not set."""
         edge = HalfEdges().new_edge()
         with pytest.raises(AttributeError) as err:
-            edge.face
+            _ = edge.face
         assert ".face" in str(err.value)
 
     @pytest.mark.parametrize("edge_index", range(3))

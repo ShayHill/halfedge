@@ -127,9 +127,8 @@ class TestInsertEdge:
     ) -> None:
         """Raise ValueError if attempting to overwrite existing edge."""
         mesh, face = mesh_faces
-        with pytest.raises(ValueError) as err:
+        with pytest.raises(ValueError, match="overwriting existing edge"):
             _ = mesh.insert_edge(face.verts[index], face.verts[index - 1], face)
-        assert "overwriting existing edge" in err.value.args[0]
 
     @pytest.mark.parametrize("index", range(4))
     def test_orig_off_face(
@@ -141,9 +140,8 @@ class TestInsertEdge:
         orig = next(
             x for x in mesh.verts if x not in face.verts and x not in dest.neighbors
         )
-        with pytest.raises(ValueError) as err:
+        with pytest.raises(ValueError, match="in mesh but not on given"):
             _ = mesh.insert_edge(orig, dest, face)
-        assert VERT_IN_ANOTHER_FACE in err.value.args[0]
 
     @pytest.mark.parametrize("index", range(4))
     def test_dest_off_face(
@@ -155,7 +153,7 @@ class TestInsertEdge:
         dest = next(
             x for x in mesh.verts if x not in face.verts and x not in orig.neighbors
         )
-        with pytest.raises(ValueError) as err:
+        with pytest.raises(ValueError, match="in mesh but not on given") as err:
             _ = mesh.insert_edge(orig, dest, face)
         assert VERT_IN_ANOTHER_FACE in err.value.args[0]
 
@@ -168,7 +166,7 @@ class TestInsertEdge:
             for x in mesh.verts
             if x not in face.verts and x != orig and x not in orig.neighbors
         )
-        with pytest.raises(ValueError) as err:
+        with pytest.raises(ValueError, match="in mesh but not on given") as err:
             _ = mesh.insert_edge(orig, dest, face)
         assert VERT_IN_ANOTHER_FACE in err.value.args[0]
 
@@ -177,29 +175,27 @@ class TestInsertEdge:
         """Raise ValueError if orig == dest"""
         mesh, face = mesh_faces
         orig = face.verts[index]
-        with pytest.raises(ValueError) as err:
+        with pytest.raises(ValueError, match="orig and dest are the same"):
             _ = mesh.insert_edge(orig, orig, face)
-        assert "orig and dest are the same" in err.value.args[0]
 
     def test_floating_edge(self, mesh_faces: tuple[HalfEdges, Face]) -> None:
         """Raise ValueError neither vert in mesh (and mesh not empty)"""
         mesh, face = mesh_faces
-        with pytest.raises(ValueError) as err:
+        with pytest.raises(ValueError, match="adding floating edge"):
             _ = mesh.insert_edge(Vert(), Vert(), face)
-        assert "adding floating edge to existing face" in err.value.args[0]
 
     def test_fail_to_infer(self, he_mesh: HalfEdges) -> None:
         """Raise ValueError if face not given and not unambiguous"""
         mesh = he_mesh
-        with pytest.raises(ValueError) as err:
+        with pytest.raises(ValueError, match="face cannot be determined"):
             _ = mesh.insert_edge(Vert(), Vert())
-        assert "face cannot be determined from orig and dest" in err.value.args[0]
 
     @pytest.mark.parametrize("index", range(4))
     def test_face_attrs_pass(
         self, index: int, mesh_faces: tuple[HalfEdges, Face]
     ) -> None:
         """Pass attributes from face when face is split"""
+        del index
         mesh, face = mesh_faces
         face.set_attrib(Color("orange"))
         edge = mesh.insert_edge(face.verts[0], face.verts[2])
@@ -209,6 +205,7 @@ class TestInsertEdge:
     @pytest.mark.parametrize("index", range(4))
     def test_edge_kwargs(self, index: int, mesh_faces: tuple[HalfEdges, Face]) -> None:
         """Shared face edge attributes pass to new edge"""
+        del index
         mesh, face = mesh_faces
         for edge in face.edges[:2]:
             edge.set_attrib(Color("blue"))
@@ -256,9 +253,8 @@ class TestRemoveEdge:
 
     def test_missing_edge(self, he_mesh: HalfEdges) -> None:
         """Raise ValueError if edge not in mesh"""
-        with pytest.raises(ValueError) as err:
+        with pytest.raises(ValueError, match="does not exist"):
             _ = he_mesh.remove_edge(Edge())
-        assert "does not exist" in err.value.args[0]
 
     def test_remove_edge_bridge(self, meshes_vlvi: dict[str, Any]) -> None:
         """Raise an exception if mesh is separated into 'islands'.
@@ -276,9 +272,8 @@ class TestRemoveEdge:
             if x.orig.valence == 3 and x.dest.valence == 3 and x.pair.face in mesh.holes
         ]
         _ = mesh.remove_edge(outer_center_edges[0])
-        with pytest.raises(ValueError) as err:
+        with pytest.raises(ValueError, match="would create non-manifold"):
             _ = mesh.remove_edge(outer_center_edges[1])
-        assert "would create non-manifold" in err.value.args[0]
 
     def test_remove_edge_to_empty_mesh(self, he_mesh: HalfEdges) -> None:
         """Mesh can be reduced to nothing.
@@ -351,7 +346,7 @@ class TestRemoveVert:
             _ = he_grid.remove_vert(vert)
 
     @pytest.mark.parametrize(
-        "i, j", chain(*(permutations(x) for x in combinations(range(4), 2)))
+        ("i", "j"), chain(*(permutations(x) for x in combinations(range(4), 2)))
     )
     def test_remove_vert_bridge(self, i: int, j: int, he_grid: HalfEdges) -> None:
         """Raise ValueError if vert has a bridge edge."""
@@ -362,10 +357,9 @@ class TestRemoveVert:
 
         # remove any two valence four verts to break manifold
         vl = [x for x in he_grid.vl if x.valence == 4]
-        _ = he_grid.remove_vert(vl[1])
-        with pytest.raises(ValueError) as err:
-            _ = he_grid.remove_vert(vl[2])
-        assert "removing vert would create non-manifold mesh" in err.value.args[0]
+        _ = he_grid.remove_vert(vl[i])
+        with pytest.raises(ValueError, match="removing vert would create non-manifold"):
+            _ = he_grid.remove_vert(vl[j])
 
     def test_peninsulas(self) -> None:
         """Do not fail when working with peninsulas."""
@@ -388,7 +382,7 @@ class TestRemoveVert:
 
 
 class TestRemoveFace:
-    def test_do_not_break_manifold(self, mesh_faces: tuple[HalfEdges, Face]) -> None:
+    def test_do_not_break_manifold(self) -> None:
         """Raise ValueError if removing face would break manifold.
 
         0--1  2--3
@@ -400,9 +394,8 @@ class TestRemoveFace:
         hi: set[tuple[int, ...]] = {(0, 1, 5, 6, 2, 3, 7, 6, 5, 4)}
         mesh = HalfEdges.from_vlfi(vl, fi, hi)
         (hole,) = mesh.holes
-        with pytest.raises(ValueError) as err:
+        with pytest.raises(ValueError, match="would create a non-manifold mesh"):
             _ = mesh.remove_face(hole)
-        assert "would create a non-manifold mesh" in err.value.args[0]
 
     def test_hole_fills_when_face_on_boundary(self) -> None:
         """When a boundary face is removed, destroy the face, not the adjacent hole.
@@ -428,9 +421,13 @@ class TestRemoveFace:
     @pytest.mark.parametrize("repeat", range(100))
     def test_remove_to_empty(self, he_mesh: HalfEdges, repeat: int) -> None:
         """Collapse edge till mesh is empty"""
+        del repeat
         while he_mesh.all_faces:
             num_faces = len(he_mesh.all_faces)
-            for face in he_mesh.all_faces:
+            all_faces = list(he_mesh.all_faces)
+            random.shuffle(all_faces)
+            assert all_faces is not None
+            for face in all_faces:
                 with suppress(ValueError):
                     _ = he_mesh.remove_face(face)
                 validate_mesh(he_mesh)
@@ -466,20 +463,6 @@ class TestSplitEdge:
 class TestFlipEdge:
     def test_flip(self) -> None:
         """Flip edge in adjacent triangles"""
-        # class MyVert(Vert["MyVert", "MyEdge", "MyFace"]):
-        # nnum: int
-
-        # class MyEdge(Edge["MyVert", "MyEdge", "MyFace"]):
-        # pass
-
-        # class MyFace(Face["MyVert", "MyEdge", "MyFace"]):
-        # pass
-
-        # class MyHalfEdges(HalfEdges["MyVert", "MyEdge", "MyFace"]):
-        # vert = MyVert
-        # edge = MyEdge
-        # face = MyFace
-
         vl = [Vert(Coordinate((x,))) for x in range(4)]
         vi: set[tuple[int, ...]] = {(0, 1, 2), (0, 2, 3)}
         mesh = HalfEdges.from_vlfi(vl, vi)
@@ -565,12 +548,13 @@ class TestCollapseEdge:
             for x in mesh.edges
             if (x.orig.sn - first_sn, x.dest.sn - first_sn) == (3, 4)
         )
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="would create non-manifold"):
             _ = mesh.collapse_edge(face_edge)
 
     @pytest.mark.parametrize("repeat", range(100))
     def test_collapse_to_empty(self, he_mesh: HalfEdges, repeat: int) -> None:
         """Collapse edge till mesh is empty"""
+        del repeat
         while he_mesh.edges:
             edges = list(he_mesh.edges)
             random.shuffle(edges)
@@ -582,10 +566,13 @@ class TestCollapseEdge:
     @pytest.mark.parametrize("repeat", range(100))
     def test_drum(self, repeat: int) -> None:
         """Collapse edge with large faces till mesh is empty"""
+        del repeat
         top = tuple(range(10))
         bot = tuple(range(10, 20))
-        legs = tuple(zip(top, bot))
-        sides = {x + tuple(reversed(y)) for x, y in zip(legs, (legs * 2)[1:])}
+        legs = tuple(zip(top, bot, strict=True))
+        sides = {
+            x + tuple(reversed(y)) for x, y in zip(legs, (legs * 2)[1:], strict=False)
+        }
         vl = [Vert(Coordinate((x,))) for x in range(20)]
         fi = {top} | {tuple(reversed(bot))} | sides
         drum = HalfEdges().from_vlfi(vl, fi)
@@ -629,6 +616,7 @@ class TestCollapseEdge:
         self, he_grid: HalfEdges, repeat: int
     ) -> None:
         """Collapse edge till mesh is empty"""
+        del repeat
         verts = he_grid.vl[:]
         random.shuffle(verts)
         side_point = next(x for x in verts if x.valence == 3)

@@ -25,7 +25,7 @@ def test_get_edge_or_vert_faces_with_vert_arg() -> None:
 def test_raise_for_non_tris_in_flip_edge(he_cube: HalfEdges) -> None:
     """Raise if face is not a triangle."""
     edge = next(iter(he_cube.edges))
-    with pytest.raises(ValueError) as err:
+    with pytest.raises(ValueError, match="can only flip") as err:
         _ = he_cube.flip_edge(edge)
     assert "between two triangles" in err.value.args[0]
 

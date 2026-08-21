@@ -8,7 +8,7 @@ created: 170204 14:22:23
 from __future__ import annotations
 
 import random
-from typing import Any, TypeVar
+from typing import TYPE_CHECKING, Any, TypeVar
 
 import pytest
 
@@ -21,7 +21,6 @@ from halfedge.half_edge_elements import (
     Vert,
     _function_lap,
 )
-from halfedge.half_edge_object import HalfEdges
 from halfedge.half_edge_querries import StaticHalfEdges
 from halfedge.type_attrib import (
     Attrib,
@@ -33,6 +32,9 @@ from halfedge.type_attrib import (
     Vector3Attrib,
 )
 from tests.conftest import compare_circular_2, get_canonical_mesh
+
+if TYPE_CHECKING:
+    from halfedge.half_edge_object import HalfEdges
 
 _TElemAttrib = TypeVar("_TElemAttrib", bound="Attrib[Any]")
 
@@ -267,7 +269,7 @@ class TestElemAttribs:
         class LazyAttrib(Attrib[int]):
             @classmethod
             def merge(cls, *merge_from: _TElemAttrib | None) -> _TElemAttrib | None:
-                raise NotImplementedError()
+                raise NotImplementedError
 
             def _infer_value(self) -> int:
                 return self.element.sn
@@ -301,7 +303,7 @@ class TestMeshElementBase:
     def test_pointers_through_init(self) -> None:
         """Key, val pairs passed as kwargs fail if key does not have a setter"""
         with pytest.raises(TypeError):
-            MeshElementBase(edge=MeshElementBase())  # type: ignore
+            _ = MeshElementBase(edge=MeshElementBase())  # pyright: ignore[reportCallIssue]
 
     def test_fill_attrib(self) -> None:
         """Fill missing attrib values from fill_from"""
@@ -327,7 +329,7 @@ def test_edge_lap_fails(he_triangle: dict[str, Any]) -> None:
     """Fails when self intersects."""
     edges = he_triangle["edges"]
     with pytest.raises(ManifoldMeshError) as err:
-        _function_lap(lambda x: edges[1], edges[0])  # type: ignore
+        _ = _function_lap(lambda x: edges[1], edges[0])  # noqa: ARG005
     assert "infinite" in err.value.args[0]
 
 
@@ -337,9 +339,9 @@ class Coordinate(IncompatibleAttrib[tuple[int, int, int]]):
 
 class TestInitVert:
     def setup_method(self) -> None:
-        self.coordinate: Coordinate  # type: ignore
-        self.edge: Edge  # type: ignore
-        self.vert: Vert  # type: ignore
+        self.coordinate: Coordinate  # pyright: ignore[reportUninitializedInstanceVariable]
+        self.edge: Edge  # pyright: ignore[reportUninitializedInstanceVariable]
+        self.vert: Vert  # pyright: ignore[reportUninitializedInstanceVariable]
         self.coordinate = Coordinate((1, 2, 3))
         self.edge = Edge()
         self.vert = Vert(self.coordinate, edge=self.edge)
@@ -377,12 +379,12 @@ class TestInitVert:
 
 class TestInitEdge:
     def setup_method(self) -> None:
-        self.coordinate: Coordinate  # type: ignore
-        self.edge: Edge  # type: ignore
-        self.orig: Vert  # type: ignore
-        self.pair: Edge  # type: ignore
-        self.face: Face  # type: ignore
-        self.next: Edge  # type: ignore
+        self.coordinate: Coordinate  # pyright: ignore[reportUninitializedInstanceVariable]
+        self.edge: Edge  # pyright: ignore[reportUninitializedInstanceVariable]
+        self.orig: Vert  # pyright: ignore[reportUninitializedInstanceVariable]
+        self.pair: Edge  # pyright: ignore[reportUninitializedInstanceVariable]
+        self.face: Face  # pyright: ignore[reportUninitializedInstanceVariable]
+        self.next: Edge  # pyright: ignore[reportUninitializedInstanceVariable]
         self.coordinate = Coordinate((1, 2, 3))
         self.edge = Edge()
         self.orig = Vert()
@@ -440,9 +442,9 @@ class TestInitEdge:
 
 class TestInitFace:
     def setup_method(self) -> None:
-        self.coordinate: Coordinate  # type: ignore
-        self.edge: Edge  # type: ignore
-        self.face: Face  # type: ignore
+        self.coordinate: Coordinate  # pyright: ignore[reportUninitializedInstanceVariable]
+        self.edge: Edge  # pyright: ignore[reportUninitializedInstanceVariable]
+        self.face: Face  # pyright: ignore[reportUninitializedInstanceVariable]
         self.coordinate = Coordinate((1, 2, 3))
         self.edge = Edge()
         self.face = Face(self.coordinate, edge=self.edge)

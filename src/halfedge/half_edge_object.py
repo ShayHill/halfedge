@@ -557,14 +557,14 @@ class HalfEdges(StaticHalfEdges):
             new_edge = self.insert_edge(orig, dest, edge.face)
             _ = new_edge.split_from(edge.pair)
             _ = new_edge.pair.split_from(edge)
-        if new_edge is None:
-            msg = par(
-                """new edge was not created. This is only possible if the mesh is
-                broken. It didn't happen in this method, because nothing has been
-                updated yet, but your mesh is definitely broken. I'll be suprised if
-                you ever see this message."""
-            )
-            raise UnrecoverableManifoldMeshError(msg)
+        msg = par(
+            """new edge was not created. This is only possible if the mesh is broken.
+            It didn't happen in this method, because nothing has been updated yet,
+            but your mesh is definitely broken. I'll be suprised if you ever see this
+            message."""
+        )
+        if new_edge is None:  # pyright: ignore[reportUnnecessaryComparison]
+            raise UnrecoverableManifoldMeshError(msg)  # pyright: ignore[reportUnreachable]
         _ = self.remove_edge(edge)
         _update_face_edges(edge_face, new_edge.pair)
         _update_face_edges(pair_face, new_edge)

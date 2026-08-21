@@ -85,7 +85,7 @@ class BlindHalfEdges:
         orig: Vert | None = None,
         pair: Edge | None = None,
         face: Face | None = None,
-        next: Edge | None = None,
+        next: Edge | None = None,  # noqa: A002
         prev: Edge | None = None,
     ) -> Edge:
         """Create a new Edge instance.

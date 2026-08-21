@@ -82,9 +82,7 @@ class StaticAttrib(Generic[_T]):
     __slots__ = ("_mesh", "cached_value")
 
     def __new__(
-        cls,
-        value: _T | None = None,
-        mesh: BlindHalfEdges | None = None,
+        cls, value: _T | None = None, mesh: BlindHalfEdges | None = None
     ) -> Self:
         """Raise an exception if the attribute is not subclassed."""
         del value
@@ -191,9 +189,7 @@ class Attrib(Generic[_T]):
     __slots__ = ("_element", "cached_value")
 
     def __new__(
-        cls,
-        value: _T | None = None,
-        element: MeshElementBase | None = None,
+        cls, value: _T | None = None, element: MeshElementBase | None = None
     ) -> Self:
         """Raise an exception if the attribute is not subclassed."""
         del value
@@ -347,9 +343,7 @@ class ContagionAttrib(Attrib[Literal[True]]):
     """
 
     def __new__(
-        cls,
-        value: Literal[True] | None = None,
-        element: MeshElementBase | None = None,
+        cls, value: Literal[True] | None = None, element: MeshElementBase | None = None
     ) -> Self:
         """Raise an exception if the attribute is not subclassed."""
         del value
@@ -399,9 +393,7 @@ class IncompatibleAttrib(Attrib[_T]):
     """
 
     def __new__(
-        cls,
-        value: _T | None = None,
-        element: MeshElementBase | None = None,
+        cls, value: _T | None = None, element: MeshElementBase | None = None
     ) -> Self:
         """Raise an exception if the attribute is not subclassed."""
         del value
@@ -442,9 +434,7 @@ class NumericAttrib(Attrib[_T]):
     """Average merge_from values."""
 
     def __new__(
-        cls,
-        value: _T | None = None,
-        element: MeshElementBase | None = None,
+        cls, value: _T | None = None, element: MeshElementBase | None = None
     ) -> Self:
         """Raise an exception if the attribute is not subclassed."""
         del value

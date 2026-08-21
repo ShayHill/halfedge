@@ -326,7 +326,7 @@ class Edge(MeshElementBase):
         orig: Vert | None = None,
         pair: Edge | None = None,
         face: Face | None = None,
-        next: Edge | None = None,
+        next: Edge | None = None,  # noqa: A002
         prev: Edge | None = None,
     ) -> None:
         """Create an Edge instance."""
@@ -424,7 +424,7 @@ class Edge(MeshElementBase):
         msg = ".next not set for Edge instance."
         raise AttributeError(msg)
 
-    @next.setter
+    @next.setter  # noqa: A003
     def next(self: Edge, next_: Edge) -> None:
         self._next = next_
 
