@@ -34,7 +34,7 @@ dev = [
 
 
 [tool.commitizen]
-name = "cz_conentional_commits"
+name = "cz_conventional_commits"
 version = "0.13.0"
 tag_format = "$version"
 major-version-zero = true
