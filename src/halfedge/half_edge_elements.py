@@ -130,6 +130,14 @@ class MeshElementBase:
             msg = f"{attrib.__name__} not found in {self.__class__.__name__}"
             raise AttributeError(msg) from e
 
+    def has_attrib(self, attrib: type[Attrib[Any]]) -> bool:
+        """Check if an attribute is present.
+
+        :param attrib: Attrib class
+        :returns: True if attrib found in self.attrib
+        """
+        return attrib.__name__ in self.attrib
+
     def try_attrib(self, attrib: type[Attrib[_T]]) -> Attrib[_T] | None:
         """Get an attribute or return None.
 
