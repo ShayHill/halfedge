@@ -1,6 +1,6 @@
 [project]
 name = "halfedge"
-version = "0.14.2"
+version = "0.15.0"
 description = "A typical half-edge data structure with some padding"
 readme = "README.md"
 license-files = ["LICENSE"]
@@ -35,7 +35,7 @@ dev = [
 
 [tool.commitizen]
 name = "cz_conventional_commits"
-version = "0.14.2"
+version = "0.15.0"
 tag_format = "$version"
 major-version-zero = true
 version_files = ["pyproject.toml:^version"]
