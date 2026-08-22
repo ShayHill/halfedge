@@ -69,6 +69,14 @@ class BlindHalfEdges:
             msg = f"{attrib.__name__} not found in {self.__class__.__name__}"
             raise AttributeError(msg) from e
 
+    def has_attrib(self, attrib: type[StaticAttrib[Any]]) -> bool:
+        """Check if a StaticAttrib is present.
+
+        :param attrib: StaticAttrib class
+        :returns: True if found, False otherwise
+        """
+        return attrib.__name__ in self.attrib
+
     def new_vert(self, *attributes: Attrib[Any], edge: Edge | None = None) -> Vert:
         """Create a new Vert instance.
 
