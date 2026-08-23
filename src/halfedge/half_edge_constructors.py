@@ -23,11 +23,12 @@ then passing that raw data to mesh_from_vr would create a mesh with 6 faces and
 from __future__ import annotations
 
 from contextlib import suppress
-from typing import TYPE_CHECKING, Any, Self, TypeVar
+from typing import TYPE_CHECKING, Any, Self
 
 from paragraphs import par
 
 from halfedge.half_edge_elements import Edge, Face, ManifoldMeshError, Vert
+from halfedge.type_attrib import AttribHolder
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
@@ -35,17 +36,7 @@ if TYPE_CHECKING:
     from halfedge.type_attrib import Attrib
 
 
-_T = TypeVar("_T")
-
-
-class _Sentinal:
-    """A sentinal value for default arguments."""
-
-
-_SENTINAL = _Sentinal()
-
-
-class BlindHalfEdges:
+class BlindHalfEdges(AttribHolder):
     """Half-edge structure with no lookups."""
 
     def __init__(self, edges: set[Edge] | None = None) -> None:
@@ -55,50 +46,6 @@ class BlindHalfEdges:
         else:
             self.edges = edges
         self.attrib: dict[str, Attrib[Any]] = {}
-
-    def set_attrib(self, attrib: Attrib[Any]) -> None:
-        """Set an attribute.
-
-        :param attrib: Attrib instance
-        """
-        self.attrib[type(attrib).__name__] = attrib.copy_to_element(self)
-
-    def get_attrib(self, attrib: type[Attrib[_T]]) -> Attrib[_T]:
-        """Get a Attrib.
-
-        :param attrib: Attrib class
-        :returns: Attrib instance
-        :raise AttributeError: if Attrib not found in self.attrib
-        """
-        try:
-            return self.attrib[attrib.__name__]
-        except KeyError as e:
-            msg = f"{attrib.__name__} not found in {self.__class__.__name__}"
-            raise AttributeError(msg) from e
-
-    def has_attrib(self, attrib: type[Attrib[Any]]) -> bool:
-        """Check if a Attrib is present.
-
-        :param attrib: Attrib class
-        :returns: True if found, False otherwise
-        """
-        return attrib.__name__ in self.attrib
-
-    def attrib_val(
-        self, attrib: type[Attrib[_T]], default: _T | _Sentinal = _SENTINAL
-    ) -> _T:
-        """Get an attribute value. Shorthand for self.get_attrib(attrib).value.
-
-        :param attrib: Attrib class
-        :param default: optional value to return if attrib not found in self.attrib.
-            If not provided, raise an AttributeError.
-        :returns: Attrib().value
-        """
-        if isinstance(default, _Sentinal):
-            return self.get_attrib(attrib).value
-        with suppress(AttributeError):
-            return self.get_attrib(attrib).value
-        return default
 
     def new_vert(self, *attributes: Attrib[Any], edge: Edge | None = None) -> Vert:
         """Create a new Vert instance.

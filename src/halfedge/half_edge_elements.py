@@ -40,22 +40,12 @@ from contextlib import suppress
 from itertools import count
 from typing import TYPE_CHECKING, Any, Self, TypeVar
 
-from halfedge.type_attrib import Attrib, ContagionAttrib
+from halfedge.type_attrib import Attrib, AttribHolder, ContagionAttrib
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
     from halfedge.half_edge_constructors import BlindHalfEdges
-
-
-_T = TypeVar("_T")
-
-
-class _Sentinal:
-    """A sentinal value for default arguments."""
-
-
-_SENTINAL = _Sentinal()
 
 
 class IsHole(ContagionAttrib):
@@ -72,7 +62,7 @@ class ManifoldMeshError(ValueError):
     """
 
 
-class MeshElementBase:
+class MeshElementBase(AttribHolder):
     """Base class for Vert, Edge, and Face."""
 
     _sn_generator = count()
@@ -116,62 +106,6 @@ class MeshElementBase:
         :param mesh: the mesh instance
         """
         self._mesh = mesh
-
-    def set_attrib(self, attrib: Attrib[Any]) -> None:
-        """Set an attribute.
-
-        :param attrib: Attrib instance
-        """
-        self.attrib[type(attrib).__name__] = attrib.copy_to_element(self)
-
-    def get_attrib(self, attrib: type[Attrib[_T]]) -> Attrib[_T]:
-        """Get an attribute.
-
-        :param attrib: Attrib class
-        :returns: Attrib instance
-        :raise AttributeError: if attrib not found in self.attrib
-        """
-        try:
-            return self.attrib[attrib.__name__]
-        except KeyError as e:
-            msg = f"{attrib.__name__} not found in {self.__class__.__name__}"
-            raise AttributeError(msg) from e
-
-    def has_attrib(self, attrib: type[Attrib[Any]]) -> bool:
-        """Check if an attribute is present.
-
-        :param attrib: Attrib class
-        :returns: True if attrib found in self.attrib
-        """
-        return attrib.__name__ in self.attrib
-
-    def attrib_val(
-        self, attrib: type[Attrib[_T]], default: _T | _Sentinal = _SENTINAL
-    ) -> _T:
-        """Get an attribute value. Shorthand for self.get_attrib(attrib).value.
-
-        :param attrib: Attrib class
-        :param default: optional value to return if attrib not found in self.attrib.
-            If not provided, raise an AttributeError.
-        :returns: Attrib().value
-        """
-        if isinstance(default, _Sentinal):
-            return self.get_attrib(attrib).value
-        with suppress(AttributeError):
-            return self.get_attrib(attrib).value
-        return default
-
-    def try_attrib(self, attrib: type[Attrib[_T]]) -> Attrib[_T] | None:
-        """Get an attribute or return None.
-
-        :param attrib: Attrib class
-        :returns: Attrib instance or None
-        :raise: AttributeError if attrib not found in self.attrib
-        """
-        try:
-            return self.get_attrib(attrib)
-        except AttributeError:
-            return None
 
     def merge_from(self, *elements: Self) -> Self:
         """Fill in missing references from other elements.

@@ -65,11 +65,14 @@ from typing import TYPE_CHECKING, Any, Generic, Literal, Self, TypeVar
 
 from paragraphs import par
 
-if TYPE_CHECKING:
-    from halfedge.half_edge_constructors import BlindHalfEdges
-    from halfedge.half_edge_elements import MeshElementBase
-
 _T = TypeVar("_T")
+
+
+class _Sentinal:
+    """A sentinel value for default arguments."""
+
+
+_SENTINAL = _Sentinal()
 
 
 class Attrib(Generic[_T]):
@@ -88,9 +91,7 @@ class Attrib(Generic[_T]):
     __slots__ = ("_element", "cached_value")
 
     def __new__(
-        cls,
-        value: _T | None = None,
-        element: MeshElementBase | BlindHalfEdges | None = None,
+        cls, value: _T | None = None, element: AttribHolder | None = None
     ) -> Self:
         """Raise an exception if the attribute is not subclassed."""
         del value
@@ -101,9 +102,7 @@ class Attrib(Generic[_T]):
         return object.__new__(cls)
 
     def __init__(
-        self,
-        value: _T | None = None,
-        element: MeshElementBase | BlindHalfEdges | None = None,
+        self, value: _T | None = None, element: AttribHolder | None = None
     ) -> None:
         """Set value and element."""
         self.cached_value: _T | None = value
@@ -126,10 +125,10 @@ class Attrib(Generic[_T]):
         raise AttributeError(msg)
 
     @property
-    def element(self) -> MeshElementBase | BlindHalfEdges:
+    def element(self) -> AttribHolder:
         """Return the element to which this attribute is assigned.
 
-        :return: MeshElementBase instance
+        :return: AttribHolder instance
         :raise AttributeError: If no element is set
         """
         if self._element is None:
@@ -137,9 +136,7 @@ class Attrib(Generic[_T]):
             raise AttributeError(msg)
         return self._element
 
-    def copy_to_element(
-        self: Attrib[_T], element: MeshElementBase | BlindHalfEdges
-    ) -> Attrib[_T]:
+    def copy_to_element(self: Attrib[_T], element: AttribHolder) -> Attrib[_T]:
         """Return a new instance with the same value, assigned to a new element.
 
         :param element: New element
@@ -236,6 +233,75 @@ class Attrib(Generic[_T]):
 _TAttrib = TypeVar("_TAttrib", bound=Attrib[Any])
 
 
+class AttribHolder:
+    """Mixin providing typed attribute storage for mesh elements and meshes.
+
+    Attributes are stored in `self.attrib` keyed by the attribute's class name,
+    so each Attrib subclass acts as its own typed key — two instances of the same
+    subclass cannot coexist on one holder; the second overwrites the first.
+
+    Access by class, not instance: `holder.get_attrib(MyAttrib)` looks up
+    `self.attrib['MyAttrib']` and returns a typed `MyAttrib` instance.
+
+    `attrib_val` uses a sentinel default: omitting `default` raises AttributeError
+    on a missing attrib; passing any value (including None) returns it instead.
+    """
+
+    if TYPE_CHECKING:
+        attrib: dict[str, Attrib[Any]]  # pyright: ignore[reportUninitializedInstanceVariable]
+
+    def set_attrib(self, attrib: Attrib[Any]) -> None:
+        """Set an attribute, binding it to self.
+
+        :param attrib: Attrib instance
+        """
+        self.attrib[type(attrib).__name__] = attrib.copy_to_element(self)
+
+    def get_attrib(self, attrib: type[Attrib[_T]]) -> Attrib[_T]:
+        """Get an attribute by class.
+
+        :param attrib: Attrib class
+        :returns: Attrib instance
+        :raise AttributeError: if attrib not found in self.attrib
+        """
+        try:
+            return self.attrib[attrib.__name__]
+        except KeyError as e:
+            msg = f"{attrib.__name__} not found in {self.__class__.__name__}"
+            raise AttributeError(msg) from e
+
+    def has_attrib(self, attrib: type[Attrib[Any]]) -> bool:
+        """Return True if this attribute type is present.
+
+        :param attrib: Attrib class
+        """
+        return attrib.__name__ in self.attrib
+
+    def attrib_val(
+        self, attrib: type[Attrib[_T]], default: _T | _Sentinal = _SENTINAL
+    ) -> _T:
+        """Return the value of an attribute, with an optional default.
+
+        :param attrib: Attrib class
+        :param default: returned when attrib is absent; omitting raises AttributeError
+        """
+        if isinstance(default, _Sentinal):
+            return self.get_attrib(attrib).value
+        with suppress(AttributeError):
+            return self.get_attrib(attrib).value
+        return default
+
+    def try_attrib(self, attrib: type[Attrib[_T]]) -> Attrib[_T] | None:
+        """Return the Attrib instance, or None if absent.
+
+        :param attrib: Attrib class
+        """
+        try:
+            return self.get_attrib(attrib)
+        except AttributeError:
+            return None
+
+
 class ContagionAttrib(Attrib[Literal[True]]):
     """Spread value when combining with anything.
 
@@ -248,7 +314,7 @@ class ContagionAttrib(Attrib[Literal[True]]):
     """
 
     def __new__(
-        cls, value: Literal[True] | None = None, element: MeshElementBase | None = None
+        cls, value: Literal[True] | None = None, element: AttribHolder | None = None
     ) -> Self:
         """Raise an exception if the attribute is not subclassed."""
         del value
@@ -259,7 +325,7 @@ class ContagionAttrib(Attrib[Literal[True]]):
         return object.__new__(cls)
 
     def __init__(
-        self, value: Literal[True] | None = None, element: MeshElementBase | None = None
+        self, value: Literal[True] | None = None, element: AttribHolder | None = None
     ) -> None:
         """Set value and element."""
         super().__init__(value or True, element)
@@ -298,9 +364,7 @@ class IncompatibleAttrib(Attrib[_T]):
     """
 
     def __new__(
-        cls,
-        value: _T | None = None,
-        element: MeshElementBase | BlindHalfEdges | None = None,
+        cls, value: _T | None = None, element: AttribHolder | None = None
     ) -> Self:
         """Raise an exception if the attribute is not subclassed."""
         del value
@@ -341,9 +405,7 @@ class NumericAttrib(Attrib[_T]):
     """Average merge_from values."""
 
     def __new__(
-        cls,
-        value: _T | None = None,
-        element: MeshElementBase | BlindHalfEdges | None = None,
+        cls, value: _T | None = None, element: AttribHolder | None = None
     ) -> Self:
         """Raise an exception if the attribute is not subclassed."""
         del value
@@ -373,7 +435,7 @@ class Vector2Attrib(Attrib[tuple[float, float]]):
     def __new__(
         cls,
         value: tuple[float, float] | None = None,
-        element: MeshElementBase | BlindHalfEdges | None = None,
+        element: AttribHolder | None = None,
     ) -> Self:
         """Raise an exception if the attribute is not subclassed."""
         del value
@@ -405,7 +467,7 @@ class Vector3Attrib(Attrib[tuple[float, float, float]]):
     def __new__(
         cls,
         value: tuple[float, float, float] | None = None,
-        element: MeshElementBase | BlindHalfEdges | None = None,
+        element: AttribHolder | None = None,
     ) -> Self:
         """Raise an exception if the attribute is not subclassed."""
         del value

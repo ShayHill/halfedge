@@ -52,7 +52,7 @@ class IsHole(ContagionAttribute):
     pass
 
 face = Face()
-face.add_attrib(IsHole())
+face.set_attrib(IsHole())
 ```
 
 
@@ -84,11 +84,11 @@ class Coordinate(Vector2Attrib):
     pass
 
 vert = Vert()
-vert.add_attrib(Coordinate((1, 2)))
+vert.set_attrib(Coordinate((1, 2)))
 assert vert.get_attrib(Coordinate).value == (1, 2)
 ```
 
-You cannot assign or access these attributes with `vert.attribute`. Instead assign with `vert.add_attrib(attrib_instance)`. Retrieve the value with `vert.get_attrib(attrib_class)`. Everything will be keyed to the class name, so you will need a new ElemAttribBase descendant for each attribute type.
+You cannot assign or access these attributes with `vert.attribute`. Instead assign with `vert.set_attrib(attrib_instance)`. Retrieve the value with `vert.get_attrib(attrib_class)`. Everything will be keyed to the class name, so you will need a new ElemAttribBase descendant for each attribute type.
 
 These element attributes can also be passed at `__init__`
 
