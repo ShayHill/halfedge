@@ -346,7 +346,7 @@ class TestRemoveVert:
             _ = he_grid.remove_vert(vert)
 
     @pytest.mark.parametrize(
-        ("i", "j"), chain(*(permutations(x) for x in combinations(range(4), 2)))
+        ("i", "j"), list(chain(*(permutations(x) for x in combinations(range(4), 2))))
     )
     def test_remove_vert_bridge(self, i: int, j: int, he_grid: HalfEdges) -> None:
         """Raise ValueError if vert has a bridge edge."""
