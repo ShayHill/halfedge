@@ -32,7 +32,7 @@ from halfedge.half_edge_elements import Edge, Face, ManifoldMeshError, Vert
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
 
-    from halfedge.type_attrib import Attrib, StaticAttrib
+    from halfedge.type_attrib import Attrib
 
 
 _T = TypeVar("_T")
@@ -54,21 +54,21 @@ class BlindHalfEdges:
             self.edges: set[Edge] = set()
         else:
             self.edges = edges
-        self.attrib: dict[str, StaticAttrib[Any]] = {}
+        self.attrib: dict[str, Attrib[Any]] = {}
 
-    def set_attrib(self, attrib: StaticAttrib[Any]) -> None:
+    def set_attrib(self, attrib: Attrib[Any]) -> None:
         """Set an attribute.
 
-        :param attrib: StaticAttrib instance
+        :param attrib: Attrib instance
         """
         self.attrib[type(attrib).__name__] = attrib.copy_to_element(self)
 
-    def get_attrib(self, attrib: type[StaticAttrib[_T]]) -> StaticAttrib[_T]:
-        """Get a StaticAttrib.
+    def get_attrib(self, attrib: type[Attrib[_T]]) -> Attrib[_T]:
+        """Get a Attrib.
 
-        :param attrib: StaticAttrib class
-        :returns: StaticAttrib instance
-        :raise AttributeError: if StaticAttrib not found in self.attrib
+        :param attrib: Attrib class
+        :returns: Attrib instance
+        :raise AttributeError: if Attrib not found in self.attrib
         """
         try:
             return self.attrib[attrib.__name__]
@@ -76,16 +76,16 @@ class BlindHalfEdges:
             msg = f"{attrib.__name__} not found in {self.__class__.__name__}"
             raise AttributeError(msg) from e
 
-    def has_attrib(self, attrib: type[StaticAttrib[Any]]) -> bool:
-        """Check if a StaticAttrib is present.
+    def has_attrib(self, attrib: type[Attrib[Any]]) -> bool:
+        """Check if a Attrib is present.
 
-        :param attrib: StaticAttrib class
+        :param attrib: Attrib class
         :returns: True if found, False otherwise
         """
         return attrib.__name__ in self.attrib
 
     def attrib_val(
-        self, attrib: type[StaticAttrib[_T]], default: _T | _Sentinal = _SENTINAL
+        self, attrib: type[Attrib[_T]], default: _T | _Sentinal = _SENTINAL
     ) -> _T:
         """Get an attribute value. Shorthand for self.get_attrib(attrib).value.
 

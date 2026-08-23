@@ -27,7 +27,6 @@ from halfedge.type_attrib import (
     ContagionAttrib,
     IncompatibleAttrib,
     NumericAttrib,
-    StaticAttrib,
     Vector2Attrib,
     Vector3Attrib,
 )
@@ -47,15 +46,40 @@ class Score(NumericAttrib[float]):
     pass
 
 
-# TODO: test that abstract classes cannot be instantiated
+class TestAbstractAttribCannotBeInstantiated:
+    def test_cannot_instantiate_abstract_attrib_class(self) -> None:
+        """Raise TypeError when instantiating an abstract class."""
+        with pytest.raises(TypeError, match="cannot be instantiated"):
+            _ = Attrib(0)
+
+    def test_cannot_instantiate_contagion_attrib_class(self) -> None:
+        """Raise TypeError when instantiating an abstract class."""
+        with pytest.raises(TypeError, match="cannot be instantiated"):
+            _ = ContagionAttrib()
+
+    def test_cannot_instantiate_incompatible_attrib_class(self) -> None:
+        """Raise TypeError when instantiating an abstract class."""
+        with pytest.raises(TypeError, match="cannot be instantiated"):
+            _ = IncompatibleAttrib[int]()
+
+    def test_cannot_instantiate_numeric_attrib_class(self) -> None:
+        """Raise TypeError when instantiating an abstract class."""
+        with pytest.raises(TypeError, match="cannot be instantiated"):
+            _ = NumericAttrib[int]()
+
+    def test_cannot_instantiate_vector2_attrib_class(self) -> None:
+        """Raise TypeError when instantiating an abstract class."""
+        with pytest.raises(TypeError, match="cannot be instantiated"):
+            _ = Vector2Attrib()
+
+    def test_cannot_instantiate_vector3_attrib_class(self) -> None:
+        """Raise TypeError when instantiating an abstract class."""
+        with pytest.raises(TypeError, match="cannot be instantiated"):
+            _ = Vector3Attrib()
 
 
 class MyAttrib(Attrib[int]):
     """An attribute with an integer value."""
-
-
-class MyStaticAttrib(StaticAttrib[int]):
-    """A static attribute with an integer value."""
 
 
 class TestCannotInstantiateAbstractClasses:
@@ -98,14 +122,14 @@ class TestCannotInstantiateAbstractClasses:
     def test_cannot_instantiate_static_attrib(self) -> None:
         """Raise TypeError when instantiating an abstract class."""
         with pytest.raises(TypeError) as err:
-            _: StaticAttrib[Any] = StaticAttrib()
+            _: Attrib[Any] = Attrib()
         assert "cannot be instantiated" in err.value.args[0]
 
 
-class TestStaticAttrib:
+class TestAttrib:
     def test_attribute_error_if_no_value_set(self) -> None:
         """Raise AttributeError if no value set."""
-        attrib = MyStaticAttrib()
+        attrib = MyAttrib()
         with pytest.raises(AttributeError):
             _ = attrib.value
 
@@ -114,11 +138,11 @@ class TestBlindHalfEdgesAttribSettersAndGetters:
     def test_set_attrib(self) -> None:
         """Set an attrib by passing a MeshElementBase instance"""
         mesh = BlindHalfEdges()
-        attrib = MyStaticAttrib(7)
+        attrib = MyAttrib(7)
         mesh.set_attrib(attrib)
-        stored_attrib = mesh.get_attrib(MyStaticAttrib)
+        stored_attrib = mesh.get_attrib(MyAttrib)
         assert stored_attrib.value == 7
-        assert stored_attrib.mesh is mesh
+        assert stored_attrib.element is mesh
 
 
 class TestAttribBaseClass:
@@ -272,11 +296,11 @@ class TestElemAttribs:
                 raise NotImplementedError
 
             def _infer_value(self) -> int:
-                return self.element.sn
+                return id(self.element)
 
         elem = MeshElementBase()
         elem.set_attrib(LazyAttrib())
-        assert elem.get_attrib(LazyAttrib).value == elem.sn
+        assert elem.get_attrib(LazyAttrib).value == id(elem)
 
 
 class TestMeshElementBase:
