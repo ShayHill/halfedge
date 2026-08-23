@@ -51,6 +51,13 @@ if TYPE_CHECKING:
 _T = TypeVar("_T")
 
 
+class _Sentinal:
+    """A sentinal value for default arguments."""
+
+
+_SENTINAL = _Sentinal()
+
+
 class IsHole(ContagionAttrib):
     """Flag a Face instance as a hole."""
 
@@ -137,6 +144,22 @@ class MeshElementBase:
         :returns: True if attrib found in self.attrib
         """
         return attrib.__name__ in self.attrib
+
+    def attrib_val(
+        self, attrib: type[Attrib[_T]], default: _T | _Sentinal = _SENTINAL
+    ) -> _T:
+        """Get an attribute value. Shorthand for self.get_attrib(attrib).value.
+
+        :param attrib: Attrib class
+        :param default: optional value to return if attrib not found in self.attrib.
+            If not provided, raise an AttributeError.
+        :returns: Attrib().value
+        """
+        if isinstance(default, _Sentinal):
+            return self.get_attrib(attrib).value
+        with suppress(AttributeError):
+            return self.get_attrib(attrib).value
+        return default
 
     def try_attrib(self, attrib: type[Attrib[_T]]) -> Attrib[_T] | None:
         """Get an attribute or return None.
